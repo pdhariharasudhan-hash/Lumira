@@ -2,6 +2,10 @@ from app.core.service_registry import (
     ServiceRegistry
 )
 
+from app.core.system_status import (
+    SystemStatus
+)
+
 
 class LumiraCore:
 
@@ -11,6 +15,10 @@ class LumiraCore:
 
         self.registry = (
             ServiceRegistry()
+        )
+
+        self.system_status = (
+            SystemStatus()
         )
 
     def plan(
@@ -117,3 +125,12 @@ class LumiraCore:
             "code":
             code
         }
+
+    def status(
+        self
+    ):
+
+        return (
+            self.system_status
+            .get_status()
+        )
