@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Lumira AI Dashboard
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="/static/style.css"
+    >
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>
+            LUMIRA AI
+        </h1>
+
+        <div class="controls">
+
+            <button id="voiceBtn">
+                🎤 Speak
+            </button>
+
+            <input
+                id="prompt"
+                type="text"
+                placeholder="Build an expense tracker api"
+            >
+
+            <button id="runBtn">
+                Generate
+            </button>
+
+        </div>
+
+        <hr>
+
+        <div class="panel">
+
+            <h2>
+                Projects
+            </h2>
+
+            <div id="projects">
+
+                Loading...
+
+            </div>
+
+        </div>
+
+        <hr>
+
+        <div class="panel">
+
+            <h2>
+                Output
+            </h2>
+
+            <pre id="output"></pre>
+
+        </div>
+
+    </div>
+
+    <script src="/static/app.js"></script>
+
+</body>
+
+</html>

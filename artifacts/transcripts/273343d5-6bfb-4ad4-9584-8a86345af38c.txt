@@ -1,0 +1,6 @@
+[MOCK TRANSCRIPT]
+
+Audio File: artifacts\audio\4500ea7f-2151-4da7-ad3b-aab83d2f4e4c.mp3
+
+Transcript generation placeholder.
+Future version will use Whisper for Tamil, English and mixed-language support.

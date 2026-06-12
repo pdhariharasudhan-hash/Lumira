@@ -1,0 +1,4 @@
+{
+  "feature": "pagination",
+  "route": "\n@app.get(\n    \"/expenses/page\"\n)\ndef paginate(\n    page:int=1,\n    size:int=5\n):\n\n    start=(page-1)*size\n    end=start+size\n\n    return expenses[start:end]\n"
+}

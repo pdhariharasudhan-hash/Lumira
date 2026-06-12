@@ -1,0 +1,67 @@
+{
+  "artifacts": [
+    {
+      "artifact_id": "e6b3b295-a3f9-4626-8d56-195c8a231218",
+      "type": "summaries",
+      "source": "manual_test",
+      "file": "artifacts\\summaries\\e6b3b295-a3f9-4626-8d56-195c8a231218.txt",
+      "timestamp": "2026-06-08 17:57:48"
+    },
+    {
+      "artifact_id": "4500ea7f-2151-4da7-ad3b-aab83d2f4e4c",
+      "type": "audio",
+      "source": "voice_capture",
+      "file": "artifacts\\audio\\4500ea7f-2151-4da7-ad3b-aab83d2f4e4c.mp3",
+      "timestamp": "2026-06-09 18:43:41"
+    },
+    {
+      "artifact_id": "273343d5-6bfb-4ad4-9584-8a86345af38c",
+      "type": "transcripts",
+      "source": "4500ea7f-2151-4da7-ad3b-aab83d2f4e4c",
+      "file": "artifacts\\transcripts\\273343d5-6bfb-4ad4-9584-8a86345af38c.txt",
+      "timestamp": "2026-06-09 18:53:08"
+    },
+    {
+      "artifact_id": "f951b046-52d3-48f7-8092-f5e52606352c",
+      "type": "summaries",
+      "source": "273343d5-6bfb-4ad4-9584-8a86345af38c",
+      "file": "artifacts\\summaries\\f951b046-52d3-48f7-8092-f5e52606352c.txt",
+      "timestamp": "2026-06-09 18:55:20"
+    },
+    {
+      "artifact_id": "b3f4ddc8-3bef-479f-a17e-7fddb5478fd2",
+      "type": "images",
+      "source": "image_generation",
+      "file": "artifacts\\images\\b3f4ddc8-3bef-479f-a17e-7fddb5478fd2.txt",
+      "timestamp": "2026-06-09 19:11:08"
+    },
+    {
+      "artifact_id": "91605e09-3a5f-4c33-a979-9bd58a71f74c",
+      "type": "schematics",
+      "source": "image_generation",
+      "file": "artifacts\\schematics\\91605e09-3a5f-4c33-a979-9bd58a71f74c.txt",
+      "timestamp": "2026-06-09 19:11:43"
+    },
+    {
+      "artifact_id": "021f4add-9ac7-40fa-9c17-68d383ab9fa7",
+      "type": "images",
+      "source": "image_generation",
+      "file": "artifacts\\images\\021f4add-9ac7-40fa-9c17-68d383ab9fa7.txt",
+      "timestamp": "2026-06-09 19:14:15"
+    },
+    {
+      "artifact_id": "55a65c18-9f6b-4be5-9dc8-7263972d9469",
+      "type": "images",
+      "source": "image_generation",
+      "file": "artifacts\\images\\55a65c18-9f6b-4be5-9dc8-7263972d9469.txt",
+      "timestamp": "2026-06-09 19:27:25"
+    },
+    {
+      "artifact_id": "fd5461a6-eee6-475a-92d2-6e5268fea7dc",
+      "type": "images",
+      "source": "image_generation",
+      "file": "artifacts\\images\\fd5461a6-eee6-475a-92d2-6e5268fea7dc.txt",
+      "timestamp": "2026-06-09 19:45:58"
+    }
+  ]
+}

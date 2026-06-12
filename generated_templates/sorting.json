@@ -1,0 +1,13 @@
+{
+  "feature":"sorting",
+
+  "imports":[],
+
+  "globals":[],
+
+  "routes":[
+    "@app.get(\"/expenses/sort\")\ndef sort_items():\n\n    return sorted(\n        expenses,\n        key=lambda x:x.get(\"amount\")\n    )"
+  ],
+
+  "requirements":[]
+}

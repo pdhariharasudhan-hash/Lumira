@@ -1,0 +1,26 @@
+.project-card {
+
+    background: #0f172a;
+
+    border: 1px solid cyan;
+
+    border-radius: 10px;
+
+    padding: 15px;
+
+    margin-bottom: 10px;
+}
+
+
+.project-card h3 {
+
+    color: cyan;
+
+    margin: 0;
+}
+
+
+.project-card button {
+
+    margin-top: 10px;
+}

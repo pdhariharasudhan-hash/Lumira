@@ -1,0 +1,16 @@
+{
+  "feature":"sqlite",
+
+  "imports":[
+    "import sqlite3"
+  ],
+
+  "globals":[
+    "connection=sqlite3.connect(\"app.db\")",
+    "cursor=connection.cursor()"
+  ],
+
+  "routes":[],
+
+  "requirements":[]
+}

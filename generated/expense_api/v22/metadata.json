@@ -1,0 +1,13 @@
+{
+    "idea": "build expense tracker api add search endpoint add authentication and sqlite add sorting and analytics",
+    "features": [
+        "add search endpoint",
+        "add authentication and sqlite",
+        "add sorting and analytics"
+    ],
+    "project_type": "api",
+    "entity": "expense_api",
+    "created": "2026-05-22 12:57:04",
+    "version": "v22",
+    "status": "generated"
+}

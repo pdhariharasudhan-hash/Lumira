@@ -1,0 +1,4 @@
+{
+  "feature": "search",
+  "route": "\n@app.get(\n    \"/expenses/search\"\n)\ndef search_items(\n    query: str\n):\n\n    return [\n        item\n        for item in expenses\n        if query.lower()\n        in str(item).lower()\n    ]\n"
+}

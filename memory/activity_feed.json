@@ -1,0 +1,44 @@
+[
+  {
+    "event": "plan_created",
+    "source": "planner",
+    "data": {
+      "goal": "build expense tracker api"
+    },
+    "timestamp": "2026-06-11 21:18:15"
+  },
+  {
+    "event": "plan_created",
+    "source": "planner",
+    "data": {
+      "goal": "build expense tracker api",
+      "intent": "build_api",
+      "step_count": 5
+    },
+    "timestamp": "2026-06-11 21:20:57"
+  },
+  {
+    "event": "workspace_created",
+    "source": "workspace",
+    "data": {
+      "workspace": "stock_ai"
+    },
+    "timestamp": "2026-06-11 21:25:18"
+  },
+  {
+    "event": "workspace_switched",
+    "source": "workspace",
+    "data": {
+      "workspace": "stock_ai"
+    },
+    "timestamp": "2026-06-11 21:25:18"
+  },
+  {
+    "event": "workspace_deleted",
+    "source": "workspace",
+    "data": {
+      "workspace": "stock_ai"
+    },
+    "timestamp": "2026-06-11 21:25:26"
+  }
+]

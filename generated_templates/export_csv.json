@@ -1,0 +1,4 @@
+{
+  "feature": "export_csv",
+  "route": "\nimport csv\n\n@app.get(\n    \"/expenses/export\"\n)\ndef export_csv():\n\n    with open(\n        \"expenses.csv\",\n        \"w\",\n        newline=\"\"\n    ) as f:\n\n        writer=csv.writer(f)\n\n        writer.writerow([\n            \"amount\",\n            \"category\"\n        ])\n\n        for item in expenses:\n\n            writer.writerow([\n                item.get(\"amount\"),\n                item.get(\"category\")\n            ])\n\n    return {\n        \"success\":True\n    }\n"
+}

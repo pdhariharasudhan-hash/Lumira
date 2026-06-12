@@ -1,0 +1,4 @@
+{
+  "feature": "analytics",
+  "route": "\n@app.get(\n    \"/analytics\"\n)\ndef analytics():\n\n    return {\n        \"total_expenses\":len(expenses),\n        \"categories\":len(set(item[\"category\"] for item in expenses))\n    }\n"
+}

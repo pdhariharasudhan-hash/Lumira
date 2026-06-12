@@ -1,0 +1,158 @@
+{
+  "latest_pipeline_run": {
+    "id": "679f877b-0740-497c-992d-0553d4d3d7a0",
+    "type": "pipeline_run",
+    "input": "build a REST API for task management using FastAPI",
+    "validate": {
+      "idea": "build a REST API for task management using FastAPI",
+      "weaknesses": [],
+      "risks": [],
+      "verdict": "continue",
+      "risk_level": "low"
+    },
+    "builder": {
+      "objective": "build a REST API for task management using FastAPI",
+      "scope": "small",
+      "suggested_steps": [
+        {
+          "id": "step_1",
+          "action": "create fastapi app instance",
+          "inputs": {},
+          "expected_output": "fastapi app initialized",
+          "dependencies": []
+        },
+        {
+          "id": "step_2",
+          "action": "define api route for task management",
+          "inputs": {},
+          "expected_output": "task route defined",
+          "dependencies": [
+            "step_1"
+          ]
+        }
+      ],
+      "status": "accept"
+    },
+    "execute": {
+      "execution_order": [
+        "step_1",
+        "step_2"
+      ],
+      "today_task": "step_1",
+      "task_steps": [
+        "Fix builder alignment issue: invalid_execute_output:bad_execution_order"
+      ],
+      "expected_output": "Aligned execute plan",
+      "blockers": [
+        "invalid_execute_output:bad_execution_order"
+      ],
+      "status": "refine"
+    },
+    "code": null,
+    "current_stage": "execute",
+    "last_completed_stage": "builder",
+    "status": "stopped",
+    "final_status": "refine_required",
+    "error": "invalid_execute_output:bad_execution_order",
+    "retry_count": 0,
+    "resume_allowed": true,
+    "aborted": false,
+    "manual_override": null,
+    "state_fixes": [
+      {
+        "timestamp": "2026-05-06T16:01:47.647946+00:00",
+        "category": "degraded",
+        "issue": "backend unavailable",
+        "fix": "fallback response used",
+        "stage_before": "builder",
+        "stage_after": "builder"
+      },
+      {
+        "timestamp": "2026-05-06T16:01:48.937141+00:00",
+        "category": "execute_hardening",
+        "issue": "execute output rejected",
+        "fix": "invalid_execute_output:bad_execution_order",
+        "stage_before": "execute",
+        "stage_after": "execute"
+      }
+    ]
+  },
+  "pipeline_run": {
+    "id": "679f877b-0740-497c-992d-0553d4d3d7a0",
+    "type": "pipeline_run",
+    "input": "build a REST API for task management using FastAPI",
+    "validate": {
+      "idea": "build a REST API for task management using FastAPI",
+      "weaknesses": [],
+      "risks": [],
+      "verdict": "continue",
+      "risk_level": "low"
+    },
+    "builder": {
+      "objective": "build a REST API for task management using FastAPI",
+      "scope": "small",
+      "suggested_steps": [
+        {
+          "id": "step_1",
+          "action": "create fastapi app instance",
+          "inputs": {},
+          "expected_output": "fastapi app initialized",
+          "dependencies": []
+        },
+        {
+          "id": "step_2",
+          "action": "define api route for task management",
+          "inputs": {},
+          "expected_output": "task route defined",
+          "dependencies": [
+            "step_1"
+          ]
+        }
+      ],
+      "status": "accept"
+    },
+    "execute": {
+      "execution_order": [
+        "step_1",
+        "step_2"
+      ],
+      "today_task": "step_1",
+      "task_steps": [
+        "Fix builder alignment issue: invalid_execute_output:bad_execution_order"
+      ],
+      "expected_output": "Aligned execute plan",
+      "blockers": [
+        "invalid_execute_output:bad_execution_order"
+      ],
+      "status": "refine"
+    },
+    "code": null,
+    "current_stage": "execute",
+    "last_completed_stage": "builder",
+    "status": "stopped",
+    "final_status": "refine_required",
+    "error": "invalid_execute_output:bad_execution_order",
+    "retry_count": 0,
+    "resume_allowed": true,
+    "aborted": false,
+    "manual_override": null,
+    "state_fixes": [
+      {
+        "timestamp": "2026-05-06T16:01:47.647946+00:00",
+        "category": "degraded",
+        "issue": "backend unavailable",
+        "fix": "fallback response used",
+        "stage_before": "builder",
+        "stage_after": "builder"
+      },
+      {
+        "timestamp": "2026-05-06T16:01:48.937141+00:00",
+        "category": "execute_hardening",
+        "issue": "execute output rejected",
+        "fix": "invalid_execute_output:bad_execution_order",
+        "stage_before": "execute",
+        "stage_after": "execute"
+      }
+    ]
+  }
+}

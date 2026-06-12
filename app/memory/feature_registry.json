@@ -1,0 +1,37 @@
+{
+  "memory": {
+    "enabled": true,
+    "version": "1.0",
+    "category": "core"
+  },
+
+  "voice_input": {
+    "enabled": true,
+    "version": "1.0",
+    "category": "core"
+  },
+
+  "voice_idea_capture": {
+    "enabled": false,
+    "version": "1.0",
+    "category": "capture"
+  },
+
+  "artifact_manager": {
+    "enabled": false,
+    "version": "1.0",
+    "category": "artifact"
+  },
+
+  "image_generation": {
+    "enabled": false,
+    "version": "1.0",
+    "category": "artifact"
+  },
+
+  "unified_search": {
+    "enabled": false,
+    "version": "1.0",
+    "category": "search"
+  }
+}

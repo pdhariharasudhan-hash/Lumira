@@ -1,0 +1,13 @@
+[MOCK SUMMARY]
+
+Transcript successfully processed.
+
+Characters: 202
+
+Future versions will use AI summarization to extract:
+- key ideas
+- action items
+- tags
+- project concepts
+- startup ideas
+- research notes

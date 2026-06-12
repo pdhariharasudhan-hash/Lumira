@@ -1,0 +1,15 @@
+{
+  "active_workspace": "default",
+  "workspaces": {
+    "default": {
+      "projects": [],
+      "collections": [],
+      "snapshots": []
+    },
+    "lumira_core": {
+      "projects": [],
+      "collections": [],
+      "snapshots": []
+    }
+  }
+}

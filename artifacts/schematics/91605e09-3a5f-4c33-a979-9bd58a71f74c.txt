@@ -1,0 +1,8 @@
+[MOCK IMAGE GENERATION]
+
+Prompt: arc reactor schematic
+
+Type: schematic
+
+Future versions will generate real visual artifacts.
+Current version stores the generation request and preserves history for traceability.
