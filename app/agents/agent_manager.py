@@ -66,6 +66,62 @@ class AgentManager:
             result
         }
 
+    def dispatch(
+        self,
+        task: str
+    ):
+
+        task_lower = (
+            task.lower()
+        )
+
+        code_keywords = [
+
+            "build",
+            "create",
+            "generate",
+            "code",
+            "api",
+            "app",
+            "website"
+        ]
+
+        research_keywords = [
+
+            "research",
+            "find",
+            "analyze",
+            "investigate",
+            "learn",
+            "explain"
+        ]
+
+        for keyword in code_keywords:
+
+            if keyword in task_lower:
+
+                return self.run(
+
+                    "code_agent",
+                    task
+                )
+
+        for keyword in research_keywords:
+
+            if keyword in task_lower:
+
+                return self.run(
+
+                    "research_agent",
+                    task
+                )
+
+        return self.run(
+
+            "research_agent",
+            task
+        )
+
     def list_agents(
         self
     ):
