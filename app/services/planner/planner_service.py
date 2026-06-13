@@ -54,5 +54,5 @@ class PlannerService:
             intent,
 
             "steps":
-            stepsaac
+            steps
         }
