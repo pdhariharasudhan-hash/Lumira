@@ -40,5 +40,23 @@
       "workspace": "stock_ai"
     },
     "timestamp": "2026-06-11 21:25:26"
+  },
+  {
+    "event": "project_added",
+    "source": "workspace",
+    "data": {
+      "workspace": "default",
+      "project": "expense_api"
+    },
+    "timestamp": "2026-06-13 21:20:08"
+  },
+  {
+    "event": "project_added",
+    "source": "workspace",
+    "data": {
+      "workspace": "default",
+      "project": "expense_tracker"
+    },
+    "timestamp": "2026-06-13 21:24:41"
   }
 ]

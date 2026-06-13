@@ -200,6 +200,194 @@ class WorkspaceService:
             ]
         }
 
+    def add_project(
+        self,
+        project_name: str,
+        project_path: str
+    ):
+
+        data = (
+            self._read()
+        )
+
+        active_workspace = (
+            data[
+                "active_workspace"
+            ]
+        )
+
+        workspace = (
+            data[
+                "workspaces"
+            ][
+                active_workspace
+            ]
+        )
+
+        for project in workspace[
+            "projects"
+        ]:
+
+            if project[
+                "name"
+            ] == project_name:
+
+                return {
+
+                    "success":
+                    False,
+
+                    "message":
+                    "project already exists"
+                }
+
+        workspace[
+            "projects"
+        ].append(
+
+            {
+                "name":
+                project_name,
+
+                "path":
+                project_path
+            }
+        )
+
+        self._write(
+            data
+        )
+
+        EventLoggerService().log(
+            event="project_added",
+            source="workspace",
+            data={
+                "workspace":
+                active_workspace,
+
+                "project":
+                project_name
+            }
+        )
+
+        return {
+
+            "success":
+            True,
+
+            "project":
+            project_name,
+
+            "path":
+            project_path
+        }
+
+    def list_projects(
+        self
+    ):
+
+        data = (
+            self._read()
+        )
+
+        active_workspace = (
+            data[
+                "active_workspace"
+            ]
+        )
+
+        workspace = (
+            data[
+                "workspaces"
+            ][
+                active_workspace
+            ]
+        )
+
+        return {
+
+            "success":
+            True,
+
+            "workspace":
+            active_workspace,
+
+            "count":
+            len(
+                workspace[
+                    "projects"
+                ]
+            ),
+
+            "projects":
+            workspace[
+                "projects"
+            ]
+        }
+
+    def remove_project(
+        self,
+        project_name: str
+    ):
+
+        data = (
+            self._read()
+        )
+
+        active_workspace = (
+            data[
+                "active_workspace"
+            ]
+        )
+
+        workspace = (
+            data[
+                "workspaces"
+            ][
+                active_workspace
+            ]
+        )
+
+        workspace[
+            "projects"
+        ] = [
+
+            project
+
+            for project in workspace[
+                "projects"
+            ]
+
+            if project[
+                "name"
+            ] != project_name
+        ]
+
+        self._write(
+            data
+        )
+
+        EventLoggerService().log(
+            event="project_removed",
+            source="workspace",
+            data={
+                "workspace":
+                active_workspace,
+
+                "project":
+                project_name
+            }
+        )
+
+        return {
+
+            "success":
+            True,
+
+            "project":
+            project_name
+        }
+
     def list_workspaces(
         self
     ):

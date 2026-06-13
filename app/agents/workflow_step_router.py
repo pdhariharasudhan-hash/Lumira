@@ -6,6 +6,10 @@ from app.agents.code_agent import (
     CodeAgent
 )
 
+from app.services.workspace.workspace_service import (
+    WorkspaceService
+)
+
 
 class WorkflowStepRouter:
 
@@ -19,6 +23,10 @@ class WorkflowStepRouter:
 
         self.code_agent = (
             CodeAgent()
+        )
+
+        self.workspace = (
+            WorkspaceService()
         )
 
     def execute_step(
@@ -64,14 +72,35 @@ class WorkflowStepRouter:
 
         if step == "save_project":
 
-            return {
+            project_name = (
+                goal.lower()
+                .replace(
+                    "build",
+                    ""
+                )
+                .replace(
+                    "api",
+                    ""
+                )
+                .strip()
+                .replace(
+                    " ",
+                    "_"
+                )
+            )
 
-                "step":
-                step,
+            return (
 
-                "status":
-                "pending"
-            }
+                self.workspace
+                .add_project(
+
+                    project_name=
+                    project_name,
+
+                    project_path=
+                    f"generated/{project_name}"
+                )
+            )
 
         return {
 

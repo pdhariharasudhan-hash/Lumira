@@ -2,7 +2,16 @@
   "active_workspace": "default",
   "workspaces": {
     "default": {
-      "projects": [],
+      "projects": [
+        {
+          "name": "expense_api",
+          "path": "generated/expense_api/v1"
+        },
+        {
+          "name": "expense_tracker",
+          "path": "generated/expense_tracker"
+        }
+      ],
       "collections": [],
       "snapshots": []
     },
