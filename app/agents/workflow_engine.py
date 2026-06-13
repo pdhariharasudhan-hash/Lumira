@@ -2,8 +2,8 @@ from app.agents.planner_agent import (
     PlannerAgent
 )
 
-from app.agents.code_agent import (
-    CodeAgent
+from app.agents.workflow_step_router import (
+    WorkflowStepRouter
 )
 
 
@@ -17,8 +17,8 @@ class WorkflowEngine:
             PlannerAgent()
         )
 
-        self.code = (
-            CodeAgent()
+        self.router = (
+            WorkflowStepRouter()
         )
 
     def execute(
@@ -32,11 +32,22 @@ class WorkflowEngine:
             )
         )
 
-        code_result = (
-            self.code.execute(
-                goal
+        results = []
+
+        for step in plan[
+            "steps"
+        ]:
+
+            result = (
+                self.router.execute_step(
+                    step,
+                    goal
+                )
             )
-        )
+
+            results.append(
+                result
+            )
 
         return {
 
@@ -49,6 +60,6 @@ class WorkflowEngine:
             "plan":
             plan,
 
-            "result":
-            code_result
+            "results":
+            results
         }
