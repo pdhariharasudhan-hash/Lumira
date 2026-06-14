@@ -1,0 +1,14 @@
+{
+    "idea": "build expense tracker api add authentication",
+    "instructions": [
+        "add authentication"
+    ],
+    "features": [
+        "auth"
+    ],
+    "project_type": "api",
+    "entity": "expense_api",
+    "created": "2026-06-14 10:10:52",
+    "version": "v25",
+    "status": "generated"
+}

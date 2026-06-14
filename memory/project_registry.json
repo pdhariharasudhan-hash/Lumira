@@ -1,0 +1,16 @@
+{
+  "expense_api": {
+    "goal": "build expense tracker api",
+    "workspace": "default",
+    "latest_version": null,
+    "status": "active",
+    "features": []
+  },
+  "inventory_api": {
+    "goal": "build inventory tracker api",
+    "workspace": "default",
+    "latest_version": null,
+    "status": "active",
+    "features": []
+  }
+}

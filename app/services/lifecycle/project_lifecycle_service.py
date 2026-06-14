@@ -6,6 +6,18 @@ from app.services.workspace.workspace_service import (
     WorkspaceService
 )
 
+from app.services.projects.project_writer import (
+    ProjectWriter
+)
+
+from app.services.code.code_service import (
+    CodeService
+)
+
+from app.services.features.feature_detector import (
+    FeatureDetector
+)
+
 
 class ProjectLifecycleService:
 
@@ -89,4 +101,124 @@ class ProjectLifecycleService:
             self.workspace
             .list_projects()
         )
-        
+
+    def continue_project(
+        self,
+        metadata: dict,
+        instruction: str
+    ):
+
+        old_idea = (
+            metadata.get(
+                "idea",
+                ""
+            )
+        )
+
+        features = (
+            metadata.get(
+                "features",
+                []
+            )
+        )
+
+        instructions = (
+            metadata.get(
+                "instructions",
+                []
+            )
+        )
+
+        instruction = (
+            instruction
+            .strip()
+            .lower()
+        )
+
+        instructions.append(
+            instruction
+        )
+
+        new_features = (
+
+            FeatureDetector()
+            .detect(
+                instruction
+            )
+        )
+
+        for feature in new_features:
+
+            if feature not in features:
+
+                features.append(
+                    feature
+                )
+
+        new_idea = (
+            old_idea
+            + " "
+            + instruction
+        ).strip()
+
+        generated = (
+
+            CodeService()
+            .generate(
+                new_idea,
+                {}
+            )
+        )
+
+        save_location = (
+
+            ProjectWriter()
+            .save(
+
+                generated[
+                    "code_target"
+                ],
+
+                generated[
+                    "files"
+                ],
+
+                {
+
+                    "idea":
+                    new_idea,
+
+                    "instructions":
+                    instructions,
+
+                    "features":
+                    features,
+
+                    "project_type":
+                    "api",
+
+                    "entity":
+                    generated[
+                        "code_target"
+                    ]
+                }
+            )
+        )
+
+        return {
+
+            "success":
+            True,
+
+            "saved_to":
+            save_location,
+
+            "new_idea":
+            new_idea,
+
+            "instructions":
+            instructions,
+
+            "features":
+            features
+        }

@@ -58,5 +58,14 @@
       "project": "expense_tracker"
     },
     "timestamp": "2026-06-13 21:24:41"
+  },
+  {
+    "event": "project_added",
+    "source": "workspace",
+    "data": {
+      "workspace": "default",
+      "project": "inventory_api"
+    },
+    "timestamp": "2026-06-14 10:23:42"
   }
 ]

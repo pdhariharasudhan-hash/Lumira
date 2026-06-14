@@ -1,20 +1,12 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from app.services.project_writer import (
-    ProjectWriter
-)
-
-from app.services.code_service import (
-    CodeService
-)
-
-from app.services.feature_detector import (
-    FeatureDetector
-)
-
 from app.routes.project_details import (
     get_project
+)
+
+from app.services.lifecycle.project_lifecycle_service import (
+    ProjectLifecycleService
 )
 
 
@@ -36,142 +28,50 @@ def continue_project(
     request: ContinueRequest
 ):
 
-
     existing = get_project(
         request.project,
         request.version
     )
 
-
     if not existing["success"]:
 
         return existing
-
 
     metadata = (
         existing["data"]
         ["metadata"]
     )
 
+    result = (
 
-    old_idea = metadata.get(
-        "idea",
-        ""
-    )
+        ProjectLifecycleService()
+        .continue_project(
 
+            metadata=
+            metadata,
 
-    features = metadata.get(
-        "features",
-        []
-    )
-
-
-    instructions = metadata.get(
-        "instructions",
-        []
-    )
-
-
-    instruction = (
-        request.instruction
-        .strip()
-        .lower()
-    )
-
-
-    instructions.append(
-        instruction
-    )
-
-
-    new_features = (
-
-        FeatureDetector()
-        .detect(
-            instruction
+            instruction=
+            request.instruction
         )
     )
-
-
-    for feature in new_features:
-
-        if feature not in features:
-
-            features.append(
-                feature
-            )
-
-
-    new_idea = (
-        old_idea
-        + " "
-        + instruction
-    ).strip()
-
-
-    generated = (
-
-        CodeService()
-        .generate(
-            new_idea,
-            {}
-        )
-    )
-
-
-    save_location = (
-
-        ProjectWriter()
-        .save(
-
-            generated[
-                "code_target"
-            ],
-
-            generated[
-                "files"
-            ],
-
-            {
-
-                "idea":
-                new_idea,
-
-                "instructions":
-                instructions,
-
-                "features":
-                features,
-
-                "project_type":
-                "api",
-
-                "entity":
-                generated[
-                    "code_target"
-                ]
-            }
-        )
-    )
-
 
     return {
 
         "success":
-        True,
+        result["success"],
 
         "previous":
         f"{request.project}/{request.version}",
 
         "saved_to":
-        save_location,
+        result["saved_to"],
 
         "new_idea":
-        new_idea,
+        result["new_idea"],
 
         "instructions":
-        instructions,
+        result["instructions"],
 
         "features":
-        features
+        result["features"]
     }

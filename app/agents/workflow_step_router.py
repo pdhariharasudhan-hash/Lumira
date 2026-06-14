@@ -10,6 +10,10 @@ from app.services.workspace.workspace_service import (
     WorkspaceService
 )
 
+from app.services.project_context.project_context_service import (
+    ProjectContextService
+)
+
 
 class WorkflowStepRouter:
 
@@ -27,6 +31,10 @@ class WorkflowStepRouter:
 
         self.workspace = (
             WorkspaceService()
+        )
+
+        self.project_context = (
+            ProjectContextService()
         )
 
     def execute_step(
@@ -97,7 +105,7 @@ class WorkflowStepRouter:
                     "code_target missing"
                 }
 
-            return (
+            workspace_result = (
 
                 self.workspace
                 .add_project(
@@ -109,6 +117,31 @@ class WorkflowStepRouter:
                     f"generated/{project_name}"
                 )
             )
+
+            registry_result = (
+
+                self.project_context
+                .create_project(
+
+                    project_name=
+                    project_name,
+
+                    goal=
+                    goal
+                )
+            )
+
+            return {
+
+                "success":
+                True,
+
+                "workspace":
+                workspace_result,
+
+                "registry":
+                registry_result
+            }
 
         return {
 
