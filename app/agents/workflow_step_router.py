@@ -32,7 +32,8 @@ class WorkflowStepRouter:
     def execute_step(
         self,
         step: str,
-        goal: str
+        goal: str,
+        context: dict
     ):
 
         if step == "validate":
@@ -72,22 +73,29 @@ class WorkflowStepRouter:
 
         if step == "save_project":
 
-            project_name = (
-                goal.lower()
-                .replace(
-                    "build",
-                    ""
-                )
-                .replace(
-                    "api",
-                    ""
-                )
-                .strip()
-                .replace(
-                    " ",
-                    "_"
+            code_result = (
+                context.get(
+                    "code",
+                    {}
                 )
             )
+
+            project_name = (
+                code_result.get(
+                    "code_target"
+                )
+            )
+
+            if not project_name:
+
+                return {
+
+                    "success":
+                    False,
+
+                    "message":
+                    "code_target missing"
+                }
 
             return (
 

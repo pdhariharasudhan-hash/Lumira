@@ -34,6 +34,8 @@ class WorkflowEngine:
 
         results = []
 
+        context = {}
+
         for step in plan[
             "steps"
         ]:
@@ -41,9 +43,14 @@ class WorkflowEngine:
             result = (
                 self.router.execute_step(
                     step,
-                    goal
+                    goal,
+                    context
                 )
             )
+
+            context[
+                step
+            ] = result
 
             results.append(
                 result
@@ -61,5 +68,8 @@ class WorkflowEngine:
             plan,
 
             "results":
-            results
+            results,
+
+            "context":
+            context
         }
