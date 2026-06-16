@@ -7,6 +7,10 @@ from app.services.project_context.project_context_service import (
     ProjectContextService
 )
 
+from app.services.project_context.project_history_service import (
+    ProjectHistoryService
+)
+
 
 class ProjectWriter:
 
@@ -117,6 +121,18 @@ class ProjectWriter:
             updates={
 
                 "latest_version":
+                project_version
+            }
+        )
+
+        ProjectHistoryService().log_event(
+
+            project_name,
+
+            "version_created",
+
+            {
+                "version":
                 project_version
             }
         )

@@ -17,7 +17,7 @@
     "features": [],
     "path": null,
     "created": "",
-    "updated": "2026-06-16 21:28:10"
+    "updated": "2026-06-16 22:07:49"
   },
   "movie_api": {
     "goal": "build movie tracker api",
@@ -26,6 +26,16 @@
     "latest_version": "v2",
     "created": "2026-06-14 11:34:14",
     "updated": "2026-06-16 21:22:08",
+    "status": "active",
+    "features": []
+  },
+  "book_api": {
+    "goal": "build book tracker api",
+    "workspace": "default",
+    "path": "generated/book_api",
+    "latest_version": "v1",
+    "created": "2026-06-16 22:01:48",
+    "updated": "2026-06-16 22:05:17",
     "status": "active",
     "features": []
   }

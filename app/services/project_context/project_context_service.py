@@ -2,6 +2,10 @@ from pathlib import Path
 import json
 from datetime import datetime
 
+from app.services.project_context.project_history_service import (
+    ProjectHistoryService
+)
+
 
 class ProjectContextService:
 
@@ -118,6 +122,18 @@ class ProjectContextService:
             data
         )
 
+        ProjectHistoryService().log_event(
+
+            project_name,
+
+            "project_created",
+
+            {
+                "goal":
+                goal
+            }
+        )
+
         return {
 
             "success":
@@ -182,6 +198,7 @@ class ProjectContextService:
         updates[
             "updated"
         ] = (
+
             datetime.now().strftime(
                 "%Y-%m-%d %H:%M:%S"
             )

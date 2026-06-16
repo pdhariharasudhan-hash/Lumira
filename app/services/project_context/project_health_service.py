@@ -4,6 +4,10 @@ from app.services.project_context.project_context_service import (
     ProjectContextService
 )
 
+from app.services.project_context.project_history_service import (
+    ProjectHistoryService
+)
+
 
 class ProjectHealthService:
 
@@ -112,6 +116,20 @@ class ProjectHealthService:
                 issues.append(
                     "metadata.json missing"
                 )
+
+        if issues:
+
+            ProjectHistoryService().log_event(
+
+                project_name,
+
+                "health_warning",
+
+                {
+                    "issues":
+                    issues
+                }
+            )
 
         return {
 
@@ -305,4 +323,3 @@ class ProjectHealthService:
             "mismatches":
             mismatches
         }
-        

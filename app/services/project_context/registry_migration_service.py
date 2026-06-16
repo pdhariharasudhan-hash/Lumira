@@ -4,6 +4,10 @@ from app.services.project_context.project_context_service import (
     ProjectContextService
 )
 
+from app.services.project_context.project_history_service import (
+    ProjectHistoryService
+)
+
 
 class RegistryMigrationService:
 
@@ -182,6 +186,15 @@ class RegistryMigrationService:
                 project_name,
 
                 updates=
+                updates
+            )
+
+            ProjectHistoryService().log_event(
+
+                project_name,
+
+                "registry_migrated",
+
                 updates
             )
 
