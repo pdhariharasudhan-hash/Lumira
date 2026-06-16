@@ -12,5 +12,15 @@
     "latest_version": null,
     "status": "active",
     "features": []
+  },
+  "movie_api": {
+    "goal": "build movie tracker api",
+    "workspace": "default",
+    "path": "generated/movie_api",
+    "latest_version": "v2",
+    "created": "2026-06-14 11:34:14",
+    "updated": "2026-06-16 21:22:08",
+    "status": "active",
+    "features": []
   }
 }

@@ -3,6 +3,10 @@ from pathlib import Path
 import json
 from datetime import datetime
 
+from app.services.project_context.project_context_service import (
+    ProjectContextService
+)
+
 
 class ProjectWriter:
 
@@ -13,7 +17,6 @@ class ProjectWriter:
         metadata: Dict
     ):
 
-
         base_folder = (
 
             Path(
@@ -23,15 +26,12 @@ class ProjectWriter:
             / project_name
         )
 
-
         base_folder.mkdir(
             parents=True,
             exist_ok=True
         )
 
-
         version = 1
-
 
         while (
 
@@ -42,19 +42,16 @@ class ProjectWriter:
 
             version += 1
 
-
         folder = (
 
             base_folder
             / f"v{version}"
         )
 
-
         folder.mkdir(
             parents=True,
             exist_ok=True
         )
-
 
         for (
             filename,
@@ -67,7 +64,6 @@ class ProjectWriter:
                 / filename
             )
 
-
             with open(
                 file_path,
                 "w",
@@ -78,29 +74,28 @@ class ProjectWriter:
                     content
                 )
 
-
         metadata[
             "created"
         ] = datetime.now().strftime(
             "%Y-%m-%d %H:%M:%S"
         )
 
-
         metadata[
             "version"
         ] = f"v{version}"
 
+        project_version = (
+            f"v{version}"
+        )
 
         metadata[
             "status"
         ] = "generated"
 
-
         metadata_path = (
             folder
             / "metadata.json"
         )
-
 
         with open(
             metadata_path,
@@ -114,6 +109,17 @@ class ProjectWriter:
                 indent=4
             )
 
+        ProjectContextService().update_project(
+
+            project_name=
+            project_name,
+
+            updates={
+
+                "latest_version":
+                project_version
+            }
+        )
 
         return str(
             folder

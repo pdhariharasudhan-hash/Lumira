@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+from datetime import datetime
 
 
 class ProjectContextService:
@@ -78,6 +79,12 @@ class ProjectContextService:
                 "project exists"
             }
 
+        timestamp = (
+            datetime.now().strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+        )
+
         data[
             project_name
         ] = {
@@ -88,8 +95,17 @@ class ProjectContextService:
             "workspace":
             workspace,
 
+            "path":
+            f"generated/{project_name}",
+
             "latest_version":
-            None,
+            "v1",
+
+            "created":
+            timestamp,
+
+            "updated":
+            timestamp,
 
             "status":
             "active",
@@ -163,11 +179,53 @@ class ProjectContextService:
                 "project not found"
             }
 
+        updates[
+            "updated"
+        ] = (
+            datetime.now().strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+        )
+
         data[
             project_name
         ].update(
             updates
         )
+
+        self._write(
+            data
+        )
+
+        return {
+
+            "success":
+            True
+        }
+
+    def delete_project(
+        self,
+        project_name: str
+    ):
+
+        data = (
+            self._read()
+        )
+
+        if project_name not in data:
+
+            return {
+
+                "success":
+                False,
+
+                "message":
+                "project not found"
+            }
+
+        del data[
+            project_name
+        ]
 
         self._write(
             data
