@@ -1,3 +1,6 @@
+from pathlib import Path
+import json
+
 from app.services.projects.project_discovery_service import (
     ProjectDiscoveryService
 )
@@ -101,6 +104,97 @@ class ProjectLifecycleService:
             self.workspace
             .list_projects()
         )
+
+    def get_project_version(
+        self,
+        project_name: str,
+        version: str
+    ):
+
+        project_folder = (
+
+            Path(
+                "generated"
+            )
+
+            / project_name
+
+            / version
+        )
+
+        if not project_folder.exists():
+
+            return {
+
+                "success":
+                False,
+
+                "message":
+                "project not found"
+            }
+
+        result = {}
+
+        metadata_file = (
+
+            project_folder
+            / "metadata.json"
+        )
+
+        if metadata_file.exists():
+
+            with open(
+                metadata_file,
+                "r",
+                encoding="utf-8"
+            ) as f:
+
+                result[
+                    "metadata"
+                ] = json.load(
+                    f
+                )
+
+        files = {}
+
+        for file in project_folder.iterdir():
+
+            if (
+                file.name
+                ==
+                "metadata.json"
+            ):
+
+                continue
+
+            with open(
+                file,
+                "r",
+                encoding="utf-8"
+            ) as f:
+
+                files[
+                    file.name
+                ] = f.read()
+
+        result[
+            "files"
+        ] = files
+
+        return {
+
+            "success":
+            True,
+
+            "project":
+            project_name,
+
+            "version":
+            version,
+
+            "data":
+            result
+        }
 
     def continue_project(
         self,

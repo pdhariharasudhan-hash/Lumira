@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
-from app.services.project_discovery_service import (
-    ProjectDiscoveryService
+from app.services.lifecycle.project_lifecycle_service import (
+    ProjectLifecycleService
 )
 
 router = APIRouter()
@@ -12,21 +12,8 @@ router = APIRouter()
 )
 def get_projects():
 
-    projects = (
-        ProjectDiscoveryService()
-        .get_projects()
+    return (
+
+        ProjectLifecycleService()
+        .list_projects()
     )
-
-    return {
-
-        "success":
-        True,
-
-        "count":
-        len(
-            projects
-        ),
-
-        "projects":
-        projects
-    }

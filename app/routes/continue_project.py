@@ -1,10 +1,6 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from app.routes.project_details import (
-    get_project
-)
-
 from app.services.lifecycle.project_lifecycle_service import (
     ProjectLifecycleService
 )
@@ -28,9 +24,18 @@ def continue_project(
     request: ContinueRequest
 ):
 
-    existing = get_project(
-        request.project,
-        request.version
+    lifecycle = (
+        ProjectLifecycleService()
+    )
+
+    existing = (
+
+        lifecycle
+        .get_project_version(
+
+            request.project,
+            request.version
+        )
     )
 
     if not existing["success"]:
@@ -44,7 +49,7 @@ def continue_project(
 
     result = (
 
-        ProjectLifecycleService()
+        lifecycle
         .continue_project(
 
             metadata=

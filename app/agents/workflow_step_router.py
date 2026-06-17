@@ -10,8 +10,8 @@ from app.services.workspace.workspace_service import (
     WorkspaceService
 )
 
-from app.services.project_context.project_context_service import (
-    ProjectContextService
+from app.services.project_context.project_manager_service import (
+    ProjectManagerService
 )
 
 
@@ -33,8 +33,8 @@ class WorkflowStepRouter:
             WorkspaceService()
         )
 
-        self.project_context = (
-            ProjectContextService()
+        self.project_manager = (
+            ProjectManagerService()
         )
 
     def execute_step(
@@ -120,7 +120,7 @@ class WorkflowStepRouter:
 
             registry_result = (
 
-                self.project_context
+                self.project_manager
                 .create_project(
 
                     project_name=
