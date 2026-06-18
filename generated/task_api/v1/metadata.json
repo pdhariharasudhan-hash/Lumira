@@ -1,0 +1,8 @@
+{
+    "idea": "build task api",
+    "project_type": "api",
+    "entity": "task_api",
+    "created": "2026-06-18 21:44:37",
+    "version": "v1",
+    "status": "generated"
+}

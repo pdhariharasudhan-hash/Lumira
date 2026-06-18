@@ -18,6 +18,10 @@
         {
           "name": "notes_api",
           "path": "generated/notes_api"
+        },
+        {
+          "name": "task_api",
+          "path": "generated/task_api"
         }
       ],
       "collections": [],

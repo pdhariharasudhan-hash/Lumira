@@ -48,5 +48,15 @@
     "updated": "2026-06-18 21:39:28",
     "status": "active",
     "features": []
+  },
+  "task_api": {
+    "goal": "build task api",
+    "workspace": "default",
+    "path": "generated/task_api",
+    "latest_version": "v1",
+    "created": "2026-06-18 21:44:37",
+    "updated": "2026-06-18 21:44:37",
+    "status": "active",
+    "features": []
   }
 }

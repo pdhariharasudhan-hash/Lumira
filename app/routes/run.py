@@ -4,20 +4,8 @@ from app.schemas.common import (
     GenericInput
 )
 
-from app.services.builder_service import (
-    BuilderService
-)
-
-from app.services.execute_service import (
-    ExecuteService
-)
-
-from app.services.code_service import (
-    CodeService
-)
-
-from app.services.project_writer import (
-    ProjectWriter
+from app.agents.workflow_engine import (
+    WorkflowEngine
 )
 
 router = APIRouter()
@@ -30,83 +18,21 @@ def run_pipeline(
     request: GenericInput
 ):
 
-    idea = request.input
+    result = (
 
-
-    validate = {
-
-        "idea":
-        idea,
-
-        "weaknesses": [],
-
-        "risks": [],
-
-        "verdict":
-        "continue",
-
-        "risk_level":
-        "low"
-    }
-
-
-    builder = (
-        BuilderService()
-        .build(
-            idea
-        )
-    )
-
-
-    execute = (
-        ExecuteService()
+        WorkflowEngine()
         .execute(
-            idea,
-            builder
+
+            request.input
         )
     )
-
-
-    code = (
-        CodeService()
-        .generate(
-            idea,
-            execute
-        )
-    )
-
-
-    save_location = (
-        ProjectWriter()
-        .save(
-            code[
-                "code_target"
-            ],
-
-            code[
-                "files"
-            ],
-
-            {
-                "idea":
-                idea,
-
-                "project_type":
-                "api",
-
-                "entity":
-                code[
-                    "code_target"
-                ]
-            }
-        )
-    )
-
 
     return {
 
         "success":
-        True,
+        result[
+            "success"
+        ],
 
         "endpoint":
         "run",
@@ -114,21 +40,6 @@ def run_pipeline(
         "status":
         "ok",
 
-        "data": {
-
-            "validate":
-            validate,
-
-            "builder":
-            builder,
-
-            "execute":
-            execute,
-
-            "code":
-            code,
-
-            "saved_to":
-            save_location
-        }
+        "data":
+        result
     }

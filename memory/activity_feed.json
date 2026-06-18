@@ -76,5 +76,14 @@
       "project": "notes_api"
     },
     "timestamp": "2026-06-16 22:23:22"
+  },
+  {
+    "event": "project_added",
+    "source": "workspace",
+    "data": {
+      "workspace": "default",
+      "project": "task_api"
+    },
+    "timestamp": "2026-06-18 21:44:37"
   }
 ]
