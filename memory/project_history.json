@@ -61,6 +61,13 @@
       "details": {
         "goal": "build notes api"
       }
+    },
+    {
+      "timestamp": "2026-06-18 21:39:28",
+      "event": "version_created",
+      "details": {
+        "version": "v1"
+      }
     }
   ]
 }

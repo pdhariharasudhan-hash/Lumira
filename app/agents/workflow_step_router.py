@@ -14,6 +14,10 @@ from app.services.project_context.project_manager_service import (
     ProjectManagerService
 )
 
+from app.services.projects.project_writer import (
+    ProjectWriter
+)
+
 
 class WorkflowStepRouter:
 
@@ -94,6 +98,13 @@ class WorkflowStepRouter:
                 )
             )
 
+            project_files = (
+                code_result.get(
+                    "files",
+                    {}
+                )
+            )
+
             if not project_name:
 
                 return {
@@ -104,6 +115,40 @@ class WorkflowStepRouter:
                     "message":
                     "code_target missing"
                 }
+
+            self.project_manager.create_project(
+
+                project_name=
+                project_name,
+
+                goal=
+                goal
+            )
+
+            save_location = (
+
+                ProjectWriter()
+                .save(
+
+                    project_name=
+                    project_name,
+
+                    files=
+                    project_files,
+
+                    metadata={
+
+                        "idea":
+                        goal,
+
+                        "project_type":
+                        "api",
+
+                        "entity":
+                        project_name
+                    }
+                )
+            )
 
             workspace_result = (
 
@@ -118,29 +163,16 @@ class WorkflowStepRouter:
                 )
             )
 
-            registry_result = (
-
-                self.project_manager
-                .create_project(
-
-                    project_name=
-                    project_name,
-
-                    goal=
-                    goal
-                )
-            )
-
             return {
 
                 "success":
                 True,
 
-                "workspace":
-                workspace_result,
+                "saved_to":
+                save_location,
 
-                "registry":
-                registry_result
+                "workspace":
+                workspace_result
             }
 
         return {
