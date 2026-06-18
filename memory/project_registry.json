@@ -58,5 +58,15 @@
     "updated": "2026-06-18 21:44:37",
     "status": "active",
     "features": []
+  },
+  "calculator_api": {
+    "goal": "build calculator api",
+    "workspace": "default",
+    "path": "generated/calculator_api",
+    "latest_version": "v1",
+    "created": "2026-06-18 21:56:08",
+    "updated": "2026-06-18 21:56:08",
+    "status": "active",
+    "features": []
   }
 }

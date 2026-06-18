@@ -85,5 +85,14 @@
       "project": "task_api"
     },
     "timestamp": "2026-06-18 21:44:37"
+  },
+  {
+    "event": "project_added",
+    "source": "workspace",
+    "data": {
+      "workspace": "default",
+      "project": "calculator_api"
+    },
+    "timestamp": "2026-06-18 21:56:08"
   }
 ]

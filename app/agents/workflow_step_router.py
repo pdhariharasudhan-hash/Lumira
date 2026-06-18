@@ -18,6 +18,10 @@ from app.services.projects.project_writer import (
     ProjectWriter
 )
 
+from app.services.validation.code_validation_service import (
+    CodeValidationService
+)
+
 
 class WorkflowStepRouter:
 
@@ -39,6 +43,10 @@ class WorkflowStepRouter:
 
         self.project_manager = (
             ProjectManagerService()
+        )
+
+        self.validator = (
+            CodeValidationService()
         )
 
     def execute_step(
@@ -116,6 +124,32 @@ class WorkflowStepRouter:
                     "code_target missing"
                 }
 
+            validation = (
+
+                self.validator
+                .validate(
+                    project_files
+                )
+            )
+
+            if not validation[
+                "valid"
+            ]:
+
+                return {
+
+                    "success":
+                    False,
+
+                    "message":
+                    "code validation failed",
+
+                    "errors":
+                    validation[
+                        "errors"
+                    ]
+                }
+
             self.project_manager.create_project(
 
                 project_name=
@@ -172,7 +206,10 @@ class WorkflowStepRouter:
                 save_location,
 
                 "workspace":
-                workspace_result
+                workspace_result,
+
+                "validation":
+                validation
             }
 
         return {

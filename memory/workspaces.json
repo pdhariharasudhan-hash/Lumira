@@ -22,6 +22,10 @@
         {
           "name": "task_api",
           "path": "generated/task_api"
+        },
+        {
+          "name": "calculator_api",
+          "path": "generated/calculator_api"
         }
       ],
       "collections": [],
