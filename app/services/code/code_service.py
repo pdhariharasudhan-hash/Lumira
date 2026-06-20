@@ -17,16 +17,18 @@ from app.services.templates.template_engine import (
     TemplateEngine
 )
 
+from app.services.code.naming_service import (
+    NamingService
+)
+
 
 class CodeService:
-
 
     def generate(
         self,
         idea: str,
         execute: Dict[str, Any]
     ) -> Dict[str, Any]:
-
 
         classifier = (
             ProjectClassifier()
@@ -42,6 +44,12 @@ class CodeService:
             "primary_entity"
         ]
 
+        collection_name = (
+            NamingService()
+            .pluralize(
+                entity
+            )
+        )
 
         fields = (
             FieldInference()
@@ -49,7 +57,6 @@ class CodeService:
                 entity
             )
         )
-
 
         features = (
 
@@ -59,7 +66,6 @@ class CodeService:
             )
         )
 
-
         sections = (
 
             TemplateEngine()
@@ -67,7 +73,6 @@ class CodeService:
                 features
             )
         )
-
 
         parameter_string = ",\n    ".join(
 
@@ -79,7 +84,6 @@ class CodeService:
             ]
         )
 
-
         object_string = ",\n            ".join(
 
             [
@@ -90,14 +94,12 @@ class CodeService:
             ]
         )
 
-
         imports = "\n".join(
 
             sections[
                 "imports"
             ]
         )
-
 
         globals_section = "\n".join(
 
@@ -106,7 +108,6 @@ class CodeService:
             ]
         )
 
-
         routes_section = "\n\n".join(
 
             sections[
@@ -114,13 +115,11 @@ class CodeService:
             ]
         )
 
-
         requirements = [
 
             "fastapi",
             "uvicorn"
         ]
-
 
         requirements.extend(
 
@@ -128,7 +127,6 @@ class CodeService:
                 "requirements"
             ]
         )
-
 
         requirements_text = "\n".join(
 
@@ -138,7 +136,6 @@ class CodeService:
                 )
             )
         )
-
 
         main_py = textwrap.dedent(
 
@@ -150,7 +147,7 @@ from fastapi import FastAPI
 app = FastAPI()
 
 
-{entity}s=[]
+{collection_name} = []
 
 
 {globals_section}
@@ -160,21 +157,21 @@ app = FastAPI()
 
 
 @app.get(
-    "/{entity}s"
+    "/{collection_name}"
 )
 def get_items():
 
-    return {entity}s
+    return {collection_name}
 
 
 @app.post(
-    "/{entity}s"
+    "/{collection_name}"
 )
 def create_item(
     {parameter_string}
 ):
 
-    {entity}s.append(
+    {collection_name}.append(
 
         {{
             {object_string}
@@ -186,23 +183,23 @@ def create_item(
         "success":
         True,
 
-        "{entity}s":
-        {entity}s
+        "{collection_name}":
+        {collection_name}
     }}
 
 
 @app.put(
-    "/{entity}s/{{item_id}}"
+    "/{collection_name}/{{item_id}}"
 )
 def update_item(
 
-    item_id:int,
+    item_id: int,
 
     {parameter_string}
 ):
 
     if item_id >= len(
-        {entity}s
+        {collection_name}
     ):
 
         return {{
@@ -212,7 +209,7 @@ def update_item(
         }}
 
 
-    {entity}s[item_id] = {{
+    {collection_name}[item_id] = {{
 
         {object_string}
     }}
@@ -223,20 +220,20 @@ def update_item(
         "success":
         True,
 
-        "{entity}s":
-        {entity}s
+        "{collection_name}":
+        {collection_name}
     }}
 
 
 @app.delete(
-    "/{entity}s/{{item_id}}"
+    "/{collection_name}/{{item_id}}"
 )
 def delete_item(
-    item_id:int
+    item_id: int
 ):
 
     if item_id >= len(
-        {entity}s
+        {collection_name}
     ):
 
         return {{
@@ -246,7 +243,7 @@ def delete_item(
         }}
 
 
-    {entity}s.pop(
+    {collection_name}.pop(
         item_id
     )
 
@@ -259,7 +256,6 @@ def delete_item(
 
 """
         )
-
 
         return {
 
@@ -278,14 +274,14 @@ def delete_item(
                 requirements_text
             },
 
-            "file_plan":[
+            "file_plan": [
 
                 "main.py",
 
                 "requirements.txt"
             ],
 
-            "implementation_steps":[
+            "implementation_steps": [
 
                 f"Create {entity} storage",
 
@@ -298,7 +294,7 @@ def delete_item(
                 "Create DELETE endpoint"
             ],
 
-            "test_steps":[
+            "test_steps": [
 
                 "pip install -r requirements.txt",
 

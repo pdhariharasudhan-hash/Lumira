@@ -1,9 +1,11 @@
-# app/services/builder_service.py
-
 from typing import Dict, Any
 
 from app.services.projects.project_classifier import (
     ProjectClassifier
+)
+
+from app.services.code.naming_service import (
+    NamingService
 )
 
 
@@ -15,6 +17,10 @@ class BuilderService:
 
         self.classifier = (
             ProjectClassifier()
+        )
+
+        self.naming = (
+            NamingService()
         )
 
     def build(
@@ -32,6 +38,13 @@ class BuilderService:
             "primary_entity"
         ]
 
+        collection_name = (
+            self.naming
+            .pluralize(
+                entity
+            )
+        )
+
         actions = result[
             "actions"
         ]
@@ -39,7 +52,6 @@ class BuilderService:
         suggested_steps = []
 
         step_number = 1
-
 
         if "storage" in actions:
 
@@ -54,14 +66,13 @@ class BuilderService:
                     "inputs": {},
 
                     "expected_output":
-                    f"{entity}s initialized",
+                    f"{collection_name} initialized",
 
                     "dependencies": []
                 }
             )
 
             step_number += 1
-
 
         route_map = {
 
@@ -70,7 +81,6 @@ class BuilderService:
             "update": "PUT",
             "delete": "DELETE"
         }
-
 
         for action, http in route_map.items():
 
@@ -96,7 +106,6 @@ class BuilderService:
                 )
 
                 step_number += 1
-
 
         return {
 

@@ -26,6 +26,10 @@
         {
           "name": "calculator_api",
           "path": "generated/calculator_api"
+        },
+        {
+          "name": "company_api",
+          "path": "generated/company_api"
         }
       ],
       "collections": [],

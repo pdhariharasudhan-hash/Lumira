@@ -101,5 +101,21 @@
         "version": "v1"
       }
     }
+  ],
+  "company_api": [
+    {
+      "timestamp": "2026-06-18 22:10:10",
+      "event": "project_created",
+      "details": {
+        "goal": "build company api"
+      }
+    },
+    {
+      "timestamp": "2026-06-18 22:10:10",
+      "event": "version_created",
+      "details": {
+        "version": "v1"
+      }
+    }
   ]
 }

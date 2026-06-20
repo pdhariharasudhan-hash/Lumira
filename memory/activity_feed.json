@@ -94,5 +94,14 @@
       "project": "calculator_api"
     },
     "timestamp": "2026-06-18 21:56:08"
+  },
+  {
+    "event": "project_added",
+    "source": "workspace",
+    "data": {
+      "workspace": "default",
+      "project": "company_api"
+    },
+    "timestamp": "2026-06-18 22:10:10"
   }
 ]
