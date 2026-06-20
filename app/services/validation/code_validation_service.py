@@ -34,16 +34,17 @@ class CodeValidationService:
 
         if "main.py" in files:
 
+            main_content = (
+                files[
+                    "main.py"
+                ]
+            )
+
             try:
 
                 compile(
-
-                    files[
-                        "main.py"
-                    ],
-
+                    main_content,
                     "main.py",
-
                     "exec"
                 )
 
@@ -51,6 +52,24 @@ class CodeValidationService:
 
                 errors.append(
                     str(e)
+                )
+
+            if (
+                "from fastapi import FastAPI"
+                not in main_content
+            ):
+
+                errors.append(
+                    "fastapi import missing"
+                )
+
+            if (
+                "app = FastAPI()"
+                not in main_content
+            ):
+
+                errors.append(
+                    "FastAPI app instance missing"
                 )
 
         return {
