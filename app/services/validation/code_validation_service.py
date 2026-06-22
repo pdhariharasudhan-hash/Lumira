@@ -72,6 +72,42 @@ class CodeValidationService:
                     "FastAPI app instance missing"
                 )
 
+            if (
+                "@app.get("
+                not in main_content
+            ):
+
+                errors.append(
+                    "GET route missing"
+                )
+
+            if (
+                "@app.post("
+                not in main_content
+            ):
+
+                errors.append(
+                    "POST route missing"
+                )
+
+            if (
+                "@app.put("
+                not in main_content
+            ):
+
+                errors.append(
+                    "PUT route missing"
+                )
+
+            if (
+                "@app.delete("
+                not in main_content
+            ):
+
+                errors.append(
+                    "DELETE route missing"
+                )
+
         return {
 
             "success":
