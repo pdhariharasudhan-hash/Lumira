@@ -53,9 +53,9 @@
     "goal": "build task api",
     "workspace": "default",
     "path": "generated/task_api",
-    "latest_version": "v1",
+    "latest_version": "v2",
     "created": "2026-06-18 21:44:37",
-    "updated": "2026-06-18 21:44:37",
+    "updated": "2026-06-22 20:42:46",
     "status": "active",
     "features": []
   },
@@ -73,9 +73,9 @@
     "goal": "build company api",
     "workspace": "default",
     "path": "generated/company_api",
-    "latest_version": "v1",
+    "latest_version": "v2",
     "created": "2026-06-18 22:10:10",
-    "updated": "2026-06-18 22:10:10",
+    "updated": "2026-06-22 20:46:08",
     "status": "active",
     "features": []
   }

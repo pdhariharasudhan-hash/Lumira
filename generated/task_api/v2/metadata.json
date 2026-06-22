@@ -1,0 +1,8 @@
+{
+    "idea": "build task manager api",
+    "project_type": "api",
+    "entity": "task_api",
+    "created": "2026-06-22 20:42:46",
+    "version": "v2",
+    "status": "generated"
+}

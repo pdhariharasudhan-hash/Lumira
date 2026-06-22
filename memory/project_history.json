@@ -84,6 +84,13 @@
       "details": {
         "version": "v1"
       }
+    },
+    {
+      "timestamp": "2026-06-22 20:42:46",
+      "event": "version_created",
+      "details": {
+        "version": "v2"
+      }
     }
   ],
   "calculator_api": [
@@ -115,6 +122,13 @@
       "event": "version_created",
       "details": {
         "version": "v1"
+      }
+    },
+    {
+      "timestamp": "2026-06-22 20:46:08",
+      "event": "version_created",
+      "details": {
+        "version": "v2"
       }
     }
   ]

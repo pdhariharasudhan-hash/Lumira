@@ -32,6 +32,23 @@ class WorkflowEngine:
             )
         )
 
+        if not plan.get(
+            "success",
+            False
+        ):
+
+            return {
+
+                "success":
+                False,
+
+                "message":
+                "planning failed",
+
+                "plan":
+                plan
+            }
+
         results = []
 
         context = {}
@@ -55,6 +72,41 @@ class WorkflowEngine:
             results.append(
                 result
             )
+
+            if (
+                isinstance(
+                    result,
+                    dict
+                )
+                and
+                result.get(
+                    "success"
+                ) is False
+            ):
+
+                return {
+
+                    "success":
+                    False,
+
+                    "goal":
+                    goal,
+
+                    "failed_step":
+                    step,
+
+                    "failure":
+                    result,
+
+                    "plan":
+                    plan,
+
+                    "results":
+                    results,
+
+                    "context":
+                    context
+                }
 
         return {
 
