@@ -5,7 +5,7 @@ from fastapi import (
     HTTPException
 )
 
-from app.services.voice_capture_service import (
+from app.services.voice.voice_capture_service import (
     VoiceCaptureService
 )
 

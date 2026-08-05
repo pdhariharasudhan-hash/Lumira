@@ -2,15 +2,15 @@ from pathlib import Path
 from typing import Dict, List
 import json
 
-from app.services.project_discovery_service import (
+from app.services.projects.project_discovery_service import (
     ProjectDiscoveryService
 )
 
-from app.services.memory_service import (
+from app.services.memory.memory_service import (
     MemoryService
 )
 
-from app.services.artifact_manager_service import (
+from app.services.artifacts.artifact_manager_service import (
     ArtifactManagerService
 )
 

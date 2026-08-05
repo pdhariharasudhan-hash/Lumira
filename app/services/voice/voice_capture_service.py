@@ -3,7 +3,7 @@ from datetime import datetime
 import shutil
 import uuid
 
-from app.services.artifact_manager_service import (
+from app.services.artifacts.artifact_manager_service import (
     ArtifactManagerService
 )
 

@@ -18,6 +18,34 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
+from app.services.conversation.conversation_models import (
+    ConversationState,
+)
+
+from app.services.goals.goal_models import (
+    GoalState,
+)
+
+from app.services.objective.objective_models import (
+    ObjectiveState,
+)
+
+from app.services.context.context_models import (
+    ContextState,
+)
+
+from app.services.constraints.constraint_models import (
+    ConstraintState,
+)
+
+from app.services.reasoning.reasoning_models import (
+    ReasoningState,
+)
+
+from app.services.decision.decision_models import (
+    DecisionState,
+)
+
 
 class BrainMetadata(BaseModel):
     """
@@ -39,11 +67,11 @@ class BrainMetadata(BaseModel):
 
 class BrainState(BaseModel):
     """
-    Temporary working memory for the Brain.
+    Temporary working memory for Lumira.
 
-    Each Intelligence module owns exactly ONE section.
+    Every Brain module owns exactly ONE section.
 
-    Conversation Intelligence
+    Conversation Module
         -> conversation
 
     Goal Manager
@@ -80,33 +108,41 @@ class BrainState(BaseModel):
         -> learning
     """
 
-    conversation: Dict[str, Any] = Field(
-        default_factory=dict
+    # ----------------------------------
+    # Strongly Typed Intelligence States
+    # ----------------------------------
+
+    conversation: ConversationState = Field(
+        default_factory=ConversationState
     )
 
-    goal: Dict[str, Any] = Field(
-        default_factory=dict
+    goal: GoalState = Field(
+        default_factory=GoalState
     )
 
-    objective: Dict[str, Any] = Field(
-        default_factory=dict
+    objective: ObjectiveState = Field(
+        default_factory=ObjectiveState
     )
 
-    context: Dict[str, Any] = Field(
-        default_factory=dict
+    context: ContextState = Field(
+        default_factory=ContextState
     )
 
-    constraints: Dict[str, Any] = Field(
-        default_factory=dict
+    constraints: ConstraintState = Field(
+        default_factory=ConstraintState
     )
 
-    reasoning: Dict[str, Any] = Field(
-        default_factory=dict
+    reasoning: ReasoningState = Field(
+        default_factory=ReasoningState
     )
 
-    decision: Dict[str, Any] = Field(
-        default_factory=dict
+    decision: DecisionState = Field(
+        default_factory=DecisionState
     )
+
+    # ----------------------------------
+    # Remaining Intelligence States
+    # ----------------------------------
 
     plan: Dict[str, Any] = Field(
         default_factory=dict
@@ -134,21 +170,31 @@ class BrainState(BaseModel):
 
     def reset(self) -> None:
         """
-        Reset every cognitive section while
-        preserving fresh metadata.
+        Reset the BrainState for a fresh pipeline execution.
         """
 
-        self.conversation.clear()
-        self.goal.clear()
-        self.objective.clear()
-        self.context.clear()
-        self.constraints.clear()
-        self.reasoning.clear()
-        self.decision.clear()
+        self.conversation = ConversationState()
+
+        self.goal = GoalState()
+
+        self.objective = ObjectiveState()
+
+        self.context = ContextState()
+
+        self.constraints = ConstraintState()
+
+        self.reasoning = ReasoningState()
+
+        self.decision = DecisionState()
+
         self.plan.clear()
+
         self.prediction.clear()
+
         self.verification.clear()
+
         self.reflection.clear()
+
         self.learning.clear()
 
         self.metadata = BrainMetadata()

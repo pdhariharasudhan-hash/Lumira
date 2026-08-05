@@ -1,8 +1,8 @@
-from app.services.lumira_identity_service import (
+from app.services.identity.lumira_identity_service import (
     LumiraIdentityService
 )
 
-from app.services.feature_activation_service import (
+from app.services.features.feature_activation_service import (
     FeatureActivationService
 )
 

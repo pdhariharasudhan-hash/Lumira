@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
-from app.services.memory_service import MemoryService, MemoryValidationError
+from app.services.memory.memory_service import MemoryService, MemoryValidationError
 
 router = APIRouter()
 memory_service = MemoryService()

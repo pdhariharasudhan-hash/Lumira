@@ -1,12 +1,12 @@
-from app.services.feature_activation_service import (
+from app.services.features.feature_activation_service import (
     FeatureActivationService
 )
 
-from app.services.image_generation_service import (
+from app.services.image.image_generation_service import (
     ImageGenerationService
 )
 
-from app.services.unified_search_service import (
+from app.services.search.unified_search_service import (
     UnifiedSearchService
 )
 

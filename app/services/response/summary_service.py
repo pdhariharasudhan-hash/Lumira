@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from app.services.artifact_manager_service import (
+from app.services.artifacts.artifact_manager_service import (
     ArtifactManagerService
 )
 

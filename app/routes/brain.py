@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from app.schemas.common import GenericInput
-from app.services.response_service import build_structured_response
+from app.services.response.response_service import build_structured_response
 
 # Import engine functions directly
 from app.routes.validate import analyze_idea

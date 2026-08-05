@@ -3,8 +3,8 @@ from typing import Dict, Any
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from app.services.code_service import CodeService
-from app.services.response_service import (
+from app.services.code.code_service import CodeService
+from app.services.response.response_service import (
     build_structured_response
 )
 

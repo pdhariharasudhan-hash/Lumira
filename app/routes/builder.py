@@ -3,11 +3,11 @@ from typing import Dict, Any
 from fastapi import APIRouter
 from app.schemas.common import GenericInput
 
-from app.services.builder_service import (
+from app.services.builder.builder_service import (
     BuilderService
 )
 
-from app.services.response_service import (
+from app.services.response.response_service import (
     build_structured_response
 )
 

@@ -8,15 +8,15 @@ from app.services.command_parser_service import (
     CommandParserService
 )
 
-from app.services.capability_router_service import (
+from app.services.capabilities.capability_router_service import (
     CapabilityRouterService
 )
 
-from app.services.execution_context_service import (
+from app.services.execution.execution_context_service import (
     ExecutionContextService
 )
 
-from app.services.intent_classifier_service import (
+from app.services.language.intent_classifier_service import (
     IntentClassifierService
 )
 

@@ -1,4 +1,4 @@
-from app.services.template_store import (
+from app.services.templates.template_store import (
     TemplateStore
 )
 

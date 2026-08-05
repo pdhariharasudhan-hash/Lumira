@@ -1,4 +1,4 @@
-from app.services.feature_registry_service import (
+from app.services.features.feature_registry_service import (
     FeatureRegistryService
 )
 

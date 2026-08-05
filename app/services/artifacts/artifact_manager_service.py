@@ -4,7 +4,7 @@ from typing import Dict, Any
 import json
 import uuid
 
-from app.services.memory_service import (
+from app.services.memory.memory_service import (
     MemoryService
 )
 

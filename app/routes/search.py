@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.services.unified_search_service import (
+from app.services.search.unified_search_service import (
     UnifiedSearchService
 )
 
