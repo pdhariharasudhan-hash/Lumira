@@ -9,11 +9,11 @@ It is recreated for every request and passed between the
 Intelligence Layer modules.
 
 Ownership:
-Handoff 11 - Intelligence Layer
+Handoff 12 - Brain Integration
 """
 
-from typing import Any, Dict
 from datetime import datetime
+from typing import Any, Dict
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -49,7 +49,7 @@ from app.services.decision.decision_models import (
 
 class BrainMetadata(BaseModel):
     """
-    Metadata describing the current brain execution.
+    Metadata describing the current Brain execution.
     """
 
     execution_id: str = Field(
@@ -58,7 +58,7 @@ class BrainMetadata(BaseModel):
 
     pipeline_version: str = "1.0"
 
-    brain_version: str = "handoff_11"
+    brain_version: str = "handoff_12"
 
     started_at: str = Field(
         default_factory=lambda: datetime.utcnow().isoformat()
@@ -69,7 +69,10 @@ class BrainState(BaseModel):
     """
     Temporary working memory for Lumira.
 
-    Every Brain module owns exactly ONE section.
+    Every Brain execution receives a fresh BrainState.
+
+    Raw user input is stored separately from derived
+    Intelligence Layer states.
 
     Conversation Module
         -> conversation
@@ -107,6 +110,12 @@ class BrainState(BaseModel):
     Learning Engine
         -> learning
     """
+
+    # ----------------------------------
+    # Raw Execution Input
+    # ----------------------------------
+
+    user_input: str = ""
 
     # ----------------------------------
     # Strongly Typed Intelligence States
@@ -164,6 +173,10 @@ class BrainState(BaseModel):
         default_factory=dict
     )
 
+    # ----------------------------------
+    # Execution Metadata
+    # ----------------------------------
+
     metadata: BrainMetadata = Field(
         default_factory=BrainMetadata
     )
@@ -172,6 +185,8 @@ class BrainState(BaseModel):
         """
         Reset the BrainState for a fresh pipeline execution.
         """
+
+        self.user_input = ""
 
         self.conversation = ConversationState()
 

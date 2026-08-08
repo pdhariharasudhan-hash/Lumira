@@ -1,86 +1,195 @@
 """
 brain_service.py
 
-Main orchestrator for Lumira's Intelligence Layer.
+Main entry point for Lumira's Intelligence Layer.
 
-BrainService coordinates execution of all registered
-Brain modules.
+BrainService coordinates the complete Brain execution flow.
 
-It does NOT contain intelligence itself.
+It does not contain cognitive intelligence itself.
+
+Flow:
+
+BrainRequest
+    ↓
+BrainState
+    ↓
+BrainValidator
+    ↓
+BrainPipeline
+    ↓
+BrainExecutor
+    ↓
+BrainResponse
 
 Ownership:
-Handoff 11 - Intelligence Layer
+Handoff 12 - Brain Integration
 """
 
-from typing import List
+from typing import Optional
 
-from app.services.brain.brain_module import BrainModule
-from app.services.brain.brain_pipeline import BrainPipeline
-from app.services.brain.brain_state import BrainState
+from app.services.brain.brain_factory import (
+    BrainFactory,
+)
+
+from app.services.brain.brain_request import (
+    BrainRequest,
+)
+
+from app.services.brain.brain_response import (
+    BrainResponse,
+)
+
+from app.services.brain.brain_state import (
+    BrainState,
+)
 
 
 class BrainService:
     """
-    Main entry point for Lumira's Brain.
-
-    Creates a fresh BrainState,
-    executes every registered BrainModule
-    in pipeline order,
-    and returns the completed state.
+    Main public orchestrator for Lumira's Brain.
     """
 
     def __init__(self) -> None:
 
-        self.pipeline = BrainPipeline()
-
-        self.modules: List[BrainModule] = []
-
-    def register(
-        self,
-        module: BrainModule
-    ) -> None:
-        """
-        Register a Brain module.
-        """
-
-        self.modules.append(module)
-
-        self.modules.sort(
-            key=lambda m: m.order
+        components = (
+            BrainFactory.create_brain_components()
         )
 
-    def clear_modules(self) -> None:
+        self.registry = components["registry"]
+
+        self.executor = components["executor"]
+
+        self.validator = components["validator"]
+
+        self.pipeline = (
+            self._create_pipeline()
+        )
+
+    def _create_pipeline(self):
         """
-        Remove all registered modules.
+        Create the BrainPipeline using the shared executor.
         """
 
-        self.modules.clear()
+        from app.services.brain.brain_pipeline import (
+            BrainPipeline,
+        )
 
-    def get_modules(self) -> List[BrainModule]:
-        """
-        Return registered modules.
-        """
+        return BrainPipeline(
+            executor=self.executor
+        )
 
-        return list(self.modules)
-
-    def execute(self) -> BrainState:
+    def create_state(
+        self,
+        request: Optional[BrainRequest] = None,
+    ) -> BrainState:
         """
-        Execute the Intelligence Layer.
+        Create a fresh temporary BrainState.
+
+        Raw user input is stored directly on BrainState.
         """
 
         state = BrainState()
 
-        enabled = {
-            stage.name
-            for stage in self.pipeline.get_stages()
-        }
+        if request is not None:
 
-        for module in self.modules:
-
-            if module.name not in enabled:
-                continue
-
-            state = module.execute(state)
+            state.user_input = request.message
 
         return state
-        
+
+    def validate(
+        self,
+        state: BrainState,
+    ) -> dict:
+        """
+        Validate the Brain registry and current state.
+        """
+
+        return self.validator.validate(
+            self.registry,
+            state,
+        )
+
+    def execute(
+        self,
+        request: Optional[BrainRequest] = None,
+    ) -> BrainResponse:
+        """
+        Execute one complete Brain request.
+        """
+
+        state = self.create_state(
+            request
+        )
+
+        validation = self.validate(
+            state
+        )
+
+        if not validation["valid"]:
+
+            return BrainResponse(
+                success=False,
+                state=state,
+                error=str(validation),
+            )
+
+        result = (
+            self.pipeline.execute_with_trace(
+                state
+            )
+        )
+
+        final_state = result["state"]
+
+        trace = result["trace"]
+
+        final_validation = (
+            self.validator.validate_state(
+                final_state
+            )
+        )
+
+        if not final_validation["valid"]:
+
+            return BrainResponse(
+                success=False,
+                state=final_state,
+                trace=trace,
+                error=str(
+                    final_validation
+                ),
+            )
+
+        return BrainResponse(
+            success=True,
+            state=final_state,
+            trace=trace,
+        )
+
+    def get_modules(self):
+        """
+        Return all registered Intelligence modules.
+        """
+
+        return self.registry.get_modules()
+
+    def get_execution_order(self):
+        """
+        Return the deterministic Intelligence execution order.
+        """
+
+        return self.executor.get_execution_order()
+
+    def get_stage_names(self):
+        """
+        Return the pipeline stage names.
+        """
+
+        return self.pipeline.get_stage_names()
+
+    def total_stages(self) -> int:
+        """
+        Return the number of enabled Brain stages.
+        """
+
+        return self.pipeline.total_stages()

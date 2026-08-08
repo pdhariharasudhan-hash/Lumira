@@ -7,11 +7,16 @@ This module updates the runtime ConversationState
 inside BrainState.
 
 Ownership:
-Handoff 11 - Conversation Intelligence
+Handoff 12 - Brain Integration
 """
 
-from app.services.brain.brain_module import BrainModule
-from app.services.brain.brain_state import BrainState
+from app.services.brain.brain_module import (
+    BrainModule,
+)
+
+from app.services.brain.brain_state import (
+    BrainState,
+)
 
 from app.services.conversation.conversation_service import (
     ConversationService,
@@ -46,12 +51,11 @@ class ConversationModule(BrainModule):
         Execute the Conversation Intelligence stage.
         """
 
-        state.conversation = self.service.analyze(
-            user_input=state.context.get(
-                "user_input",
-                "",
-            ),
-            state=state.conversation,
+        state.conversation = (
+            self.service.analyze(
+                user_input=state.user_input,
+                state=state.conversation,
+            )
         )
 
         return state
