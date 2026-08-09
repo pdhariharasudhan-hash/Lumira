@@ -25,6 +25,9 @@ from app.services.decision.decision_models import (
 class PredictionService:
     """
     Runtime Prediction Engine.
+
+    Predicts likely outcomes, risks, bottlenecks,
+    duration, and complexity from the current plan.
     """
 
     def analyze(
@@ -33,6 +36,10 @@ class PredictionService:
         decision: DecisionState,
         state: PredictionState,
     ) -> PredictionState:
+        """
+        Analyze the current execution plan and produce
+        runtime predictions.
+        """
 
         state.expected_outcomes = (
             self._expected_outcomes(
@@ -70,9 +77,8 @@ class PredictionService:
 
         state.failure_probability = (
             round(
-                1.0 -
-                decision.confidence,
-                2
+                1.0 - decision.confidence,
+                2,
             )
         )
 
@@ -86,81 +92,123 @@ class PredictionService:
 
         return state
 
-    # -----------------------------
+    # ----------------------------------
+    # Expected Outcomes
+    # ----------------------------------
 
     def _expected_outcomes(
         self,
         planner: PlannerState,
-    ):
+    ) -> list[str]:
+        """
+        Predict expected outputs from the plan.
+        """
 
         return list(
             planner.estimated_outputs
         )
 
+    # ----------------------------------
+    # Risk Prediction
+    # ----------------------------------
+
     def _risks(
         self,
         planner: PlannerState,
-    ):
+    ) -> list[str]:
+        """
+        Identify likely risks resulting from
+        the current execution plan.
+        """
 
-        risks = []
+        risks: list[str] = []
 
         if planner.blocked_tasks:
-
             risks.append(
-                "Blocked tasks detected."
+                "Execution may be delayed until "
+                "planner blockers are resolved."
             )
 
         if planner.dependencies:
-
             risks.append(
-                "Execution depends on external requirements."
+                "Execution may be delayed because "
+                "required dependencies are unresolved."
             )
 
         return risks
 
+    # ----------------------------------
+    # Bottleneck Prediction
+    # ----------------------------------
+
     def _bottlenecks(
         self,
         planner: PlannerState,
-    ):
+    ) -> list[str]:
+        """
+        Identify current execution bottlenecks.
+        """
 
-        return list(
-            planner.dependencies
-        )
+        bottlenecks: list[str] = []
+
+        if planner.blocked_tasks:
+            bottlenecks.extend(
+                planner.blocked_tasks
+            )
+
+        if planner.dependencies:
+            bottlenecks.extend(
+                planner.dependencies
+            )
+
+        return bottlenecks
+
+    # ----------------------------------
+    # Duration Estimation
+    # ----------------------------------
 
     def _duration(
         self,
         planner: PlannerState,
-    ):
+    ) -> str:
+        """
+        Estimate execution duration from
+        the number of planned steps.
+        """
 
-        if len(
+        step_count = len(
             planner.execution_steps
-        ) < 5:
+        )
 
+        if step_count < 5:
             return "Short"
 
-        if len(
-            planner.execution_steps
-        ) < 10:
-
+        if step_count < 10:
             return "Medium"
 
         return "Long"
 
+    # ----------------------------------
+    # Complexity Estimation
+    # ----------------------------------
+
     def _complexity(
         self,
         planner: PlannerState,
-    ):
+    ) -> str:
+        """
+        Estimate execution complexity from
+        the number of planned steps.
+        """
 
-        count = len(
+        step_count = len(
             planner.execution_steps
         )
 
-        if count < 5:
-
+        if step_count < 5:
             return "Low"
 
-        if count < 10:
-
+        if step_count < 10:
             return "Medium"
 
         return "High"
