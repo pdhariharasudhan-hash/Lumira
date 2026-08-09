@@ -9,7 +9,7 @@ It is recreated for every request and passed between the
 Intelligence Layer modules.
 
 Ownership:
-Handoff 12 - Brain Integration
+Handoff 12 - Intelligence Layer
 """
 
 from datetime import datetime
@@ -46,6 +46,26 @@ from app.services.decision.decision_models import (
     DecisionState,
 )
 
+from app.services.planner.planner_models import (
+    PlannerState,
+)
+
+from app.services.prediction.prediction_models import (
+    PredictionState,
+)
+
+from app.services.verification.verification_models import (
+    VerificationState,
+)
+
+from app.services.reflection.reflection_models import (
+    ReflectionState,
+)
+
+from app.services.learning.learning_models import (
+    LearningState,
+)
+
 
 class BrainMetadata(BaseModel):
     """
@@ -69,10 +89,7 @@ class BrainState(BaseModel):
     """
     Temporary working memory for Lumira.
 
-    Every Brain execution receives a fresh BrainState.
-
-    Raw user input is stored separately from derived
-    Intelligence Layer states.
+    Every Brain module owns exactly ONE section.
 
     Conversation Module
         -> conversation
@@ -96,7 +113,7 @@ class BrainState(BaseModel):
         -> decision
 
     Planner Intelligence
-        -> plan
+        -> planner
 
     Prediction Engine
         -> prediction
@@ -112,7 +129,7 @@ class BrainState(BaseModel):
     """
 
     # ----------------------------------
-    # Raw Execution Input
+    # Original User Input
     # ----------------------------------
 
     user_input: str = ""
@@ -149,37 +166,37 @@ class BrainState(BaseModel):
         default_factory=DecisionState
     )
 
-    # ----------------------------------
-    # Remaining Intelligence States
-    # ----------------------------------
-
-    plan: Dict[str, Any] = Field(
-        default_factory=dict
+    planner: PlannerState = Field(
+        default_factory=PlannerState
     )
 
-    prediction: Dict[str, Any] = Field(
-        default_factory=dict
+    prediction: PredictionState = Field(
+        default_factory=PredictionState
     )
 
-    verification: Dict[str, Any] = Field(
-        default_factory=dict
+    verification: VerificationState = Field(
+        default_factory=VerificationState
     )
 
-    reflection: Dict[str, Any] = Field(
-        default_factory=dict
+    reflection: ReflectionState = Field(
+        default_factory=ReflectionState
     )
 
-    learning: Dict[str, Any] = Field(
-        default_factory=dict
+    learning: LearningState = Field(
+        default_factory=LearningState
     )
 
     # ----------------------------------
-    # Execution Metadata
+    # Brain Metadata
     # ----------------------------------
 
     metadata: BrainMetadata = Field(
         default_factory=BrainMetadata
     )
+
+    # ----------------------------------
+    # Reset
+    # ----------------------------------
 
     def reset(self) -> None:
         """
@@ -202,17 +219,21 @@ class BrainState(BaseModel):
 
         self.decision = DecisionState()
 
-        self.plan.clear()
+        self.planner = PlannerState()
 
-        self.prediction.clear()
+        self.prediction = PredictionState()
 
-        self.verification.clear()
+        self.verification = VerificationState()
 
-        self.reflection.clear()
+        self.reflection = ReflectionState()
 
-        self.learning.clear()
+        self.learning = LearningState()
 
         self.metadata = BrainMetadata()
+
+    # ----------------------------------
+    # Serialization
+    # ----------------------------------
 
     def to_dict(self) -> Dict[str, Any]:
         """
