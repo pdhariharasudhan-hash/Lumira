@@ -51,7 +51,10 @@ class BrainValidator:
         if len(orders) != len(set(orders)):
             return {
                 "valid": False,
-                "error": "Brain modules contain duplicate execution orders.",
+                "error": (
+                    "Brain modules contain duplicate "
+                    "execution orders."
+                ),
             }
 
         sorted_orders = sorted(orders)
@@ -106,7 +109,9 @@ class BrainValidator:
         return {
             "valid": True,
             "state_type": state.__class__.__name__,
-            "execution_id": state.metadata.execution_id,
+            "execution_id": (
+                state.execution_context.execution_id
+            ),
         }
 
     def validate(

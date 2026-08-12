@@ -8,15 +8,34 @@ BrainState is NOT permanent memory.
 It is recreated for every request and passed between the
 Intelligence Layer modules.
 
+BrainState contains both:
+
+1. Execution context
+   -> BrainContext
+
+2. Cognitive intelligence states
+   -> ConversationState
+   -> GoalState
+   -> ObjectiveState
+   -> ContextState
+   -> ConstraintState
+   -> ReasoningState
+   -> DecisionState
+   -> PlannerState
+   -> PredictionState
+   -> VerificationState
+   -> ReflectionState
+   -> LearningState
+
 Ownership:
 Handoff 12 - Intelligence Layer
 """
 
-from datetime import datetime
 from typing import Any, Dict
-from uuid import uuid4
 
 from pydantic import BaseModel, Field
+
+from app.services.brain.brain_context import BrainContext
 
 from app.services.conversation.conversation_models import (
     ConversationState,
@@ -72,24 +91,16 @@ class BrainMetadata(BaseModel):
     Metadata describing the current Brain execution.
     """
 
-    execution_id: str = Field(
-        default_factory=lambda: str(uuid4())
-    )
-
     pipeline_version: str = "1.0"
 
     brain_version: str = "handoff_12"
-
-    started_at: str = Field(
-        default_factory=lambda: datetime.utcnow().isoformat()
-    )
 
 
 class BrainState(BaseModel):
     """
     Temporary working memory for Lumira.
 
-    Every Brain module owns exactly ONE section.
+    Every Brain module owns exactly ONE cognitive section.
 
     Conversation Module
         -> conversation
@@ -126,7 +137,18 @@ class BrainState(BaseModel):
 
     Learning Engine
         -> learning
+
+    Execution-level metadata belongs to:
+        -> execution_context
     """
+
+    # ----------------------------------
+    # Execution Context
+    # ----------------------------------
+
+    execution_context: BrainContext = Field(
+        default_factory=BrainContext
+    )
 
     # ----------------------------------
     # Original User Input
@@ -202,6 +224,8 @@ class BrainState(BaseModel):
         """
         Reset the BrainState for a fresh pipeline execution.
         """
+
+        self.execution_context = BrainContext()
 
         self.user_input = ""
 

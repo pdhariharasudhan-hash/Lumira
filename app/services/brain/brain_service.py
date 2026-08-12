@@ -85,14 +85,50 @@ class BrainService:
         """
         Create a fresh temporary BrainState.
 
-        Raw user input is stored directly on BrainState.
+        Request data is mapped into the correct
+        BrainState boundaries.
+
+        User input:
+            request.message
+                -> state.user_input
+
+        Project:
+            request.project
+                -> state.execution_context.project_id
+
+        Metadata:
+            request.metadata
+                -> state.execution_context.metadata
         """
 
         state = BrainState()
 
-        if request is not None:
+        if request is None:
+            return state
 
-            state.user_input = request.message
+        # ----------------------------------
+        # User Input
+        # ----------------------------------
+
+        state.user_input = request.message
+
+        # ----------------------------------
+        # Execution Context
+        # ----------------------------------
+
+        if request.project is not None:
+
+            state.execution_context.project_id = (
+                request.project
+            )
+
+        # ----------------------------------
+        # Request Metadata
+        # ----------------------------------
+
+        state.execution_context.metadata = dict(
+            request.metadata
+        )
 
         return state
 
