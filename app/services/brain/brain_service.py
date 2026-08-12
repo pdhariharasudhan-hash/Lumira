@@ -85,20 +85,8 @@ class BrainService:
         """
         Create a fresh temporary BrainState.
 
-        Request data is mapped into the correct
-        BrainState boundaries.
-
-        User input:
-            request.message
-                -> state.user_input
-
-        Project:
-            request.project
-                -> state.execution_context.project_id
-
-        Metadata:
-            request.metadata
-                -> state.execution_context.metadata
+        Request-level information is propagated into
+        the BrainState and its execution context.
         """
 
         state = BrainState()
@@ -107,7 +95,7 @@ class BrainService:
             return state
 
         # ----------------------------------
-        # User Input
+        # Original User Input
         # ----------------------------------
 
         state.user_input = request.message
@@ -116,18 +104,12 @@ class BrainService:
         # Execution Context
         # ----------------------------------
 
-        if request.project is not None:
-
-            state.execution_context.project_id = (
-                request.project
-            )
-
-        # ----------------------------------
-        # Request Metadata
-        # ----------------------------------
-
-        state.execution_context.metadata = dict(
-            request.metadata
+        state.execution_context.update(
+            session_id=request.session_id,
+            project_id=request.project or "",
+            environment=request.environment,
+            workspace=request.workspace,
+            metadata=dict(request.metadata),
         )
 
         return state
