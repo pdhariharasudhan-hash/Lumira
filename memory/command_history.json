@@ -1,0 +1,16 @@
+[
+  {
+    "request_id": "5aa3e46a-223b-47ae-97f3-1667cc0d8ce8",
+    "execution_id": "00f95bff-4d5b-4a64-87ee-040970c75074",
+    "session_id": "history_test",
+    "project_id": "expense_api",
+    "message": "build an expense tracker API",
+    "environment": "development",
+    "workspace": "default",
+    "metadata": {
+      "source": "history_test",
+      "priority": "high"
+    },
+    "timestamp": "2026-08-15T15:19:17.311649"
+  }
+]

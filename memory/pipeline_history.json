@@ -1,0 +1,75 @@
+[
+  {
+    "execution_id": "4e8323f5-3a48-4425-9942-48e127d1c7ae",
+    "request_id": "6a48b612-9ba5-4413-b48a-62605233eccd",
+    "session_id": "history_test",
+    "project_id": "expense_api",
+    "user_input": "build an expense tracker API",
+    "success": true,
+    "error": null,
+    "trace": [
+      {
+        "module": "conversation",
+        "order": 1,
+        "status": "completed"
+      },
+      {
+        "module": "goal",
+        "order": 2,
+        "status": "completed"
+      },
+      {
+        "module": "objective",
+        "order": 3,
+        "status": "completed"
+      },
+      {
+        "module": "context",
+        "order": 4,
+        "status": "completed"
+      },
+      {
+        "module": "constraints",
+        "order": 5,
+        "status": "completed"
+      },
+      {
+        "module": "reasoning",
+        "order": 6,
+        "status": "completed"
+      },
+      {
+        "module": "decision",
+        "order": 7,
+        "status": "completed"
+      },
+      {
+        "module": "planner",
+        "order": 8,
+        "status": "completed"
+      },
+      {
+        "module": "prediction",
+        "order": 9,
+        "status": "completed"
+      },
+      {
+        "module": "verification",
+        "order": 10,
+        "status": "completed"
+      },
+      {
+        "module": "reflection",
+        "order": 11,
+        "status": "completed"
+      },
+      {
+        "module": "learning",
+        "order": 12,
+        "status": "completed"
+      }
+    ],
+    "stage_count": 12,
+    "timestamp": "2026-08-15T15:19:17.318637"
+  }
+]
