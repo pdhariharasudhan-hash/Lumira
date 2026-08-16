@@ -10,15 +10,19 @@ It does not contain cognitive intelligence itself.
 Flow:
 
 BrainRequest
-    ↓
+    ?
 BrainState
-    ↓
+    ?
+Command History
+    ?
 BrainValidator
-    ↓
+    ?
 BrainPipeline
-    ↓
+    ?
 BrainExecutor
-    ↓
+    ?
+Pipeline History
+    ?
 BrainResponse
 
 Ownership:
@@ -43,6 +47,14 @@ from app.services.brain.brain_state import (
     BrainState,
 )
 
+from app.services.history.command_history_service import (
+    CommandHistoryService,
+)
+
+from app.services.history.pipeline_history_service import (
+    PipelineHistoryService,
+)
+
 
 class BrainService:
     """
@@ -63,6 +75,14 @@ class BrainService:
 
         self.pipeline = (
             self._create_pipeline()
+        )
+
+        self.command_history = (
+            CommandHistoryService()
+        )
+
+        self.pipeline_history = (
+            PipelineHistoryService()
         )
 
     def _create_pipeline(self):
@@ -94,15 +114,7 @@ class BrainService:
         if request is None:
             return state
 
-        # ----------------------------------
-        # Original User Input
-        # ----------------------------------
-
         state.user_input = request.message
-
-        # ----------------------------------
-        # Execution Context
-        # ----------------------------------
 
         state.execution_context.update(
             session_id=request.session_id,
@@ -113,6 +125,53 @@ class BrainService:
         )
 
         return state
+
+    def _record_command(
+        self,
+        state: BrainState,
+    ) -> None:
+        """
+        Record the incoming command using the current
+        BrainState execution identity.
+        """
+
+        context = state.execution_context
+
+        self.command_history.record(
+            request_id=context.request_id,
+            execution_id=context.execution_id,
+            session_id=context.session_id,
+            project_id=context.project_id,
+            message=state.user_input,
+            environment=context.environment,
+            workspace=context.workspace,
+            metadata=dict(context.metadata),
+        )
+
+    def _record_pipeline(
+        self,
+        state: BrainState,
+        success: bool,
+        trace: list,
+        error: Optional[str] = None,
+    ) -> None:
+        """
+        Record the completed or failed pipeline using
+        the SAME BrainState execution identity.
+        """
+
+        context = state.execution_context
+
+        self.pipeline_history.record(
+            execution_id=context.execution_id,
+            request_id=context.request_id,
+            session_id=context.session_id,
+            project_id=context.project_id,
+            user_input=state.user_input,
+            success=success,
+            trace=trace,
+            error=error,
+        )
 
     def validate(
         self,
@@ -133,11 +192,27 @@ class BrainService:
     ) -> BrainResponse:
         """
         Execute one complete Brain request.
+
+        One request creates exactly one BrainState.
+        That same state owns the execution identity used
+        by command history and pipeline history.
         """
 
         state = self.create_state(
             request
         )
+
+        # ----------------------------------
+        # Record incoming command
+        # ----------------------------------
+
+        self._record_command(
+            state
+        )
+
+        # ----------------------------------
+        # Initial validation
+        # ----------------------------------
 
         validation = self.validate(
             state
@@ -145,21 +220,62 @@ class BrainService:
 
         if not validation["valid"]:
 
+            error = str(validation)
+
+            self._record_pipeline(
+                state=state,
+                success=False,
+                trace=[],
+                error=error,
+            )
+
             return BrainResponse(
                 success=False,
                 state=state,
-                error=str(validation),
+                error=error,
             )
 
-        result = (
-            self.pipeline.execute_with_trace(
-                state
+        # ----------------------------------
+        # Brain Pipeline
+        # ----------------------------------
+
+        trace = []
+
+        try:
+
+            result = (
+                self.pipeline.execute_with_trace(
+                    state
+                )
             )
-        )
 
-        final_state = result["state"]
+            final_state = result["state"]
 
-        trace = result["trace"]
+            trace = result["trace"]
+
+        except Exception as exc:
+
+            error = (
+                f"{type(exc).__name__}: {exc}"
+            )
+
+            self._record_pipeline(
+                state=state,
+                success=False,
+                trace=trace,
+                error=error,
+            )
+
+            return BrainResponse(
+                success=False,
+                state=state,
+                trace=trace,
+                error=error,
+            )
+
+        # ----------------------------------
+        # Final validation
+        # ----------------------------------
 
         final_validation = (
             self.validator.validate_state(
@@ -169,14 +285,34 @@ class BrainService:
 
         if not final_validation["valid"]:
 
+            error = str(
+                final_validation
+            )
+
+            self._record_pipeline(
+                state=final_state,
+                success=False,
+                trace=trace,
+                error=error,
+            )
+
             return BrainResponse(
                 success=False,
                 state=final_state,
                 trace=trace,
-                error=str(
-                    final_validation
-                ),
+                error=error,
             )
+
+        # ----------------------------------
+        # Successful pipeline history
+        # ----------------------------------
+
+        self._record_pipeline(
+            state=final_state,
+            success=True,
+            trace=trace,
+            error=None,
+        )
 
         return BrainResponse(
             success=True,

@@ -2,3 +2,9 @@
 __pycache__/
 *.pyc
 .env
+# Lumira runtime history
+memory/activity_feed.json
+memory/command_history.json
+memory/pipeline_history.json
+memory/planner_history.json
+memory/execution_sessions.json
