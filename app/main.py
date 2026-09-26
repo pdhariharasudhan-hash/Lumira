@@ -74,6 +74,14 @@ from app.routes.command import (
     router as command_router
 )
 
+from app.routes.sessions import (
+    router as sessions_router
+)
+
+from app.routes.goals import (
+    router as goals_router
+)
+
 
 app = FastAPI(
     title="Personal AI Core",
@@ -179,6 +187,16 @@ app.include_router(
 app.include_router(
     command_router,
     tags=["Command"]
+)
+
+app.include_router(
+    sessions_router,
+    tags=["Sessions"]
+)
+
+app.include_router(
+    goals_router,
+    tags=["Goals"]
 )
 
 

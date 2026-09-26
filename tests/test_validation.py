@@ -7,6 +7,7 @@ from app.services.artifacts.artifact_manager_service import ArtifactManagerServi
 from app.services.history.pipeline_history_service import PipelineHistoryService
 from app.services.memory.memory_service import MemoryService
 from app.services.projects.project_writer import ProjectWriter
+from app.services.sessions.session_manager_service import SessionManagerService
 
 
 def test_brain_route_builds_valid_response(tmp_path, monkeypatch):
@@ -18,6 +19,9 @@ def test_brain_route_builds_valid_response(tmp_path, monkeypatch):
     assert payload["success"] is True
     assert payload["data"]["stage"] == "complete"
     assert payload["data"]["state"]["goal"]["primary_goal"]
+    session_id = payload["data"]["state"]["execution_context"]["session_id"]
+    assert client.get(f"/sessions/{session_id}").status_code == 200
+    assert client.get(f"/brain/state/{session_id}").json()["cognitive_state"]["goal"]
     assert [entry["module"] for entry in payload["data"]["trace"]] == [
         "conversation",
         "goal",
@@ -84,14 +88,15 @@ def test_builder_mode_project_and_followups_keep_context(tmp_path, monkeypatch):
 
     mode = client.post("/command", json={"input": "Lumira, enter Builder Mode."}).json()
     assert mode["result"]["mode"] == "builder"
+    session_id = mode["session_id"]
 
-    created = client.post("/command", json={"input": "Create a FastAPI expense API."}).json()
+    created = client.post("/command", json={"input": "Create a FastAPI expense API.", "session_id": session_id}).json()
     assert created["result"]["project_name"] == "expense_api"
     assert created["context"]["active_project"] == "expense_api"
     assert created["brain"]["state"]["mode"]["active_mode"] == "builder"
 
-    auth = client.post("/command", json={"input": "Add JWT authentication."}).json()
-    tests = client.post("/command", json={"input": "Add tests."}).json()
+    auth = client.post("/command", json={"input": "Add JWT authentication.", "session_id": session_id}).json()
+    tests = client.post("/command", json={"input": "Add tests.", "session_id": session_id}).json()
     assert auth["result"]["success"] is True
     assert tests["result"]["success"] is True
     assert tests["context"]["active_project"] == "expense_api"
@@ -139,6 +144,26 @@ def test_unified_search_finds_records_in_all_supported_sources(tmp_path, monkeyp
         "needle artifact source",
     )
     MemoryService().add_feature_history({"feature": "needle feature"})
+    memory = MemoryService()
+    goal = memory.create_goal("needle durable goal", project_id="needle_project")
+    memory.record_decision(
+        "needle decision",
+        "explicit choice",
+        project_id="needle_project",
+        goal_id=goal["goal_id"],
+    )
+    experience = memory.record_experience(
+        "success",
+        "needle verified experience",
+        "needle workflow passed",
+        project_id="needle_project",
+        goal_id=goal["goal_id"],
+        lessons=["needle pattern was verified with the project test suite."],
+        verified=True,
+    )
+    memory.consolidate_learning(experience)
+    session = SessionManagerService().create_session(project_id="needle_project")
+    SessionManagerService().append_message(session["session_id"], "user", "needle conversation")
     PipelineHistoryService().record(
         execution_id="needle-execution",
         request_id="needle-request",
@@ -157,3 +182,159 @@ def test_unified_search_finds_records_in_all_supported_sources(tmp_path, monkeyp
     assert results["memory"]
     assert results["feature_history"]
     assert results["pipeline_history"]
+    assert results["sessions"]
+    assert results["conversations"]
+    assert results["goals"]
+    assert results["decisions"]
+    assert results["experiences"]
+    assert results["learning"]
+
+
+def test_session_restart_recovers_project_decision_and_scoped_memory(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    first_process = TestClient(app)
+
+    created = first_process.post(
+        "/command",
+        json={"input": "Build a FastAPI expense API."},
+    ).json()
+    session_id = created["session_id"]
+    assert created["result"]["project_name"] == "expense_api"
+
+    authenticated = first_process.post(
+        "/command",
+        json={"input": "Add authentication.", "session_id": session_id},
+    ).json()
+    assert authenticated["result"]["success"] is True
+    version_after_auth = authenticated["context"]["active_version"]
+
+    remembered = first_process.post(
+        "/command",
+        json={
+            "input": "Remember that this project should use JWT authentication.",
+            "session_id": session_id,
+        },
+    ).json()
+    assert remembered["result"]["success"] is True
+    assert remembered["result"]["decision"]["project_id"] == "expense_api"
+
+    MemoryService().record_decision(
+        "Use an unrelated datastore",
+        "Different project requirement",
+        project_id="unrelated_project",
+    )
+
+    # A new TestClient and fresh services model a backend process restart.
+    restarted_process = TestClient(app)
+    recovered = restarted_process.get(f"/sessions/{session_id}")
+    assert recovered.status_code == 200
+    session = recovered.json()
+    assert session["active_project"] == "expense_api"
+    assert session["active_version"] == version_after_auth
+    assert session["current_goal"]
+    assert session["cognitive_state_id"]
+    assert len(session["recent_messages"]) >= 6
+    brain_state = restarted_process.get(f"/brain/state/{session_id}").json()
+    assert brain_state["cognitive_state"]["execution_status"] == "completed"
+    assert brain_state["context_snapshot"][0]["active_project"] == "expense_api"
+
+    relevant_memory = restarted_process.get(
+        "/memory/relevant",
+        params={"q": "JWT authentication", "session_id": session_id},
+    ).json()["data"]
+    assert any("JWT authentication" in item["decision"] for item in relevant_memory["decisions"])
+    assert relevant_memory["learning_records"]
+    project_goals = restarted_process.get("/goals", params={"project_id": "expense_api"}).json()["goals"]
+    assert any(goal["goal_id"] == session["goal_id"] for goal in project_goals)
+
+    resumed = restarted_process.post(
+        "/command",
+        json={"input": "Continue the expense API.", "session_id": session_id},
+    ).json()
+    decisions = resumed["brain"]["state"]["relevant_memory"]["decisions"]
+    assert any("JWT authentication" in item["decision"] for item in decisions)
+    assert all(item["project_id"] != "unrelated_project" for item in decisions)
+    assert resumed["context"]["active_project"] == "expense_api"
+
+    dashboard = restarted_process.post(
+        "/command",
+        json={"input": "Add a dashboard.", "session_id": session_id},
+    ).json()
+    assert dashboard["result"]["success"] is True
+    assert "dashboard" in dashboard["result"]["new_idea"].lower()
+    assert "generated/expense_api/" in dashboard["result"]["saved_to"].replace("\\", "/")
+    assert dashboard["context"]["active_project"] == "expense_api"
+    assert dashboard["context"]["active_version"] != version_after_auth
+
+
+def test_session_lifecycle_api_and_ambiguous_reference(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    client = TestClient(app)
+    created = client.post("/sessions", json={"workspace_id": "test-workspace"})
+    assert created.status_code == 200
+    session_id = created.json()["session_id"]
+
+    from app.services.sessions.session_manager_service import SessionManagerService
+
+    manager = SessionManagerService()
+    manager.add_reference(session_id, "expense_api")
+    manager.add_reference(session_id, "dashboard_app")
+    ambiguous = client.post(
+        "/command",
+        json={"input": "Make it dark.", "session_id": session_id},
+    )
+    assert ambiguous.status_code == 200
+    assert ambiguous.json()["clarification_required"] is True
+    assert ambiguous.json()["reference_resolution"]["status"] == "ambiguous"
+
+    paused = client.post(f"/sessions/{session_id}/pause")
+    assert paused.status_code == 200
+    assert paused.json()["status"] == "paused"
+    resumed = client.post(f"/sessions/{session_id}/resume")
+    assert resumed.status_code == 200
+    assert resumed.json()["status"] == "active"
+    closed = client.post(f"/sessions/{session_id}/close")
+    assert closed.status_code == 200
+    assert closed.json()["status"] == "closed"
+    assert client.post(f"/sessions/{session_id}/pause").status_code == 409
+    assert client.post(f"/sessions/{session_id}/resume").status_code == 409
+    rejected = client.post(
+        "/command",
+        json={"input": "Continue the project.", "session_id": session_id},
+    )
+    assert rejected.status_code == 409
+
+
+def test_goal_api_creates_lists_and_updates_durable_goal(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    client = TestClient(app)
+    created = client.post(
+        "/goals",
+        json={
+            "title": "Expense API",
+            "objective": "Ship JWT-secured expense management",
+            "project_id": "expense_api",
+            "parent_goal_id": "portfolio-root",
+            "priority": "high",
+        },
+    )
+    assert created.status_code == 200
+    goal_id = created.json()["goal_id"]
+
+    updated = client.patch(
+        f"/goals/{goal_id}",
+        json={"status": "in_progress", "progress": 0.4, "milestones": [{"title": "Authentication", "complete": True}]},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["status"] == "in_progress"
+    assert updated.json()["progress"] == 0.4
+
+    listing = client.get("/goals", params={"project_id": "expense_api", "status": "in_progress"})
+    assert listing.status_code == 200
+    assert [goal["goal_id"] for goal in listing.json()["goals"]] == [goal_id]
+
+
+def test_missing_memory_key_keeps_not_found_status(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    response = TestClient(app).get("/memory/not-a-known-key")
+    assert response.status_code == 404

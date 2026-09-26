@@ -53,21 +53,17 @@ class ContextService:
             f"{objective.primary_objective}"
         ).lower()
 
-        state.project_type = (
-            self._detect_project_type(text)
-        )
+        detected_project_type = self._detect_project_type(text)
+        if detected_project_type != "general" or not state.project_type:
+            state.project_type = detected_project_type
 
-        state.domain = (
-            self._detect_domain(text)
-        )
+        detected_domain = self._detect_domain(text)
+        if detected_domain != "general" or not state.domain:
+            state.domain = detected_domain
 
-        state.programming_language = (
-            self._detect_language(text)
-        )
+        state.programming_language = self._detect_language(text) or state.programming_language
 
-        state.framework = (
-            self._detect_framework(text)
-        )
+        state.framework = self._detect_framework(text) or state.framework
 
         state.environment = (
             "development"
@@ -77,7 +73,10 @@ class ContextService:
             "default"
         )
 
-        state.existing_project = False
+        state.existing_project = state.existing_project or bool(
+            conversation.session_id
+            and conversation.recent_references
+        )
 
         state.confidence = (
             self._calculate_confidence(text)

@@ -31,6 +31,10 @@ class ConversationState(BaseModel):
 
     current_topic: str = ""
 
+    session_id: str = ""
+
+    conversation_id: str = ""
+
     current_goal: str = ""
 
     conversation_summary: str = ""
@@ -40,6 +44,14 @@ class ConversationState(BaseModel):
     )
 
     topic_history: List[str] = Field(
+        default_factory=list
+    )
+
+    recent_messages: List[dict] = Field(
+        default_factory=list
+    )
+
+    recent_references: List[str] = Field(
         default_factory=list
     )
 

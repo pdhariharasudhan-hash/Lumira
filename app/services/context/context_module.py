@@ -56,5 +56,9 @@ class ContextModule(BrainModule):
 
             state=state.context,
         )
+        state.context.existing_project = bool(
+            state.execution_context.project_id
+        )
+        state.context.workspace = state.execution_context.workspace
 
         return state

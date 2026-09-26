@@ -55,6 +55,7 @@ class ConversationService:
         # Topic Detection (Temporary)
         # ---------------------------------
 
+        previous_summary = state.conversation_summary
         state.current_topic = text
 
         # ---------------------------------
@@ -66,20 +67,24 @@ class ConversationService:
             or state.topic_history[-1] != text
         ):
             state.topic_history.append(text)
+            state.topic_history = state.topic_history[-20:]
 
         # ---------------------------------
         # Simple Goal Detection
         # ---------------------------------
 
-        state.current_goal = self._detect_goal(text)
+        detected_goal = self._detect_goal(text)
+        if detected_goal:
+            state.current_goal = detected_goal
 
         # ---------------------------------
         # Conversation Summary
         # ---------------------------------
 
-        state.conversation_summary = (
-            f"Current discussion: {state.current_topic}"
-        )
+        current_summary = f"Current discussion: {state.current_topic}"
+        state.conversation_summary = " | ".join(
+            part for part in (previous_summary, current_summary) if part
+        )[-2000:]
 
         # ---------------------------------
         # Intent Detection (Placeholder)

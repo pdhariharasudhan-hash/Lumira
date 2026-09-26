@@ -120,6 +120,20 @@ class CommandParserService:
                 "payload": {"instruction": command},
             }
 
+        if text.startswith(("make it ", "change it ", "update it ")):
+            return {
+                "success": True,
+                "capability": "continue_project",
+                "payload": {"instruction": command},
+            }
+
+        if text.startswith("continue "):
+            return {
+                "success": True,
+                "capability": "resume_project",
+                "payload": {},
+            }
+
         builder_rules = [
             ("generate project", "project_generation"),
             ("create project", "project_generation"),

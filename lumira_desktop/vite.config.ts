@@ -8,6 +8,8 @@ export default defineConfig({
     proxy: {
       "/brain": "http://127.0.0.1:8000",
       "/command": "http://127.0.0.1:8000",
+      "/sessions": "http://127.0.0.1:8000",
+      "/memory": "http://127.0.0.1:8000",
     },
   },
 })

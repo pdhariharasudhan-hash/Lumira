@@ -16,6 +16,7 @@ from app.services.artifacts.artifact_manager_service import (
 
 
 from app.services.history.pipeline_history_service import PipelineHistoryService
+from app.services.sessions.session_manager_service import SessionManagerService
 
 
 class UnifiedSearchService:
@@ -35,6 +36,7 @@ class UnifiedSearchService:
         )
 
         self.pipeline_history = PipelineHistoryService()
+        self.sessions = SessionManagerService()
 
     # ==========================
     # PROJECT SEARCH
@@ -244,6 +246,8 @@ class UnifiedSearchService:
         query: str
     ):
 
+        structured_memory = self.memory.get_all()
+
         return {
 
             "projects":
@@ -269,5 +273,52 @@ class UnifiedSearchService:
             "pipeline_history":
             self.search_pipeline_history(
                 query
-            )
+            ),
+
+            "sessions": self.search_sessions(query),
+
+            "conversations": self.search_conversations(query),
+
+            "goals": self._search_records(structured_memory.get("goals", []), query),
+
+            "decisions": self._search_records(structured_memory.get("decisions", []), query),
+
+            "experiences": self._search_records(structured_memory.get("experiences", []), query),
+
+            "learning": self._search_records(structured_memory.get("learning_records", []), query),
         }
+
+    @staticmethod
+    def _search_records(records, query: str):
+        query = query.strip().lower()
+        if not query:
+            return []
+        return [
+            record for record in records
+            if query in json.dumps(record, ensure_ascii=False).lower()
+        ]
+
+    def search_sessions(self, query: str):
+        query = query.strip().lower()
+        if not query:
+            return []
+        return [
+            session for session in self.sessions.list_sessions(limit=200)
+            if query in json.dumps({key: value for key, value in session.items() if key != "cognitive_state"}, ensure_ascii=False).lower()
+        ]
+
+    def search_conversations(self, query: str):
+        query = query.strip().lower()
+        if not query:
+            return []
+        results = []
+        for session in self.sessions.list_sessions(limit=200):
+            conversation = {
+                "session_id": session.get("session_id"),
+                "conversation_id": session.get("conversation_id"),
+                "summary": session.get("conversation", {}).get("summary", ""),
+                "recent_messages": session.get("recent_messages", []),
+            }
+            if query in json.dumps(conversation, ensure_ascii=False).lower():
+                results.append(conversation)
+        return results

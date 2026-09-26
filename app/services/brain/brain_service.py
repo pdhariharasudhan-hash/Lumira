@@ -62,6 +62,16 @@ from app.services.history.command_history_service import (
 from app.services.history.pipeline_history_service import (
     PipelineHistoryService,
 )
+from app.services.memory.memory_service import MemoryService
+from app.services.sessions.session_manager_service import (
+    SessionManagerService,
+    redact_sensitive_text,
+    redact_sensitive_value,
+)
+from app.services.conversation.conversation_models import ConversationState
+from app.services.goals.goal_models import GoalState
+from app.services.objective.objective_models import ObjectiveState
+from app.services.history.event_logger_service import EventLoggerService
 
 
 class BrainService:
@@ -96,6 +106,9 @@ class BrainService:
         self.mode_detector = (
             ModeDetectionService()
         )
+
+        self.sessions = SessionManagerService()
+        self.memory = MemoryService()
 
     def _create_pipeline(self):
         """
@@ -210,7 +223,7 @@ class BrainService:
             execution_id=context.execution_id,
             session_id=context.session_id,
             project_id=context.project_id,
-            message=state.user_input,
+            message=redact_sensitive_text(state.user_input),
             environment=context.environment,
             workspace=context.workspace,
             metadata=dict(context.metadata),
@@ -235,9 +248,9 @@ class BrainService:
             request_id=context.request_id,
             session_id=context.session_id,
             project_id=context.project_id,
-            user_input=state.user_input,
+            user_input=redact_sensitive_text(state.user_input),
             success=success,
-            trace=trace,
+            trace=redact_sensitive_value(trace),
             error=error,
         )
 
@@ -266,9 +279,44 @@ class BrainService:
         by command history and pipeline history.
         """
 
-        state = self.create_state(
-            request
+        request = request or BrainRequest()
+        session = self.sessions.resolve_session(
+            session_id=request.session_id or None,
+            workspace_id=request.workspace,
+            project_id=request.project,
         )
+        request = request.model_copy(update={
+            "session_id": session["session_id"],
+            "project": request.project or session.get("active_project"),
+            "metadata": {
+                **request.metadata,
+                "active_mode": session.get("active_mode") or request.metadata.get("active_mode"),
+            },
+        })
+
+        state = self.create_state(request)
+        self._restore_session_state(state, session)
+        state.relevant_memory = self.memory.retrieve_relevant(
+            query=request.message,
+            project_id=session.get("active_project") or request.project,
+            goal_id=session.get("goal_id"),
+        )
+        EventLoggerService().log(
+            event="memory_retrieved",
+            source="brain",
+            data={
+                "session_id": session["session_id"],
+                "record_counts": {
+                    key: len(value) for key, value in state.relevant_memory.items()
+                },
+            },
+        )
+        if session.get("cognitive_state"):
+            EventLoggerService().log(
+                event="context_restored",
+                source="brain",
+                data={"session_id": session["session_id"]},
+            )
 
         # ----------------------------------
         # Resolve operating mode
@@ -304,6 +352,8 @@ class BrainService:
                 trace=[],
                 error=error,
             )
+
+            self._persist_run(state, session, success=False, error=error)
 
             return BrainResponse(
                 success=False,
@@ -342,6 +392,8 @@ class BrainService:
                 error=error,
             )
 
+            self._persist_run(state, session, success=False, error=error)
+
             return BrainResponse(
                 success=False,
                 state=state,
@@ -372,6 +424,8 @@ class BrainService:
                 error=error,
             )
 
+            self._persist_run(final_state, session, success=False, error=error)
+
             return BrainResponse(
                 success=False,
                 state=final_state,
@@ -390,11 +444,121 @@ class BrainService:
             error=None,
         )
 
+        self._persist_run(final_state, session, success=True)
+
         return BrainResponse(
             success=True,
             state=final_state,
             trace=trace,
         )
+
+    def _restore_session_state(self, state: BrainState, session: dict) -> None:
+        conversation = session.get("conversation", {})
+        cognitive = session.get("cognitive_state") or {}
+        state.conversation = ConversationState(
+            session_id=session["session_id"],
+            conversation_id=session.get("conversation_id", ""),
+            current_topic=conversation.get("current_topic", ""),
+            current_goal=session.get("current_goal") or "",
+            conversation_summary=conversation.get("summary", ""),
+            pending_questions=conversation.get("pending_questions", []),
+            topic_history=[
+                message["content"]
+                for message in session.get("recent_messages", [])
+                if message.get("role") == "user"
+            ][-20:],
+            recent_messages=session.get("recent_messages", [])[-20:],
+            recent_references=conversation.get("recent_references", []),
+            detected_language=conversation.get("language_context", "en"),
+        )
+        if cognitive.get("goal"):
+            state.goal = GoalState(
+                primary_goal=cognitive["goal"],
+                confidence=float(cognitive.get("confidence") or 0.0),
+            )
+        if cognitive.get("objective"):
+            state.objective = ObjectiveState(
+                primary_objective=cognitive["objective"],
+                confidence=float(cognitive.get("confidence") or 0.0),
+                completion_status="in_progress",
+            )
+        state.execution_context.project_id = session.get("active_project") or ""
+
+    def _persist_run(self, state: BrainState, session: dict, success: bool, error: str | None = None) -> None:
+        session_id = session["session_id"]
+        if state.user_input:
+            self.sessions.append_message(session_id, "user", state.user_input)
+
+        goal = state.goal.primary_goal.strip()
+        goal_id = session.get("goal_id")
+        if goal_id:
+            EventLoggerService().log(
+                event="goal_loaded",
+                source="brain",
+                data={"session_id": session_id, "goal_id": goal_id},
+            )
+        if goal:
+            if goal_id:
+                self.memory.update_goal(
+                    goal_id,
+                    title=goal,
+                    objective=state.objective.primary_objective,
+                    project_id=session.get("active_project"),
+                    status="active",
+                    blockers=(
+                        list(state.constraints.missing_information)
+                        + list(state.constraints.risks)
+                    ),
+                )
+            else:
+                goal_record = self.memory.create_goal(
+                    title=goal,
+                    objective=state.objective.primary_objective,
+                    priority=state.goal.priority,
+                    project_id=session.get("active_project"),
+                    blockers=(
+                        list(state.constraints.missing_information)
+                        + list(state.constraints.risks)
+                    ),
+                )
+                goal_id = goal_record["goal_id"]
+
+        state_dict = state.model_dump(mode="json")
+        self.sessions.save_cognitive_state(
+            session_id,
+            state_dict,
+            goal_id=goal_id,
+            success=success,
+        )
+        self.sessions.update_context(
+            session_id,
+            project_id=session.get("active_project"),
+            active_project=session.get("active_project"),
+            active_version=session.get("active_version"),
+            active_mode=state.mode.active_mode,
+            current_goal=goal or session.get("current_goal"),
+            goal_id=goal_id,
+        )
+
+        if goal and not success:
+            experience = self.memory.record_experience(
+                "failure",
+                summary=f"{state.objective.primary_objective or goal}",
+                outcome=f"cognitive pipeline failed: {error or 'unknown error'}",
+                project_id=session.get("active_project"),
+                goal_id=goal_id,
+                source_run=state.execution_context.execution_id,
+            )
+            self.sessions.link_record(
+                session_id,
+                "experience",
+                experience["experience_id"],
+            )
+            EventLoggerService().log(
+                event="experience_created",
+                source="brain",
+                data={"session_id": session_id, "experience_id": experience["experience_id"]},
+            )
 
     def get_modules(self):
         """

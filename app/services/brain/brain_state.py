@@ -224,6 +224,10 @@ class BrainState(BaseModel):
         default_factory=LearningState
     )
 
+    relevant_memory: Dict[str, Any] = Field(
+        default_factory=dict
+    )
+
     # ----------------------------------
     # Brain Metadata
     # ----------------------------------
@@ -272,6 +276,8 @@ class BrainState(BaseModel):
         self.reflection = ReflectionState()
 
         self.learning = LearningState()
+
+        self.relevant_memory = {}
 
         self.metadata = BrainMetadata()
 

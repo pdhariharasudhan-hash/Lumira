@@ -41,6 +41,11 @@ class ObjectiveService:
         if not text:
             return state
 
+        if state.primary_objective and text.lower().startswith(("add ", "make it ", "change it ", "update it ", "continue ")):
+            state.completion_status = "in_progress"
+            state.last_updated = datetime.utcnow().isoformat()
+            return state
+
         state.primary_objective = self._extract_objective(
             text
         )

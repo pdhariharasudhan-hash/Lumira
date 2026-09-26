@@ -7,6 +7,9 @@ from pydantic import BaseModel
 # -------------------------
 class GenericInput(BaseModel):
     input: str
+    session_id: Optional[str] = None
+    workspace_id: str = "default"
+    project_id: Optional[str] = None
 
 
 # -------------------------

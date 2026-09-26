@@ -39,6 +39,11 @@ class GoalService:
         if not text:
             return state
 
+        if state.primary_goal and text.lower().startswith(("add ", "make it ", "change it ", "update it ", "continue ")):
+            state.confidence = max(state.confidence, 0.75)
+            state.last_updated = datetime.utcnow().isoformat()
+            return state
+
         state.primary_goal = self._extract_goal(text)
 
         state.goal_type = self._detect_goal_type(text)

@@ -1,13 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { FiArrowUp, FiCpu, FiPlus } from "react-icons/fi";
 import "./MainLayout.css";
 
 type BrainResponse = {
 	success?: boolean;
+	session_id?: string;
 	data?: {
 		stage?: string;
 		status?: string;
+		state?: {
+			execution_context?: { session_id?: string };
+			[key: string]: unknown;
+		};
 		[key: string]: unknown;
 	};
 	result?: {
@@ -18,13 +23,26 @@ type BrainResponse = {
 		success?: boolean;
 		[key: string]: unknown;
 	};
+	context?: {
+		active_project?: string | null;
+		current_goal?: string | null;
+	};
 	error?: string;
 };
 
 type Message = {
-	prompt: string;
+	prompt?: string;
+	transcript?: string;
 	response?: BrainResponse;
 	error?: string;
+};
+
+type SessionRecord = {
+	session_id: string;
+	status: string;
+	active_project?: string | null;
+	current_goal?: string | null;
+	recent_messages?: Array<{ role: string; content: string }>;
 };
 
 function MainLayout() {
@@ -32,11 +50,55 @@ function MainLayout() {
 	const [workflow, setWorkflow] = useState<"brain" | "project">("brain");
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [isSending, setIsSending] = useState(false);
+	const [session, setSession] = useState<SessionRecord | null>(null);
+	const [isRestoringSession, setIsRestoringSession] = useState(() => Boolean(window.localStorage.getItem("lumira.sessionId")));
+
+	useEffect(() => {
+		const storedId = window.localStorage.getItem("lumira.sessionId");
+		if (!storedId) {
+			setIsRestoringSession(false);
+			return;
+		}
+
+		void fetch(`/sessions/${encodeURIComponent(storedId)}`)
+			.then(async (response) => {
+				if (!response.ok) throw new Error("Session unavailable");
+				let loaded = (await response.json()) as SessionRecord;
+				if (loaded.status === "paused") {
+					const resumed = await fetch(`/sessions/${encodeURIComponent(storedId)}/resume`, { method: "POST" });
+					if (!resumed.ok) throw new Error("Session could not be resumed");
+					loaded = (await resumed.json()) as SessionRecord;
+				}
+				setSession(loaded);
+				setMessages((loaded.recent_messages ?? []).map((message) =>
+					message.role === "user"
+						? { prompt: message.content }
+						: { transcript: message.content },
+				));
+			})
+			.catch(() => {
+				window.localStorage.removeItem("lumira.sessionId");
+			})
+			.finally(() => setIsRestoringSession(false));
+	}, []);
+
+	async function startNewSession() {
+		const response = await fetch("/sessions", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ workspace_id: "default" }),
+		});
+		if (!response.ok) throw new Error("Could not create a new session");
+		const created = (await response.json()) as SessionRecord;
+		window.localStorage.setItem("lumira.sessionId", created.session_id);
+		setSession(created);
+		setMessages([]);
+	}
 
 	async function submitPrompt(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 		const input = prompt.trim();
-		if (!input || isSending) return;
+		if (!input || isSending || isRestoringSession) return;
 
 		setPrompt("");
 		setMessages((current) => [...current, { prompt: input }]);
@@ -49,12 +111,21 @@ function MainLayout() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					input: isProjectRequest ? `Generate project: ${input}` : input,
+					session_id: session?.session_id,
+					workspace_id: "default",
 				}),
 			});
 			const result = (await response.json()) as BrainResponse;
 
 			if (!response.ok || result.success === false || result.result?.success === false) {
 				throw new Error(result.error || `Request failed (${response.status})`);
+			}
+
+			const sessionId = result.session_id ?? result.data?.state?.execution_context?.session_id;
+			if (sessionId) {
+				window.localStorage.setItem("lumira.sessionId", sessionId);
+				const loadedSession = await fetch(`/sessions/${encodeURIComponent(sessionId)}`);
+				if (loadedSession.ok) setSession((await loadedSession.json()) as SessionRecord);
 			}
 
 			setMessages((current) =>
@@ -84,7 +155,8 @@ function MainLayout() {
 				<button
 					className="new-session"
 					type="button"
-					onClick={() => setMessages([])}
+					onClick={() => void startNewSession()}
+					disabled={isRestoringSession || isSending}
 					title="Start a new session"
 				>
 					<FiPlus aria-hidden="true" />
@@ -93,7 +165,7 @@ function MainLayout() {
 				<div className="rail-caption">WORKSPACE</div>
 				<div className="workspace-item" aria-current="page">
 					<span className="workspace-dot" />
-					<span>Personal workspace</span>
+					<span>{session?.active_project ?? "Personal workspace"}</span>
 				</div>
 				<div className="rail-footer">
 					<span className="connection-dot" />
@@ -106,6 +178,7 @@ function MainLayout() {
 					<div>
 						<div className="eyebrow">PERSONAL AI SYSTEM</div>
 						<h1>Workbench</h1>
+						{session && <div className="session-context">Session {session.session_id.slice(0, 8)} · {session.status}{session.current_goal ? ` · ${session.current_goal}` : ""}</div>}
 					</div>
 					<div className="runtime-label"><span className="connection-dot" /> CORE READY</div>
 				</header>
@@ -127,31 +200,28 @@ function MainLayout() {
 									? `Project saved: ${message.response.result.project_name}`
 									: message.response?.result?.capability ?? "Core response";
 								return (
-								<article className="run" key={`${message.prompt}-${index}`}>
-									<div className="user-prompt">{message.prompt}</div>
-									{message.response ? (
-										<div className="run-result">
-											<div className="run-heading">
-												<span className="result-icon"><FiCpu aria-hidden="true" /></span>
-												<strong>{label}</strong>
-												<span className="run-stage">
-													{message.response.data?.stage ?? message.response.result?.status ?? "complete"}
-												</span>
+									<article className="run" key={`${message.prompt ?? message.transcript}-${index}`}>
+										{message.prompt && <div className="user-prompt">{message.prompt}</div>}
+										{message.transcript && <p className="assistant-transcript">{message.transcript}</p>}
+										{message.response ? (
+											<div className="run-result">
+												<div className="run-heading">
+													<span className="result-icon"><FiCpu aria-hidden="true" /></span>
+													<strong>{label}</strong>
+													<span className="run-stage">
+														{message.response.data?.stage ?? message.response.result?.status ?? "complete"}
+													</span>
+												</div>
+												<div className="run-status">{status.replaceAll("_", " ")}</div>
+												{message.response.result?.saved_path && <p className="saved-path">Saved to {message.response.result.saved_path}</p>}
+												<pre>{JSON.stringify(output, null, 2)}</pre>
 											</div>
-											<div className="run-status">
-												{status.replaceAll("_", " ")}
-											</div>
-											{message.response.result?.saved_path && (
-												<p className="saved-path">Saved to {message.response.result.saved_path}</p>
-											)}
-											<pre>{JSON.stringify(output, null, 2)}</pre>
-										</div>
-									) : message.error ? (
-										<p className="run-error">{message.error}</p>
-									) : isSending && index === messages.length - 1 ? (
-										<p className="run-pending">Running through the core...</p>
-									) : null}
-								</article>
+										) : message.error ? (
+											<p className="run-error">{message.error}</p>
+										) : isSending && index === messages.length - 1 ? (
+											<p className="run-pending">Running through the core...</p>
+										) : null}
+									</article>
 								);
 							})}
 						</div>
@@ -160,22 +230,8 @@ function MainLayout() {
 
 				<div className="composer-wrap">
 					<div className="workflow-switch" role="group" aria-label="Choose workflow">
-						<button
-							className={workflow === "brain" ? "workflow-option active" : "workflow-option"}
-							type="button"
-							aria-pressed={workflow === "brain"}
-							onClick={() => setWorkflow("brain")}
-						>
-							Brain
-						</button>
-						<button
-							className={workflow === "project" ? "workflow-option active" : "workflow-option"}
-							type="button"
-							aria-pressed={workflow === "project"}
-							onClick={() => setWorkflow("project")}
-						>
-							Generate project
-						</button>
+						<button className={workflow === "brain" ? "workflow-option active" : "workflow-option"} type="button" aria-pressed={workflow === "brain"} onClick={() => setWorkflow("brain")}>Brain</button>
+						<button className={workflow === "project" ? "workflow-option active" : "workflow-option"} type="button" aria-pressed={workflow === "project"} onClick={() => setWorkflow("project")}>Generate project</button>
 					</div>
 					<form className="composer" onSubmit={submitPrompt}>
 						<textarea
@@ -191,20 +247,10 @@ function MainLayout() {
 							}}
 							rows={2}
 						/>
-						<button
-							className="send-button"
-							type="submit"
-							disabled={!prompt.trim() || isSending}
-							aria-label="Send request"
-							title="Send request"
-						>
-							<FiArrowUp aria-hidden="true" />
-						</button>
+						<button className="send-button" type="submit" disabled={!prompt.trim() || isSending || isRestoringSession} aria-label="Send request" title="Send request"><FiArrowUp aria-hidden="true" /></button>
 					</form>
 					<div className="composer-note">
-						{workflow === "brain"
-							? "Requests are processed by your local Lumira core."
-							: "Generated projects are validated and saved in your workspace."}
+						{workflow === "brain" ? "Requests are processed by your local Lumira core." : "Generated projects are validated and saved in your workspace."}
 					</div>
 				</div>
 			</section>

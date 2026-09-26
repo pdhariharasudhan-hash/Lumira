@@ -1,9 +1,17 @@
 import json
+import re
 from pathlib import Path
 from typing import Any, Dict, Optional
+from copy import deepcopy
+from datetime import UTC, datetime
+from uuid import uuid4
 
 from app.services.modes.models.mode_state import (
     ModeState,
+)
+from app.services.persistence.atomic_json_store import (
+    AtomicJsonStore,
+    PersistenceIntegrityError,
 )
 
 
@@ -16,6 +24,24 @@ class MemoryValidationError(Exception):
 
 
 class MemoryService:
+    _sensitive_key_pattern = re.compile(
+        r"(?i)password|api[_ -]?key|access[_ -]?token|secret|authorization"
+    )
+    _secret_pattern = re.compile(
+        r"(?i)(password|api[_ -]?key|access[_ -]?token|secret|authorization)"
+        r"(\s*[:=]\s*)([^\r\n]+)|\bBearer\s+[A-Za-z0-9._~+/-]+=*"
+    )
+
+    @classmethod
+    def _safe_text(cls, value: str) -> str:
+        return cls._secret_pattern.sub(
+            lambda match: (
+                f"{match.group(1)}{match.group(2)}[REDACTED]"
+                if match.group(1)
+                else "Bearer [REDACTED]"
+            ),
+            value,
+        )
 
     # --------------------------------------------------------
     # Mode Context
@@ -84,7 +110,41 @@ class MemoryService:
 
     def __init__(self, file_path: str = "data/project_memory.json"):
         self.file_path = Path(file_path)
+        self.store = AtomicJsonStore(self.file_path)
+        self.cognitive_file = self.file_path.with_name("cognitive_memory.json")
+        self.cognitive_store = AtomicJsonStore(self.cognitive_file)
         self._ensure_file()
+
+    @staticmethod
+    def _default_cognitive_memory() -> dict:
+        return {
+            "schema_version": 1,
+            "goals": [],
+            "decisions": [],
+            "experiences": [],
+            "learning_records": [],
+        }
+
+    def _read_cognitive_memory(self) -> dict:
+        try:
+            data = self.cognitive_store.read(self._default_cognitive_memory())
+        except PersistenceIntegrityError as exc:
+            raise MemoryValidationError(str(exc)) from exc
+        if not isinstance(data, dict):
+            raise MemoryValidationError("Cognitive memory root must be an object")
+        if data.get("schema_version") != 1:
+            raise MemoryValidationError(
+                f"Unsupported cognitive memory schema version: {data.get('schema_version')!r}"
+            )
+        for key in ("goals", "decisions", "experiences", "learning_records"):
+            if not isinstance(data.get(key), list):
+                raise MemoryValidationError(f"{key} must be a list")
+            if any(
+                not isinstance(record, dict) or record.get("schema_version") != 1
+                for record in data[key]
+            ):
+                raise MemoryValidationError(f"{key} contains an invalid record")
+        return data
 
     def _default_memory(self) -> Dict[str, Any]:
          return {
@@ -96,7 +156,12 @@ class MemoryService:
 
             "artifacts": [],
 
-            "feature_history": []
+            "feature_history": [],
+            "schema_version": 1,
+            "goals": [],
+            "decisions": [],
+            "experiences": [],
+            "learning_records": [],
         }
 
     def _normalize_pipeline_run(self, run: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
@@ -255,19 +320,19 @@ class MemoryService:
         self._ensure_file()
 
         try:
-            content = self.file_path.read_text(encoding="utf-8").strip()
-
-            if not content:
-                clean_data = self._default_memory()
-                self._write_memory(clean_data)
-                return clean_data
-
-            data = json.loads(content)
+            data = self.store.read()
 
             if not isinstance(data, dict):
-                clean_data = self._default_memory()
-                self._write_memory(clean_data)
-                return clean_data
+                raise PersistenceIntegrityError("Memory store root must be an object")
+
+            schema_version = data.get("schema_version", 0)
+            if schema_version == 0:
+                data = self._migrate_memory_v0_to_v1(data)
+                self._write_memory(data)
+            elif schema_version != 1:
+                raise PersistenceIntegrityError(
+                    f"Unsupported memory schema version: {schema_version!r}"
+                )
 
             data.setdefault("project_name", "Personal AI Core")
 
@@ -280,6 +345,8 @@ class MemoryService:
                 "feature_history",
                 []
             )
+            for key in ("goals", "decisions", "experiences", "learning_records"):
+                data.setdefault(key, [])
 
             pipeline_runs = data.get("pipeline_runs")
             if not isinstance(pipeline_runs, list):
@@ -296,19 +363,178 @@ class MemoryService:
 
             return data
 
-        except json.JSONDecodeError:
-            clean_data = self._default_memory()
-            self._write_memory(clean_data)
-            return clean_data
+        except (json.JSONDecodeError, PersistenceIntegrityError) as exc:
+            raise MemoryValidationError(str(exc)) from exc
+
+    @staticmethod
+    def _migrate_memory_v0_to_v1(data: dict) -> dict:
+        migrated = dict(data)
+        migrated.setdefault("pipeline_runs", [])
+        migrated.setdefault("latest_pipeline_run", None)
+        migrated.setdefault("artifacts", [])
+        migrated.setdefault("feature_history", [])
+        migrated.setdefault("goals", [])
+        migrated.setdefault("decisions", [])
+        migrated.setdefault("experiences", [])
+        migrated.setdefault("learning_records", [])
+        migrated["schema_version"] = 1
+        return migrated
 
     def _write_memory(self, data: Dict[str, Any]) -> None:
-        self.file_path.write_text(
-            json.dumps(data, indent=2, ensure_ascii=False),
-            encoding="utf-8"
+        self.store.write(data)
+
+    @classmethod
+    def _redact_nested(cls, value):
+        if isinstance(value, str):
+            return cls._safe_text(value)
+        if isinstance(value, list):
+            return [cls._redact_nested(item) for item in value]
+        if isinstance(value, dict):
+            return {
+                str(key): "[REDACTED]" if cls._sensitive_key_pattern.search(str(key)) else cls._redact_nested(item)
+                for key, item in value.items()
+            }
+        return value
+
+    @staticmethod
+    def _record(kind: str, **fields) -> dict:
+        now = datetime.now(UTC).isoformat()
+        return {
+            f"{kind}_id": str(uuid4()),
+            **fields,
+            "created_at": now,
+            "updated_at": now,
+            "schema_version": 1,
+        }
+
+    def _append_record(self, collection: str, record: dict) -> dict:
+        cognitive_collections = {
+            "goals",
+            "decisions",
+            "experiences",
+            "learning_records",
+        }
+        target_store = (
+            self.cognitive_store
+            if collection in cognitive_collections
+            else self.store
+        )
+        default_document = (
+            self._default_cognitive_memory()
+            if collection in cognitive_collections
+            else self._default_memory()
         )
 
+        def append(memory):
+            if not isinstance(memory, dict):
+                raise MemoryValidationError("memory root must be an object")
+            version = memory.get("schema_version", 0)
+            if version not in {0, 1}:
+                raise MemoryValidationError(f"unsupported memory schema version: {version!r}")
+            memory.setdefault("schema_version", 1)
+            records = memory.setdefault(collection, [])
+            if not isinstance(records, list):
+                raise MemoryValidationError(f"{collection} must be a list")
+            records.append(record)
+            return deepcopy(record)
+
+        try:
+            return target_store.update(append, default_document)
+        except PersistenceIntegrityError as exc:
+            raise MemoryValidationError(str(exc)) from exc
+
+    def create_goal(self, title: str, objective: str = "", priority: str = "normal", project_id: str | None = None, parent_goal_id: str | None = None, status: str = "active", blockers: list[str] | None = None) -> dict:
+        return self._append_record("goals", self._record(
+            "goal", parent_goal_id=parent_goal_id, title=self._safe_text(title),
+            objective=self._safe_text(objective), priority=priority, status=status,
+            progress=0.0, milestones=[], dependencies=[],
+            blockers=[self._safe_text(item) for item in (blockers or [])], project_id=project_id,
+            artifact_ids=[],
+        ))
+
+    def update_goal(self, goal_id: str, **updates) -> dict:
+        allowed = {"title", "objective", "priority", "status", "progress", "milestones", "dependencies", "blockers", "project_id", "artifact_ids"}
+        if set(updates) - allowed:
+            raise MemoryValidationError("unsupported goal field")
+        updates = self._redact_nested(updates)
+
+        def update(memory):
+            if memory.get("schema_version") != 1:
+                raise MemoryValidationError("unsupported cognitive memory schema version")
+            for record in memory.setdefault("goals", []):
+                if record.get("goal_id") == goal_id:
+                    record.update(updates)
+                    record["updated_at"] = datetime.now(UTC).isoformat()
+                    return deepcopy(record)
+            raise KeyError("goal not found")
+
+        return self.cognitive_store.update(update, self._default_cognitive_memory())
+
+    def record_decision(self, decision: str, reason: str = "", session_id: str | None = None, project_id: str | None = None, goal_id: str | None = None, alternatives: list[str] | None = None, constraints: list[str] | None = None, confidence: float = 0.0) -> dict:
+        return self._append_record("decisions", self._record(
+            "decision", session_id=session_id, project_id=project_id,
+            goal_id=goal_id, decision=self._safe_text(decision), reason=self._safe_text(reason),
+            alternatives=[self._safe_text(item) for item in (alternatives or [])],
+            constraints=[self._safe_text(item) for item in (constraints or [])],
+            confidence=max(0.0, min(1.0, float(confidence))),
+        ))
+
+    def record_experience(self, experience_type: str, summary: str, outcome: str, project_id: str | None = None, goal_id: str | None = None, lessons: list[str] | None = None, artifact_ids: list[str] | None = None, source_run: str | None = None, verified: bool = False) -> dict:
+        if experience_type not in {"success", "failure", "decision", "workflow"}:
+            raise MemoryValidationError("unsupported experience type")
+        return self._append_record("experiences", self._record(
+            "experience", type=experience_type, project_id=project_id,
+            goal_id=goal_id, source_run=source_run, summary=self._safe_text(summary),
+            outcome=self._safe_text(outcome), lessons=[self._safe_text(item) for item in (lessons or [])],
+            artifact_ids=list(artifact_ids or []), verified=bool(verified),
+        ))
+
+    def consolidate_learning(self, experience: dict) -> dict | None:
+        lessons = [self._safe_text(lesson.strip()) for lesson in experience.get("lessons", []) if isinstance(lesson, str) and len(lesson.strip()) >= 20]
+        if not lessons or experience.get("type") not in {"success", "failure"} or experience.get("verified") is not True:
+            return None
+        return self._append_record("learning_records", self._record(
+            "learning", source_experience=experience.get("experience_id"),
+            source_run=experience.get("source_run"),
+            source_project=experience.get("project_id"),
+            pattern=experience.get("type"),
+            observation=experience.get("summary", ""),
+            outcome=experience.get("outcome", ""), lesson=lessons[0],
+            confidence=0.75,
+            applicability="same_project_or_matching_workflow",
+        ))
+
+    def retrieve_relevant(self, query: str = "", project_id: str | None = None, goal_id: str | None = None, limit: int = 20) -> dict:
+        memory = self._read_cognitive_memory()
+        tokens = {token for token in query.lower().split() if len(token) > 2}
+        result = {}
+        for collection in ("goals", "decisions", "experiences", "learning_records"):
+            ranked = []
+            for record in memory.get(collection, []):
+                record_project = record.get("project_id", record.get("source_project"))
+                if record_project and record_project != project_id:
+                    continue
+                if goal_id and record.get("goal_id") not in {None, goal_id}:
+                    continue
+                searchable = json.dumps(record, ensure_ascii=False).lower()
+                score = sum(1 for token in tokens if token in searchable)
+                if project_id and record_project == project_id:
+                    score += 100
+                if goal_id and record.get("goal_id") == goal_id:
+                    score += 100
+                if score:
+                    record_id = next((value for key, value in record.items() if key.endswith("_id") and key != "source_run"), "")
+                    ranked.append((score, record.get("created_at", ""), record_id, record))
+            ranked.sort(key=lambda row: (-row[0], row[1], row[2]))
+            result[collection] = [deepcopy(row[3]) for row in ranked[:max(0, limit)]]
+        return result
+
     def get_all(self) -> Dict[str, Any]:
-        return self._read_memory()
+        memory = self._read_memory()
+        cognitive = self._read_cognitive_memory()
+        for key in ("goals", "decisions", "experiences", "learning_records"):
+            memory[key] = cognitive[key]
+        return memory
 
     def get_value(self, key: str) -> Any:
         memory = self._read_memory()
@@ -327,80 +553,55 @@ class MemoryService:
         value: Any,
         mode: ModeState | None = None,
     ) -> Dict[str, Any]:
-        memory = self._read_memory()
-        validated_value = self._validate_memory_update(key, value)
+        if self._sensitive_key_pattern.search(key):
+            raise MemoryValidationError("credential-like memory keys are not allowed")
+        validated_value = self._redact_nested(
+            self._validate_memory_update(key, value)
+        )
 
         mode_context = self._mode_context(
             mode
         )
 
-        # -------------------------
-        # PIPELINE RUN (append safely, no duplicates)
-        # -------------------------
-        if key == "pipeline_run":
-            if not isinstance(validated_value, dict):
-                raise MemoryValidationError("pipeline_run must be a valid dict")
+        def apply(memory):
+            if not isinstance(memory, dict):
+                raise MemoryValidationError("memory root must be an object")
+            schema_version = memory.get("schema_version", 0)
+            if schema_version not in {0, 1}:
+                raise MemoryValidationError(f"unsupported memory schema version: {schema_version!r}")
+            memory.setdefault("schema_version", 1)
 
-            run_id = validated_value.get("id")
-            if not run_id:
-                raise MemoryValidationError("pipeline_run must have an id")
+            if key == "pipeline_run":
+                if not isinstance(validated_value, dict):
+                    raise MemoryValidationError("pipeline_run must be a valid dict")
+                run_id = validated_value.get("id")
+                if not run_id:
+                    raise MemoryValidationError("pipeline_run must have an id")
+                existing = memory.setdefault("pipeline_runs", [])
+                runs = [record for record in existing if isinstance(record, dict) and record.get("id") != run_id]
+                run = dict(validated_value)
+                if mode_context is not None:
+                    run.setdefault("mode_context", mode_context)
+                runs.append(run)
+                memory["pipeline_runs"] = runs
+                memory["latest_pipeline_run"] = run
+            elif key == "pipeline_runs":
+                if not isinstance(validated_value, list):
+                    raise MemoryValidationError("pipeline_runs must be a list")
+                unique = {run["id"]: run for run in validated_value if isinstance(run, dict) and run.get("id")}
+                memory["pipeline_runs"] = list(unique.values())
+            elif key == "latest_pipeline_run":
+                if not isinstance(validated_value, dict):
+                    raise MemoryValidationError("latest_pipeline_run must be dict")
+                memory[key] = validated_value
+            else:
+                memory[key] = validated_value
+            return deepcopy(memory)
 
-            existing_runs = memory.get("pipeline_runs", [])
-
-            # 🔥 REMOVE DUPLICATES
-            filtered_runs = [
-                r for r in existing_runs
-                if isinstance(r, dict) and r.get("id") != run_id
-            ]
-
-            if mode_context is not None:
-                validated_value = dict(
-                    validated_value
-                )
-
-                validated_value.setdefault(
-                    "mode_context",
-                    mode_context,
-                )
-
-            filtered_runs.append(
-                validated_value
-            )
-
-            memory["pipeline_runs"] = filtered_runs
-            memory["latest_pipeline_run"] = validated_value
-
-        # -------------------------
-        # PIPELINE RUNS (overwrite safely)
-        # -------------------------
-        elif key == "pipeline_runs":
-            if not isinstance(validated_value, list):
-                raise MemoryValidationError("pipeline_runs must be a list")
-
-            unique = {}
-            for run in validated_value:
-                if isinstance(run, dict) and run.get("id"):
-                    unique[run["id"]] = run
-
-            memory["pipeline_runs"] = list(unique.values())
-
-        # -------------------------
-        # LATEST PIPELINE
-        # -------------------------
-        elif key == "latest_pipeline_run":
-            if not isinstance(validated_value, dict):
-                raise MemoryValidationError("latest_pipeline_run must be dict")
-
-            memory["latest_pipeline_run"] = validated_value
-
-        # -------------------------
-        # GENERIC KEYS
-        # -------------------------
-        else:
-            memory[key] = validated_value
-
-        self._write_memory(memory)
-        return memory
+        try:
+            return self.store.update(apply, self._default_memory())
+        except PersistenceIntegrityError as exc:
+            raise MemoryValidationError(str(exc)) from exc
         
         # ==========================
         # ARTIFACTS
@@ -411,20 +612,7 @@ class MemoryService:
         artifact_record: dict
     ):
 
-        memory = self._read_memory()
-
-        memory.setdefault(
-            "artifacts",
-            []
-        )
-
-        memory["artifacts"].append(
-            artifact_record
-        )
-
-        self._write_memory(
-            memory
-        )
+        self._append_record("artifacts", artifact_record)
 
         return artifact_record
 
@@ -448,20 +636,7 @@ class MemoryService:
         record: dict
     ):
 
-        memory = self._read_memory()
-
-        memory.setdefault(
-            "feature_history",
-            []
-        )
-
-        memory["feature_history"].append(
-            record
-        )
-
-        self._write_memory(
-            memory
-        )
+        self._append_record("feature_history", record)
 
         return record
 
