@@ -7,8 +7,14 @@ class IntentClassifierService:
 
         command = command.lower()
 
+        if "enter " in command and " mode" in command:
+            return "mode"
+
         if command.startswith("build"):
             return "build"
+
+        if command.startswith("add "):
+            return "continue"
 
         if command.startswith("search"):
             return "search"

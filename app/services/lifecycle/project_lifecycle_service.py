@@ -264,14 +264,17 @@ class ProjectLifecycleService:
             )
         )
 
+        project_name = metadata.get(
+            "project",
+            generated["code_target"],
+        )
+
         save_location = (
 
             ProjectWriter()
             .save(
 
-                generated[
-                    "code_target"
-                ],
+                project_name,
 
                 generated[
                     "files"
@@ -292,9 +295,10 @@ class ProjectLifecycleService:
                     "api",
 
                     "entity":
-                    generated[
-                        "code_target"
-                    ]
+                    project_name,
+
+                    "project":
+                    project_name,
                 }
             )
         )

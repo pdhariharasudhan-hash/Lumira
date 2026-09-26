@@ -155,6 +155,21 @@ class BrainService:
         if not state.user_input.strip():
             return
 
+        preferred_mode = state.execution_context.metadata.get(
+            "active_mode"
+        )
+
+        if preferred_mode and self.mode_detector.registry.exists(preferred_mode):
+            mode_manager = ModeManagerService()
+            mode_manager.activate(
+                mode_id=preferred_mode,
+                reason="persisted_manual_selection",
+                confidence=1.0,
+                manual=True,
+            )
+            state.mode = mode_manager.get_state().model_copy(deep=True)
+            return
+
         detection = self.mode_detector.detect(
             state.user_input
         )

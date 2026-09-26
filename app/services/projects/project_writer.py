@@ -1,5 +1,6 @@
 from typing import Dict
 from pathlib import Path
+import re
 import json
 from datetime import datetime
 
@@ -21,14 +22,22 @@ class ProjectWriter:
         metadata: Dict
     ):
 
+        project_name = str(project_name).strip()
+        if not project_name or "/" in project_name or "\\" in project_name or project_name in {".", ".."}:
+            raise ValueError("project_name must be a single safe path component")
+
+        project_name = re.sub(r"[^A-Za-z0-9_-]+", "_", project_name).strip("_-")
+        if not project_name:
+            raise ValueError("project_name must contain letters or digits")
+
+        generated_root = Path("generated").resolve()
+
         base_folder = (
-
-            Path(
-                "generated"
-            )
-
-            / project_name
+            generated_root / project_name
         )
+
+        if generated_root not in base_folder.resolve().parents:
+            raise ValueError("project path escapes the generated directory")
 
         base_folder.mkdir(
             parents=True,
@@ -61,6 +70,16 @@ class ProjectWriter:
             filename,
             content
         ) in files.items():
+
+            if (
+                not isinstance(filename, str)
+                or not filename
+                or Path(filename).is_absolute()
+                or "/" in filename
+                or "\\" in filename
+                or filename in {".", ".."}
+            ):
+                raise ValueError("generated filenames must be safe path components")
 
             file_path = (
 

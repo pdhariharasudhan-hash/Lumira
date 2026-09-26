@@ -24,6 +24,20 @@ class CommandParserService:
                 "message": "Command cannot be empty",
             }
 
+        if "enter " in text and " mode" in text:
+            requested_mode = text.split("enter ", 1)[1].split(" mode", 1)[0]
+            requested_mode = requested_mode.strip(" .!?").replace(" ", "_")
+            supported_modes = {
+                "personal", "builder", "growth", "creator",
+                "generator", "research", "assistant", "operations",
+            }
+            if requested_mode in supported_modes:
+                return {
+                    "success": True,
+                    "capability": "activate_mode",
+                    "payload": {"mode": requested_mode},
+                }
+
         # ----------------------------------------------------
         # IMAGE GENERATION
         # ----------------------------------------------------
@@ -87,13 +101,31 @@ class CommandParserService:
         # BUILDER
         # ----------------------------------------------------
 
+        if (
+            text.startswith(("build ", "create ", "make ", "generate "))
+            and any(term in text for term in ("api", "application", "app", "backend", "project"))
+        ):
+            return {
+                "success": True,
+                "capability": "project_generation",
+                "payload": {
+                    "idea": command,
+                },
+            }
+
+        if text.startswith("add "):
+            return {
+                "success": True,
+                "capability": "continue_project",
+                "payload": {"instruction": command},
+            }
+
         builder_rules = [
             ("generate project", "project_generation"),
             ("create project", "project_generation"),
             ("version project", "project_versioning"),
             ("debug", "debugging"),
             ("develop", "project_engineering"),
-            ("build", "project_engineering"),
         ]
 
         for phrase, capability in builder_rules:

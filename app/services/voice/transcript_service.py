@@ -1,17 +1,24 @@
 from datetime import datetime
+from typing import Protocol
 
 from app.services.artifacts.artifact_manager_service import (
     ArtifactManagerService
 )
 
 
+class TranscriptionProvider(Protocol):
+    def transcribe(self, audio_path: str) -> str:
+        ...
+
+
 class TranscriptService:
 
-    def __init__(self):
+    def __init__(self, provider: TranscriptionProvider | None = None):
 
         self.artifacts = (
             ArtifactManagerService()
         )
+        self.provider = provider
 
     def generate_transcript(
         self,
@@ -48,20 +55,23 @@ class TranscriptService:
                 "Artifact is not audio"
             }
 
-        transcript_text = (
+        if self.provider is None:
+            return {
+                "success": False,
+                "code": "provider_unavailable",
+                "message": "Audio is stored, but no speech-to-text provider is configured.",
+            }
 
-            "[MOCK TRANSCRIPT]\n\n"
-
-            f"Audio File: "
-            f"{audio_artifact['file']}\n\n"
-
-            "Transcript generation "
-            "placeholder.\n"
-
-            "Future version will use "
-            "Whisper for Tamil, English "
-            "and mixed-language support."
+        transcript_text = self.provider.transcribe(
+            audio_artifact["file"]
         )
+
+        if not isinstance(transcript_text, str) or not transcript_text.strip():
+            return {
+                "success": False,
+                "code": "empty_transcript",
+                "message": "The transcription provider returned no transcript.",
+            }
 
         transcript_artifact = (
 

@@ -33,10 +33,10 @@ class GeneratorCapabilityService:
         subject = concepts[0]
 
         image = {
-            "type": "generated_image",
+            "type": "image_generation_specification",
             "version": "1.0",
             "request": request,
-            "status": "generated",
+            "status": "specification_created",
             "subject": subject,
             "format": "structured_image_spec",
             "composition": {

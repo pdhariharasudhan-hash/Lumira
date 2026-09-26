@@ -29,7 +29,25 @@ class ProjectClassifier:
             "app",
             "tracker",
             "backend",
-            "system"
+            "system",
+            "fastapi",
+            "flask",
+            "django",
+            "express",
+            "node",
+            "react",
+            "rest",
+            "authentication",
+            "authorization",
+            "auth",
+            "jwt",
+            "login",
+            "test",
+            "tests",
+            "testing",
+            "secure",
+            "with",
+            "for",
         }
 
         entities = []

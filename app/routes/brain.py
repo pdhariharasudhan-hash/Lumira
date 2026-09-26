@@ -2,62 +2,22 @@ from fastapi import APIRouter
 
 from app.schemas.common import GenericInput
 from app.services.response.response_service import build_structured_response
-
-# Import engine functions directly
-from app.routes.validate import analyze_idea
-from app.routes.builder import analyze_build_request
-from app.routes.execute import analyze_execution_request
-from app.routes.code import analyze_code_request
+from app.services.brain.brain_request import BrainRequest
+from app.services.brain.brain_service import BrainService
 
 router = APIRouter()
 
 
 def main_brain_flow(content: str) -> dict:
-    text = content.strip()
-
-    # -------- STEP 1: VALIDATE --------
-    validation = analyze_idea(text)
-
-    if validation["verdict"] == "reject":
-        return {
-            "stage": "validate",
-            "status": "stopped",
-            "validation": validation
-        }
-
-    # -------- STEP 2: BUILD --------
-    build = analyze_build_request(text)
-
-    if build["status"] == "refine":
-        return {
-            "stage": "builder",
-            "status": "needs_refinement",
-            "validation": validation,
-            "builder": build
-        }
-
-    # -------- STEP 3: EXECUTE --------
-    execution = analyze_execution_request(text, build)
-
-    if execution["status"] in {"refine", "reject"}:
-        return {
-            "stage": "builder",
-            "status": "needs_refinement",
-            "validation": validation,
-            "builder": build,
-            "execute": execution
-        }
-
-    # -------- STEP 4: CODE --------
-    code = analyze_code_request(text, execution)
-
+    response = BrainService().execute(
+        BrainRequest(message=content.strip())
+    )
     return {
-        "stage": "complete",
-        "status": "ready_for_build",
-        "validation": validation,
-        "builder": build,
-        "execute": execution,
-        "code": code
+        "stage": "complete" if response.success else "failed",
+        "status": "ready_for_build" if response.success else "failed",
+        "state": response.state.model_dump(mode="json") if response.state else None,
+        "trace": response.trace,
+        "error": response.error,
     }
 
 
@@ -65,10 +25,17 @@ def main_brain_flow(content: str) -> dict:
 def brain_endpoint(payload: GenericInput):
     content = payload.input.strip()
 
+    if not content:
+        return build_structured_response(
+            endpoint="brain",
+            status="error",
+            data={"stage": "failed", "status": "invalid_input", "error": "input cannot be empty"},
+        )
+
     result = main_brain_flow(content)
 
     return build_structured_response(
         endpoint="brain",
-        status="ok",
+        status="ok" if result["stage"] == "complete" else "error",
         data=result
     )

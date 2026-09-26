@@ -1,17 +1,24 @@
 from datetime import datetime
+from typing import Protocol
 
 from app.services.artifacts.artifact_manager_service import (
     ArtifactManagerService
 )
 
 
+class ImageGenerationProvider(Protocol):
+    def generate(self, prompt: str, image_type: str) -> dict:
+        ...
+
+
 class ImageGenerationService:
 
-    def __init__(self):
+    def __init__(self, provider: ImageGenerationProvider | None = None):
 
         self.artifacts = (
             ArtifactManagerService()
         )
+        self.provider = provider
 
     def generate(
         self,
@@ -38,50 +45,20 @@ class ImageGenerationService:
                 f"Unsupported image type: {image_type}"
             }
 
-        artifact_content = (
+        if self.provider is None:
+            return {
+                "success": False,
+                "code": "provider_unavailable",
+                "message": "No image rendering provider is configured; no image artifact was created.",
+            }
 
-            "[MOCK IMAGE GENERATION]\n\n"
-
-            f"Prompt: {prompt}\n\n"
-
-            f"Type: {image_type}\n\n"
-
-            "Future versions will generate "
-            "real visual artifacts.\n"
-
-            "Current version stores the "
-            "generation request and preserves "
-            "history for traceability."
-        )
-
-        artifact_folder = {
-
-            "image": "images",
-            "diagram": "diagrams",
-            "blueprint": "blueprints",
-            "schematic": "schematics"
-        }
-
-        artifact = (
-
-            self.artifacts
-            .create_artifact(
-
-                artifact_type=
-                artifact_folder[
-                    image_type
-                ],
-
-                content=
-                artifact_content,
-
-                source=
-                "image_generation",
-
-                extension=
-                "txt"
-            )
-        )
+        result = self.provider.generate(prompt, image_type)
+        if not isinstance(result, dict) or not result.get("success"):
+            return result if isinstance(result, dict) else {
+                "success": False,
+                "code": "invalid_provider_response",
+                "message": "The image provider returned an invalid response.",
+            }
 
         return {
 
@@ -94,8 +71,8 @@ class ImageGenerationService:
             "image_type":
             image_type,
 
-            "artifact":
-            artifact,
+            "provider_result":
+            result,
 
             "created":
             datetime.now().strftime(

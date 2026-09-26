@@ -24,8 +24,9 @@ class TemplateEngine:
         }
 
 
-        template_folder = Path(
-            "generated_templates"
+        template_folder = (
+            Path(__file__).resolve().parents[3]
+            / "generated_templates"
         )
 
 

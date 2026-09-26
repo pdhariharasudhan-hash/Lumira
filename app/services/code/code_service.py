@@ -84,6 +84,15 @@ class CodeService:
             ]
         )
 
+        auth_parameter = ""
+        if "auth" in features:
+            auth_parameter = "current_user: str = Depends(get_current_user)"
+            parameter_string = (
+                f"{parameter_string},\n    {auth_parameter}"
+                if parameter_string
+                else auth_parameter
+            )
+
         object_string = ",\n            ".join(
 
             [
@@ -159,7 +168,9 @@ app = FastAPI()
 @app.get(
     "/{collection_name}"
 )
-def get_items():
+def get_items(
+    {auth_parameter}
+):
 
     return {collection_name}
 
@@ -229,7 +240,8 @@ def update_item(
     "/{collection_name}/{{item_id}}"
 )
 def delete_item(
-    item_id: int
+    item_id: int,
+    {auth_parameter}
 ):
 
     if item_id >= len(

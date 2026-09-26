@@ -22,6 +22,7 @@ class ExecutionContextService:
                 "active_version": None,
                 "current_stage": None,
                 "last_command": None,
+                "active_mode": None,
                 "artifacts": []
             })
 
@@ -51,7 +52,15 @@ class ExecutionContextService:
 
     def get_context(self):
 
-        return self._read()
+        data = self._read()
+        data.setdefault("active_mode", None)
+        return data
+
+    def set_mode(self, mode):
+
+        data = self._read()
+        data["active_mode"] = mode
+        self._write(data)
 
     def set_goal(self, goal):
 
@@ -120,5 +129,6 @@ class ExecutionContextService:
             "active_version": None,
             "current_stage": None,
             "last_command": None,
+            "active_mode": None,
             "artifacts": []
         })

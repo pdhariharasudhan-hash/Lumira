@@ -17,6 +17,12 @@ from datetime import datetime
 from app.services.conversation.conversation_models import (
     ConversationState,
 )
+from app.services.language.intent_classifier_service import (
+    IntentClassifierService,
+)
+from app.services.language.language_detection_service import (
+    LanguageDetectionService,
+)
 
 
 class ConversationService:
@@ -25,6 +31,10 @@ class ConversationService:
 
     This service owns only ConversationState.
     """
+
+    def __init__(self):
+        self.intent_classifier = IntentClassifierService()
+        self.language_detector = LanguageDetectionService()
 
     def analyze(
         self,
@@ -75,21 +85,20 @@ class ConversationService:
         # Intent Detection (Placeholder)
         # ---------------------------------
 
-        state.detected_intent = (
-            self._detect_intent(text)
-        )
+        state.detected_intent = self.intent_classifier.classify(text)
 
         # ---------------------------------
         # Language Detection
         # ---------------------------------
 
-        state.detected_language = "en"
+        language = self.language_detector.detect(text)
+        state.detected_language = language["language"]
 
         # ---------------------------------
         # Confidence
         # ---------------------------------
 
-        state.confidence = 1.0
+        state.confidence = language["confidence"]
 
         # ---------------------------------
         # Timestamp

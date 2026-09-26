@@ -1,17 +1,24 @@
 from datetime import datetime
+from typing import Protocol
 
 from app.services.artifacts.artifact_manager_service import (
     ArtifactManagerService
 )
 
 
+class SummaryProvider(Protocol):
+    def summarize(self, transcript: str) -> str:
+        ...
+
+
 class SummaryService:
 
-    def __init__(self):
+    def __init__(self, provider: SummaryProvider | None = None):
 
         self.artifacts = (
             ArtifactManagerService()
         )
+        self.provider = provider
 
     def generate_summary(
         self,
@@ -48,6 +55,13 @@ class SummaryService:
                 "Artifact is not a transcript"
             }
 
+        if self.provider is None:
+            return {
+                "success": False,
+                "code": "provider_unavailable",
+                "message": "No transcript summarization provider is configured.",
+            }
+
         transcript_file = (
             transcript_artifact[
                 "file"
@@ -77,26 +91,13 @@ class SummaryService:
                 str(e)
             }
 
-        summary_text = (
-
-            "[MOCK SUMMARY]\n\n"
-
-            "Transcript successfully "
-            "processed.\n\n"
-
-            f"Characters: "
-            f"{len(transcript_text)}\n\n"
-
-            "Future versions will use "
-            "AI summarization to extract:\n"
-
-            "- key ideas\n"
-            "- action items\n"
-            "- tags\n"
-            "- project concepts\n"
-            "- startup ideas\n"
-            "- research notes\n"
-        )
+        summary_text = self.provider.summarize(transcript_text)
+        if not isinstance(summary_text, str) or not summary_text.strip():
+            return {
+                "success": False,
+                "code": "empty_summary",
+                "message": "The summary provider returned no summary.",
+            }
 
         summary_artifact = (
 
