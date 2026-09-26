@@ -1,0 +1,1382 @@
+from typing import Dict, List
+import re
+
+from app.services.modes.mode_registry_service import (
+    ModeRegistryService,
+)
+
+from app.services.modes.models.mode_detection import (
+    ModeCandidate,
+    ModeDetectionResult,
+)
+
+
+class ModeDetectionService:
+    """
+    Deterministic Intent + Domain mode detector.
+
+    Pipeline:
+
+        input
+          ?
+        normalization
+          ?
+        intent evidence
+          ?
+        domain evidence
+          ?
+        phrase evidence
+          ?
+        primary / secondary ranking
+          ?
+        ambiguity
+
+    The detector recommends a primary mode.
+    Secondary candidates are preserved.
+
+    It never activates a mode.
+
+    Ownership:
+    Handoff 13.4 - Intent + Domain Evidence
+    """
+
+    AMBIGUITY_MARGIN = 0.20
+    MIN_INTENT_SCORE = 0.75
+
+    INTENT_WEIGHT = 1.00
+    DOMAIN_WEIGHT = 0.35
+
+    INTENTS: Dict[str, List[str]] = {
+
+        "personal": [
+            "remember",
+            "remind",
+            "organize",
+            "manage",
+        ],
+
+        "builder": [
+            "build",
+            "code",
+            "program",
+            "debug",
+            "develop",
+            "fix",
+            "implement",
+        ],
+
+        "growth": [
+            "grow",
+            "earn",
+            "monetize",
+            "market",
+            "sell",
+            "increase",
+            "scale",
+        ],
+
+        "creator": [
+            "write",
+            "design",
+            "edit",
+            "draft",
+            "compose",
+        ],
+
+        "generator": [
+            "generate",
+            "create",
+            "produce",
+            "make",
+            "render",
+        ],
+
+        "research": [
+            "research",
+            "analyze",
+            "compare",
+            "investigate",
+            "study",
+            "find",
+            "explain",
+            "evaluate",
+        ],
+
+        "assistant": [
+            "help",
+            "plan",
+            "summarize",
+            "answer",
+            "assist",
+        ],
+
+        "operations": [
+            "execute",
+            "run",
+            "deploy",
+            "automate",
+            "monitor",
+            "operate",
+            "release",
+        ],
+    }
+
+    DOMAINS: Dict[str, List[str]] = {
+
+        "personal": [
+            "personal",
+            "my",
+            "life",
+            "routine",
+            "schedule",
+            "memory",
+            "reminder",
+            "habit",
+            "daily",
+        ],
+
+        "builder": [
+            "api",
+            "code",
+            "software",
+            "app",
+            "application",
+            "website",
+            "program",
+            "developer",
+            "prototype",
+        ],
+
+        "growth": [
+            "business",
+            "money",
+            "revenue",
+            "marketing",
+            "sales",
+            "startup",
+            "customer",
+            "profit",
+        ],
+
+        "creator": [
+            "content",
+            "blog",
+            "video",
+            "script",
+            "creative",
+            "article",
+            "story",
+        ],
+
+        "generator": [
+            "image",
+            "diagram",
+            "file",
+            "asset",
+        ],
+
+        "research": [
+            "information",
+            "technology",
+            "science",
+            "battery",
+            "models",
+            "data",
+            "paper",
+            "topic",
+        ],
+
+        "assistant": [
+            "schedule",
+            "task",
+            "calendar",
+            "reminder",
+            "list",
+        ],
+
+        "operations": [
+            "workflow",
+            "production",
+            "deployment",
+            "server",
+            "infrastructure",
+            "pipeline",
+            "environment",
+        ],
+    }
+
+    PHRASES: Dict[str, Dict[str, float]] = {
+
+        "business plan": {
+            "growth": 1.25,
+        },
+
+        "startup workflow": {
+            "operations": 1.25,
+        },
+
+        "production api": {
+            "operations": 1.25,
+        },
+
+        "image generator": {
+            "generator": 1.25,
+        },
+
+        "expense tracker": {
+            "builder": 1.25,
+        },
+
+        "battery technology": {
+            "research": 1.25,
+        },
+
+        "personal life": {
+            "personal": 1.25,
+        },
+
+        "production deployment": {
+            "operations": 1.25,
+        },
+    }
+
+    # ----------------------------------
+    # Primary Action Vocabulary
+    # ----------------------------------
+    #
+    # These are actual requested actions.
+    #
+    # Domain words such as "code", "api",
+    # "application", and "development" are
+    # intentionally excluded.
+    #
+    PRIMARY_ACTIONS: Dict[str, List[str]] = {
+
+        "personal": [
+            "remember",
+            "remind",
+            "organize",
+            "manage",
+        ],
+
+        "builder": [
+            "build",
+            "debug",
+            "fix",
+            "implement",
+        ],
+
+        "growth": [
+            "grow",
+            "earn",
+            "monetize",
+            "market",
+            "sell",
+            "increase",
+            "scale",
+        ],
+
+        "creator": [
+            "write",
+            "design",
+            "edit",
+            "draft",
+            "compose",
+        ],
+
+        "generator": [
+            "generate",
+            "create",
+            "produce",
+            "make",
+            "render",
+        ],
+
+        "research": [
+            "research",
+            "analyze",
+            "compare",
+            "investigate",
+            "study",
+            "find",
+            "explain",
+            "evaluate",
+        ],
+
+        "assistant": [
+            "help",
+            "plan",
+            "summarize",
+            "answer",
+            "assist",
+        ],
+
+        "operations": [
+            "execute",
+            "run",
+            "deploy",
+            "automate",
+            "monitor",
+            "operate",
+            "release",
+        ],
+    }
+
+    MORPHOLOGY: Dict[str, str] = {
+
+        "building": "build",
+        "built": "build",
+
+        "coding": "code",
+        "coded": "code",
+
+        "programming": "program",
+        "programmed": "program",
+
+        "debugging": "debug",
+        "debugged": "debug",
+
+        "developing": "develop",
+        "developed": "develop",
+        "development": "develop",
+
+        "researching": "research",
+        "researched": "research",
+
+        "analyzing": "analyze",
+        "analysing": "analyze",
+        "analyzed": "analyze",
+        "analysed": "analyze",
+
+        "comparing": "compare",
+        "compared": "compare",
+
+        "investigating": "investigate",
+        "investigated": "investigate",
+
+        "studying": "study",
+        "studied": "study",
+
+        "writing": "write",
+        "wrote": "write",
+
+        "designing": "design",
+        "designed": "design",
+
+        "editing": "edit",
+        "edited": "edit",
+
+        "drafting": "draft",
+        "drafted": "draft",
+
+        "generating": "generate",
+        "generated": "generate",
+
+        "creating": "create",
+        "created": "create",
+
+        "producing": "produce",
+        "produced": "produce",
+
+        "making": "make",
+        "made": "make",
+
+        "deploying": "deploy",
+        "deployed": "deploy",
+        "deployment": "deploy",
+
+        "executing": "execute",
+        "executed": "execute",
+
+        "running": "run",
+        "ran": "run",
+
+        "automating": "automate",
+        "automated": "automate",
+
+        "monitoring": "monitor",
+        "monitored": "monitor",
+
+        "operating": "operate",
+        "operated": "operate",
+
+        "releasing": "release",
+        "released": "release",
+
+        "planning": "plan",
+        "planned": "plan",
+
+        "helping": "help",
+        "helped": "help",
+
+        "summarizing": "summarize",
+        "summarised": "summarize",
+        "summarized": "summarize",
+
+        "answering": "answer",
+        "answered": "answer",
+
+        "assisting": "assist",
+        "assisted": "assist",
+
+        "growing": "grow",
+        "grew": "grow",
+
+        "earning": "earn",
+        "earned": "earn",
+
+        "monetizing": "monetize",
+        "monetized": "monetize",
+
+        "marketing": "market",
+        "marketed": "market",
+
+        "selling": "sell",
+        "sold": "sell",
+
+        "increasing": "increase",
+        "increased": "increase",
+
+        "scaling": "scale",
+        "scaled": "scale",
+
+        "remembering": "remember",
+        "remembered": "remember",
+
+        "reminding": "remind",
+        "reminded": "remind",
+
+        "organizing": "organize",
+        "organised": "organize",
+        "organized": "organize",
+        "organised": "organize",
+
+        "managing": "manage",
+        "managed": "manage",
+    }
+
+    def __init__(
+        self,
+        registry: ModeRegistryService | None = None,
+    ) -> None:
+
+        self.registry = (
+            registry
+            if registry is not None
+            else ModeRegistryService()
+        )
+
+    def _extract_primary_actions(
+        self,
+        normalized: str,
+    ) -> List[tuple[str, str]]:
+        """
+        Extract all explicit primary actions.
+
+        Returns deterministic pairs of:
+
+            (action, owning_mode)
+
+        Duplicate actions are removed while preserving
+        deterministic ordering.
+        """
+
+        matches: List[
+            tuple[str, str]
+        ] = []
+
+        for mode_id, actions in (
+            self.PRIMARY_ACTIONS.items()
+        ):
+
+            for action in actions:
+
+                if self._matches(
+                    normalized,
+                    action,
+                ):
+
+                    matches.append(
+                        (
+                            action,
+                            mode_id,
+                        )
+                    )
+
+        matches.sort(
+            key=lambda item: (
+                -len(item[0].split()),
+                -len(item[0]),
+                item[0],
+                item[1],
+            )
+        )
+
+        return list(
+            dict.fromkeys(matches)
+        )
+
+    def _extract_primary_action(
+        self,
+        normalized: str,
+    ) -> tuple[str, str, float]:
+        """
+        Extract the strongest explicit requested action.
+
+        Returns:
+
+            (
+                action,
+                owning_mode,
+                confidence,
+            )
+
+        Domain words such as "code", "api",
+        "application", and "development" are not
+        considered primary actions.
+        """
+
+        matches: List[
+            tuple[str, str]
+        ] = []
+
+        for mode_id, actions in (
+            self.PRIMARY_ACTIONS.items()
+        ):
+
+            for action in actions:
+
+                if self._matches(
+                    normalized,
+                    action,
+                ):
+
+                    matches.append(
+                        (
+                            action,
+                            mode_id,
+                        )
+                    )
+
+        if not matches:
+            return "", "", 0.0
+
+        # Deterministic ordering.
+        #
+        # Longer actions are preferred first so that
+        # future multi-word actions can safely coexist
+        # with shorter actions.
+        matches.sort(
+            key=lambda item: (
+                -len(item[0].split()),
+                -len(item[0]),
+                item[0],
+                item[1],
+            )
+        )
+
+        action, mode_id = matches[0]
+
+        # If multiple different modes claim the exact
+        # same action, the action itself is not enough
+        # to determine ownership.
+        same_action_modes = {
+            candidate_mode
+            for candidate_action, candidate_mode
+            in matches
+            if candidate_action == action
+        }
+
+        if len(same_action_modes) > 1:
+            return action, "", 0.0
+
+        return action, mode_id, 1.0
+
+    def detect(
+        self,
+        text: str,
+    ) -> ModeDetectionResult:
+
+        normalized = self._normalize(text)
+
+        if not normalized:
+            return self._empty_result(text)
+
+        (
+            primary_action,
+            primary_action_mode,
+            primary_action_confidence,
+        ) = self._extract_primary_action(
+            normalized
+        )
+
+        primary_actions = (
+            self._extract_primary_actions(
+                normalized
+            )
+        )
+
+        primary_action_modes = {
+            mode_id
+            for _, mode_id
+            in primary_actions
+        }
+
+        multi_action_conflict = (
+            len(primary_action_modes) > 1
+        )
+
+        candidates: List[
+            ModeCandidate
+        ] = []
+
+        for mode_id in self.registry.get_ids():
+
+            intent_matches: List[str] = []
+            domain_matches: List[str] = []
+            phrase_matches: List[str] = []
+
+            intent_score = 0.0
+            domain_score = 0.0
+            phrase_score = 0.0
+
+            # ------------------------------
+            # Intent evidence
+            # ------------------------------
+
+            for intent in self.INTENTS.get(
+                mode_id,
+                [],
+            ):
+
+                if self._matches(
+                    normalized,
+                    intent,
+                ):
+
+                    intent_matches.append(intent)
+                    intent_score += self.INTENT_WEIGHT
+
+            # ------------------------------
+            # Domain evidence
+            # ------------------------------
+
+            for domain in self.DOMAINS.get(
+                mode_id,
+                [],
+            ):
+
+                if self._matches(
+                    normalized,
+                    domain,
+                ):
+
+                    domain_matches.append(domain)
+                    domain_score += self.DOMAIN_WEIGHT
+
+            # ------------------------------
+            # Phrase evidence
+            # ------------------------------
+
+            for phrase, mode_weights in (
+                self.PHRASES.items()
+            ):
+
+                if not self._matches(
+                    normalized,
+                    phrase,
+                ):
+                    continue
+
+                if mode_id not in mode_weights:
+                    continue
+
+                phrase_matches.append(phrase)
+                phrase_score += mode_weights[mode_id]
+
+            has_intent = (
+                intent_score >= self.MIN_INTENT_SCORE
+            )
+
+            has_phrase = (
+                phrase_score > 0.0
+            )
+
+            # Domain evidence alone must NEVER
+            # activate a mode.
+            if not has_intent and not has_phrase:
+                continue
+
+            raw_score = round(
+                intent_score
+                + domain_score
+                + phrase_score,
+                2,
+            )
+
+            matched_keywords = list(
+                dict.fromkeys(
+                    intent_matches
+                    + domain_matches
+                    + phrase_matches
+                )
+            )
+
+            reasons = []
+
+            if intent_matches:
+                reasons.append(
+                    "Intent: "
+                    + ", ".join(intent_matches)
+                )
+
+            if domain_matches:
+                reasons.append(
+                    "Domain: "
+                    + ", ".join(domain_matches)
+                )
+
+            if phrase_matches:
+                reasons.append(
+                    "Phrase: "
+                    + ", ".join(phrase_matches)
+                )
+
+            candidates.append(
+                ModeCandidate(
+                    mode_id=mode_id,
+                    raw_score=raw_score,
+                    score=0.0,
+                    intent_score=round(
+                        intent_score,
+                        2,
+                    ),
+                    domain_score=round(
+                        domain_score,
+                        2,
+                    ),
+                    phrase_score=round(
+                        phrase_score,
+                        2,
+                    ),
+                    matched_keywords=matched_keywords,
+                    matched_intents=intent_matches,
+                    matched_domains=domain_matches,
+                    matched_phrases=phrase_matches,
+                    reasons=reasons,
+                )
+            )
+
+        if not candidates:
+            return self._empty_result(text)
+
+        # ----------------------------------
+        # Semantic Decision Layer
+        # ----------------------------------
+        #
+        # Evidence is NOT treated as one flat score.
+        #
+        # Decision hierarchy:
+        #
+        #   1. Strong semantic phrase
+        #   2. Direct action
+        #   3. Action + compatible domain
+        #   4. Domain
+        #   5. Context
+        #
+        # Domain evidence must never defeat a direct
+        # action merely because the domain belongs to
+        # another mode.
+        #
+        # Examples:
+        #
+        #   "run my code"
+        #       run   -> operations
+        #       code  -> builder domain
+        #       => operations
+        #
+        #   "create a business plan"
+        #       create -> generator
+        #       plan   -> assistant
+        #       business plan -> growth phrase
+        #       => growth
+        #
+
+        # ----------------------------------
+        # Strong phrase evidence
+        # ----------------------------------
+        #
+        # Explicit semantic phrases have highest
+        # precedence.
+        #
+        # Example:
+        #
+        #   "create a business plan"
+        #
+        #   create -> generator
+        #   business plan -> growth
+        #
+        # Therefore growth wins.
+
+        phrase_candidates = [
+            candidate
+            for candidate in candidates
+            if candidate.phrase_score > 0.0
+        ]
+
+        strongest_phrase = max(
+            (
+                candidate.phrase_score
+                for candidate in phrase_candidates
+            ),
+            default=0.0,
+        )
+
+        strongest_phrase_candidates = [
+            candidate
+            for candidate in phrase_candidates
+            if candidate.phrase_score
+            == strongest_phrase
+        ]
+
+        # A strong phrase is authoritative only when
+        # it represents the requested operation itself.
+        #
+        # Phrases such as "production api" describe
+        # the target/context and must not defeat an
+        # explicit action such as "debug".
+        #
+        # If a confident primary action exists and the
+        # strongest phrase belongs to another mode only
+        # because of target/context wording, the action
+        # wins.
+
+        # Some phrases describe the semantic task
+        # itself and therefore legitimately override
+        # the generic primary action.
+        #
+        # Examples:
+        #
+        #   "business plan"
+        #       create -> generator
+        #       business plan -> growth
+        #       => growth
+        #
+        #   "production api"
+        #       debug -> builder
+        #       production api -> operations
+        #       => builder
+        #
+        # Semantic task phrases are explicitly marked
+        # by the PHRASE_TASK_MODES table.
+
+        phrase_is_context_only = False
+
+        if (
+            primary_action_mode
+            and primary_action_confidence >= 1.0
+            and len(strongest_phrase_candidates) == 1
+        ):
+
+            phrase_candidate = (
+                strongest_phrase_candidates[0]
+            )
+
+            phrase_is_context_only = (
+                not self._phrase_is_task(
+                    normalized,
+                    phrase_candidate,
+                )
+            )
+
+        if (
+            strongest_phrase >= 1.25
+            and len(strongest_phrase_candidates) == 1
+            and not phrase_is_context_only
+        ):
+
+            selected = (
+                strongest_phrase_candidates[0]
+            )
+
+            ambiguous = False
+
+        # ----------------------------------
+        # Primary action evidence
+        # ----------------------------------
+        #
+        # If no strong semantic phrase exists,
+        # the extracted primary action becomes the
+        # strongest decision signal.
+        #
+        # Example:
+        #
+        #   "run my code"
+        #
+        #   primary action = run
+        #   action mode    = operations
+        #   code domain    = builder
+        #
+        # operations wins.
+
+        elif (
+            primary_action_mode
+            and primary_action_confidence >= 1.0
+        ):
+
+            action_candidate = next(
+                (
+                    candidate
+                    for candidate in candidates
+                    if candidate.mode_id
+                    == primary_action_mode
+                ),
+                None,
+            )
+
+            if action_candidate is not None:
+
+                selected = action_candidate
+                ambiguous = False
+
+            else:
+
+                selected = candidates[0]
+                ambiguous = len(candidates) > 1
+
+        else:
+
+            # ----------------------------------
+            # Intent fallback
+            # ----------------------------------
+
+            intent_candidates = [
+                candidate
+                for candidate in candidates
+                if candidate.intent_score
+                >= self.MIN_INTENT_SCORE
+            ]
+
+            if not intent_candidates:
+
+                if (
+                    len(
+                        strongest_phrase_candidates
+                    ) == 1
+                ):
+
+                    selected = (
+                        strongest_phrase_candidates[0]
+                    )
+
+                    ambiguous = False
+
+                else:
+
+                    selected = candidates[0]
+                    ambiguous = (
+                        len(candidates) > 1
+                    )
+
+            else:
+
+                strongest_intent = max(
+                    candidate.intent_score
+                    for candidate
+                    in intent_candidates
+                )
+
+                strongest_intent_candidates = [
+                    candidate
+                    for candidate
+                    in intent_candidates
+                    if candidate.intent_score
+                    == strongest_intent
+                ]
+
+                if len(
+                    strongest_intent_candidates
+                ) == 1:
+
+                    selected = (
+                        strongest_intent_candidates[0]
+                    )
+
+                    ambiguous = False
+
+                else:
+
+                    intent_peers = sorted(
+                        strongest_intent_candidates,
+                        key=lambda candidate: (
+                            -candidate.phrase_score,
+                            -candidate.domain_score,
+                            -candidate.raw_score,
+                            candidate.mode_id,
+                        ),
+                    )
+
+                    selected = intent_peers[0]
+
+                    second_intent = (
+                        intent_peers[1]
+                    )
+
+                    phrase_difference = round(
+                        selected.phrase_score
+                        - second_intent.phrase_score,
+                        2,
+                    )
+
+                    domain_difference = round(
+                        selected.domain_score
+                        - second_intent.domain_score,
+                        2,
+                    )
+
+                    if phrase_difference > 0.0:
+                        ambiguous = False
+
+                    elif domain_difference >= 0.70:
+                        ambiguous = False
+
+                    else:
+                        ambiguous = True
+
+        # ----------------------------------
+        # Final normalized scores
+        # ----------------------------------
+
+        # ----------------------------------
+        # Score Statistics
+        # ----------------------------------
+        #
+        # Confidence statistics describe the actual
+        # candidate ranking, NOT the selected decision.
+        #
+        # This distinction is critical.
+        #
+        # A mode may be selected because of semantic
+        # precedence even when another candidate has a
+        # higher raw evidence score.
+        #
+        # Therefore:
+        #
+        #   raw_top_score
+        #       = highest candidate raw score
+        #
+        #   raw_second_score
+        #       = second-highest candidate raw score
+        #
+        #   raw_score_margin
+        #       = top - second
+        #
+        # These values must never depend on selected_mode.
+        # ----------------------------------
+
+        ranked_candidates = sorted(
+            candidates,
+            key=lambda candidate: (
+                -candidate.raw_score,
+                candidate.mode_id,
+            ),
+        )
+
+        raw_top_score = (
+            ranked_candidates[0].raw_score
+            if ranked_candidates
+            else 0.0
+        )
+
+        raw_second_score = (
+            ranked_candidates[1].raw_score
+            if len(ranked_candidates) > 1
+            else 0.0
+        )
+
+        raw_score_margin = round(
+            raw_top_score
+            - raw_second_score,
+            2,
+        )
+
+        normalization_base = max(
+            max(
+                candidate.raw_score
+                for candidate in candidates
+            ),
+            1.0,
+        )
+
+        for candidate in candidates:
+
+            candidate.score = min(
+                1.0,
+                round(
+                    candidate.raw_score
+                    / normalization_base,
+                    2,
+                ),
+            )
+
+            candidate.is_primary = False
+
+        # ----------------------------------
+        # Multi-action conflict
+        # ----------------------------------
+        #
+        # Different explicit actions belonging to
+        # different modes cannot silently collapse into
+        # one mode.
+        #
+        # A strong semantic task phrase may still resolve
+        # the overall request.
+        #
+        if (
+            multi_action_conflict
+            and not (
+                strongest_phrase >= 1.25
+                and len(
+                    strongest_phrase_candidates
+                ) == 1
+            )
+        ):
+            ambiguous = True
+
+        selected_mode = (
+            ""
+            if ambiguous
+            else selected.mode_id
+        )
+
+        if selected_mode:
+            selected.is_primary = True
+
+        # ----------------------------------
+        # 13.4.5 Decision Traceability
+        # ----------------------------------
+        #
+        # The trace describes the FINAL decision.
+        #
+        # Primary action evidence is recorded whenever
+        # the extracted action belongs to the selected
+        # mode.
+        #
+        # This must work regardless of which decision
+        # branch selected the candidate.
+
+        if selected_mode:
+
+            trace_reasons = list(
+                selected.reasons
+            )
+
+            if (
+                primary_action
+                and primary_action_mode
+                == selected_mode
+            ):
+                trace_reasons.append(
+                    "Primary action: "
+                    + primary_action
+                )
+
+            if selected.matched_phrases:
+                formatted_phrases = [
+                    phrase.replace(
+                        "_",
+                        " ",
+                    )
+                    for phrase
+                    in selected.matched_phrases
+                ]
+
+                trace_reasons.append(
+                    "Semantic phrase: "
+                    + ", ".join(
+                        formatted_phrases
+                    )
+                )
+
+            if selected.matched_intents:
+                trace_reasons.append(
+                    "Matched intent: "
+                    + ", ".join(
+                        selected.matched_intents
+                    )
+                )
+
+            if selected.matched_domains:
+                trace_reasons.append(
+                    "Matched domain: "
+                    + ", ".join(
+                        selected.matched_domains
+                    )
+                )
+
+            selected.reasons = list(
+                dict.fromkeys(
+                    trace_reasons
+                )
+            )
+
+        # ----------------------------------
+        # Normalized Score Statistics
+        # ----------------------------------
+        #
+        # These values describe the mathematical
+        # candidate ranking, not the semantic selection.
+        #
+        # selected may intentionally differ from the
+        # highest-scoring candidate.
+        # ----------------------------------
+
+        top_score = min(
+            1.0,
+            round(
+                raw_top_score
+                / normalization_base,
+                2,
+            ),
+        )
+
+        second_score = (
+            min(
+                1.0,
+                round(
+                    raw_second_score
+                    / normalization_base,
+                    2,
+                ),
+            )
+            if raw_second_score > 0
+            else 0.0
+        )
+
+        score_margin = round(
+            top_score
+            - second_score,
+            2,
+        )
+
+        return ModeDetectionResult(
+            input_text=text,
+            candidates=candidates,
+            selected_mode=selected_mode,
+            primary_action=primary_action,
+            primary_action_mode=primary_action_mode,
+            primary_action_confidence=(
+                primary_action_confidence
+            ),
+            top_score=top_score,
+            second_score=second_score,
+            score_margin=score_margin,
+            raw_top_score=raw_top_score,
+            raw_second_score=raw_second_score,
+            raw_score_margin=raw_score_margin,
+            ambiguous=ambiguous,
+        )
+
+    def _normalize(
+        self,
+        text: str,
+    ) -> str:
+
+        tokens = re.findall(
+            r"[a-z0-9]+",
+            text.strip().lower(),
+        )
+
+        normalized_tokens = [
+            self.MORPHOLOGY.get(
+                token,
+                token,
+            )
+            for token in tokens
+        ]
+
+        return " ".join(
+            normalized_tokens
+        )
+
+    PHRASE_TASK_MODES: Dict[str, List[str]] = {
+        "business plan": [
+            "growth",
+        ],
+    }
+
+    def _phrase_is_task(
+        self,
+        normalized: str,
+        candidate: ModeCandidate,
+    ) -> bool:
+        """
+        Determine whether a matched phrase represents
+        the semantic task rather than merely describing
+        the target/context.
+
+        Unknown phrases remain conservative and are
+        treated as task phrases unless explicitly known
+        to be contextual.
+        """
+
+        for phrase in candidate.matched_phrases:
+
+            if phrase in self.PHRASE_TASK_MODES:
+
+                allowed_modes = (
+                    self.PHRASE_TASK_MODES[
+                        phrase
+                    ]
+                )
+
+                return (
+                    candidate.mode_id
+                    in allowed_modes
+                )
+
+        # Known contextual phrase.
+        if (
+            "production api"
+            in candidate.matched_phrases
+        ):
+            return False
+
+        return True
+
+    def _matches(
+        self,
+        text: str,
+        keyword: str,
+    ) -> bool:
+
+        pattern = (
+            r"(?<!\w)"
+            + re.escape(
+                keyword.lower()
+            )
+            + r"(?!\w)"
+        )
+
+        return re.search(
+            pattern,
+            text,
+        ) is not None
+
+    def _empty_result(
+        self,
+        text: str,
+    ) -> ModeDetectionResult:
+
+        return ModeDetectionResult(
+            input_text=text,
+            candidates=[],
+            selected_mode="",
+            top_score=0.0,
+            second_score=0.0,
+            score_margin=0.0,
+            raw_top_score=0.0,
+            raw_second_score=0.0,
+            raw_score_margin=0.0,
+            ambiguous=True,
+        )

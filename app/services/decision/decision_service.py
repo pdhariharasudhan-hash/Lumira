@@ -24,6 +24,10 @@ from app.services.constraints.constraint_models import (
     ConstraintState,
 )
 
+from app.services.modes.models.mode_state import (
+    ModeState,
+)
+
 
 class DecisionService:
     """
@@ -37,6 +41,7 @@ class DecisionService:
         reasoning: ReasoningState,
         constraints: ConstraintState,
         state: DecisionState,
+        mode: ModeState | None = None,
     ) -> DecisionState:
 
         state.alternatives_considered = list(
@@ -55,7 +60,10 @@ class DecisionService:
         )
 
         state.selected_option = (
-            self._select_option(reasoning)
+            self._select_option(
+                reasoning,
+                mode,
+            )
         )
 
         state.decision_reason = (
@@ -83,10 +91,42 @@ class DecisionService:
     def _select_option(
         self,
         reasoning: ReasoningState,
+        mode: ModeState | None = None,
     ) -> str:
+        """
+        Select an execution option using reasoning and
+        the current operating mode.
+
+        Mode does not replace reasoning.
+
+        It provides operating context for the decision.
+        """
 
         if reasoning.conclusions:
             return reasoning.conclusions[0]
+
+        if mode is not None:
+
+            if mode.active_mode == "builder":
+                return "Proceed to implementation planning."
+
+            if mode.active_mode == "research":
+                return "Continue research and evidence gathering."
+
+            if mode.active_mode == "generator":
+                return "Proceed to artifact generation planning."
+
+            if mode.active_mode == "creator":
+                return "Proceed to content creation planning."
+
+            if mode.active_mode == "growth":
+                return "Proceed to growth strategy planning."
+
+            if mode.active_mode == "operations":
+                return "Proceed to operational execution planning."
+
+            if mode.active_mode == "assistant":
+                return "Proceed with the requested assistance."
 
         return "Continue analysis"
 

@@ -1,0 +1,50 @@
+{
+  "type": "architecture_diagram",
+  "version": "1.0",
+  "request": "create architecture diagram for an ecommerce application",
+  "status": "generated",
+  "layout": "layered",
+  "direction": "top_down",
+  "subject": "ecommerce",
+  "layers": [
+    {
+      "id": "layer_1",
+      "name": "presentation",
+      "order": 1
+    },
+    {
+      "id": "layer_2",
+      "name": "application",
+      "order": 2
+    },
+    {
+      "id": "layer_3",
+      "name": "data",
+      "order": 3
+    }
+  ],
+  "components": [
+    {
+      "id": "component_1",
+      "name": "ecommerce",
+      "layer": "application",
+      "type": "primary"
+    },
+    {
+      "id": "component_2",
+      "name": "application",
+      "layer": "presentation",
+      "type": "service"
+    }
+  ],
+  "connections": [
+    {
+      "from": "component_1",
+      "to": "component_2",
+      "relation": "depends_on"
+    }
+  ],
+  "layer_count": 3,
+  "component_count": 2,
+  "connection_count": 1
+}

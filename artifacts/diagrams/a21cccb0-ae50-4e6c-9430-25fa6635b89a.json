@@ -1,0 +1,39 @@
+{
+  "type": "diagram",
+  "version": "1.0",
+  "request": "create a simple architecture diagram for a todo api",
+  "status": "generated",
+  "layout": "hierarchical",
+  "direction": "top_down",
+  "nodes": [
+    {
+      "id": "node_1",
+      "label": "architecture",
+      "type": "primary"
+    },
+    {
+      "id": "node_2",
+      "label": "todo",
+      "type": "component"
+    },
+    {
+      "id": "node_3",
+      "label": "api",
+      "type": "component"
+    }
+  ],
+  "edges": [
+    {
+      "source": "node_1",
+      "target": "node_2",
+      "relation": "contains"
+    },
+    {
+      "source": "node_1",
+      "target": "node_3",
+      "relation": "contains"
+    }
+  ],
+  "node_count": 3,
+  "edge_count": 2
+}

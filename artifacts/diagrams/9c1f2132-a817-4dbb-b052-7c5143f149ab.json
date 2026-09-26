@@ -1,0 +1,68 @@
+{
+  "type": "ui_design",
+  "version": "1.0",
+  "request": "create a simple UI design for a todo application",
+  "status": "generated",
+  "subject": "todo",
+  "layout": "responsive",
+  "navigation": "top_navigation",
+  "screens": [
+    {
+      "id": "screen_1",
+      "name": "home",
+      "purpose": "primary user entry point"
+    },
+    {
+      "id": "screen_2",
+      "name": "details",
+      "purpose": "view and manage primary content"
+    },
+    {
+      "id": "screen_3",
+      "name": "settings",
+      "purpose": "configure application behavior"
+    }
+  ],
+  "components": [
+    {
+      "id": "component_1",
+      "name": "header",
+      "type": "navigation"
+    },
+    {
+      "id": "component_2",
+      "name": "content",
+      "type": "primary_content"
+    },
+    {
+      "id": "component_3",
+      "name": "action_button",
+      "type": "interaction"
+    },
+    {
+      "id": "component_4",
+      "name": "footer",
+      "type": "navigation"
+    }
+  ],
+  "interactions": [
+    {
+      "from": "screen_1",
+      "to": "screen_2",
+      "action": "open_details"
+    },
+    {
+      "from": "screen_2",
+      "to": "screen_1",
+      "action": "back"
+    },
+    {
+      "from": "screen_1",
+      "to": "screen_3",
+      "action": "open_settings"
+    }
+  ],
+  "screen_count": 3,
+  "component_count": 4,
+  "interaction_count": 3
+}

@@ -2,6 +2,10 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from app.services.modes.models.mode_state import (
+    ModeState,
+)
+
 
 VALID_STAGES = ["validate", "builder", "execute", "code"]
 VALID_STATUSES = ["running", "stopped", "completed"]
@@ -12,6 +16,72 @@ class MemoryValidationError(Exception):
 
 
 class MemoryService:
+
+    # --------------------------------------------------------
+    # Mode Context
+    # --------------------------------------------------------
+
+    def _mode_context(
+        self,
+        mode: ModeState | None,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Return deterministic memory context for the
+        active operating mode.
+
+        Memory remains a persistence layer.
+        Mode does not alter pipeline validation rules.
+        """
+
+        if mode is None:
+            return None
+
+        contexts = {
+            "builder": {
+                "mode": "builder",
+                "memory_focus": "implementation",
+            },
+
+            "research": {
+                "mode": "research",
+                "memory_focus": "evidence",
+            },
+
+            "generator": {
+                "mode": "generator",
+                "memory_focus": "artifacts",
+            },
+
+            "creator": {
+                "mode": "creator",
+                "memory_focus": "content",
+            },
+
+            "growth": {
+                "mode": "growth",
+                "memory_focus": "strategy",
+            },
+
+            "operations": {
+                "mode": "operations",
+                "memory_focus": "operations",
+            },
+
+            "assistant": {
+                "mode": "assistant",
+                "memory_focus": "user_alignment",
+            },
+
+            "personal": {
+                "mode": "personal",
+                "memory_focus": "general",
+            },
+        }
+
+        return contexts.get(
+            mode.active_mode
+        )
+
     def __init__(self, file_path: str = "data/project_memory.json"):
         self.file_path = Path(file_path)
         self._ensure_file()
@@ -251,9 +321,18 @@ class MemoryService:
     # ==========================
     # 🔥 FIXED DETERMINISTIC UPDATE
     # ==========================
-    def update(self, key: str, value: Any) -> Dict[str, Any]:
+    def update(
+        self,
+        key: str,
+        value: Any,
+        mode: ModeState | None = None,
+    ) -> Dict[str, Any]:
         memory = self._read_memory()
         validated_value = self._validate_memory_update(key, value)
+
+        mode_context = self._mode_context(
+            mode
+        )
 
         # -------------------------
         # PIPELINE RUN (append safely, no duplicates)
@@ -274,7 +353,19 @@ class MemoryService:
                 if isinstance(r, dict) and r.get("id") != run_id
             ]
 
-            filtered_runs.append(validated_value)
+            if mode_context is not None:
+                validated_value = dict(
+                    validated_value
+                )
+
+                validated_value.setdefault(
+                    "mode_context",
+                    mode_context,
+                )
+
+            filtered_runs.append(
+                validated_value
+            )
 
             memory["pipeline_runs"] = filtered_runs
             memory["latest_pipeline_run"] = validated_value

@@ -74,6 +74,27 @@ class ProjectClassifier:
 
                 break
 
+        # LUMIRA CAPABILITY ACTION ALIASES
+        if isinstance(text, str):
+            _lumira_input = text.strip().lower()
+
+            # Debugging requires executable project actions.
+            if "debug" in _lumira_input:
+                for _lumira_action in (
+                    "storage",
+                    "read",
+                    "update",
+                    "delete",
+                ):
+                    if _lumira_action not in actions:
+                        actions.append(_lumira_action)
+
+            # Project generation requires executable creation steps.
+            if "create" in _lumira_input and "project" in _lumira_input:
+                if "storage" not in actions:
+                    actions.append("storage")
+                if "create" not in actions:
+                    actions.append("create")
         return list(
             set(actions)
         )

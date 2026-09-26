@@ -1,0 +1,101 @@
+{
+    "project": "lumira_project_generation_e2e",
+    "idea": "build a simple todo api for project generation e2e second version",
+    "capability": "project_generation",
+    "code_target": "todo_api",
+    "file_plan": [
+        "main.py",
+        "requirements.txt"
+    ],
+    "implementation_steps": [
+        "Create todo storage",
+        "Create GET endpoint",
+        "Create POST endpoint",
+        "Create PUT endpoint",
+        "Create DELETE endpoint"
+    ],
+    "test_steps": [
+        "pip install -r requirements.txt",
+        "uvicorn main:app --reload"
+    ],
+    "builder": {
+        "idea": "build a simple todo api for project generation e2e second version",
+        "objective": "build todo api",
+        "scope": "small",
+        "suggested_steps": [
+            {
+                "id": "step_1",
+                "action": "create todo storage",
+                "inputs": {},
+                "expected_output": "todos initialized",
+                "dependencies": []
+            },
+            {
+                "id": "step_2",
+                "action": "implement todo POST route",
+                "inputs": {},
+                "expected_output": "todo POST endpoint created",
+                "dependencies": [
+                    "step_1"
+                ]
+            },
+            {
+                "id": "step_3",
+                "action": "implement todo GET route",
+                "inputs": {},
+                "expected_output": "todo GET endpoint created",
+                "dependencies": [
+                    "step_1"
+                ]
+            },
+            {
+                "id": "step_4",
+                "action": "implement todo PUT route",
+                "inputs": {},
+                "expected_output": "todo PUT endpoint created",
+                "dependencies": [
+                    "step_1"
+                ]
+            },
+            {
+                "id": "step_5",
+                "action": "implement todo DELETE route",
+                "inputs": {},
+                "expected_output": "todo DELETE endpoint created",
+                "dependencies": [
+                    "step_1"
+                ]
+            }
+        ],
+        "priority": "high",
+        "status": "accept"
+    },
+    "execution": {
+        "execution_order": [
+            "step_1",
+            "step_2",
+            "step_3",
+            "step_4",
+            "step_5"
+        ],
+        "today_task": "step_5",
+        "task_steps": [
+            "step_1",
+            "step_2",
+            "step_3",
+            "step_4",
+            "step_5"
+        ],
+        "expected_output": "todo DELETE endpoint created",
+        "blockers": [],
+        "status": "accept"
+    },
+    "validation": {
+        "success": true,
+        "valid": true,
+        "errors": []
+    },
+    "created": "2026-09-19 22:16:34",
+    "version": "v2",
+    "status": "generated"
+}

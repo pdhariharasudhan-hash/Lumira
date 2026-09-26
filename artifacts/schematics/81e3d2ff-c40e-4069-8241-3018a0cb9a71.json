@@ -1,0 +1,30 @@
+{
+  "type": "schematic",
+  "version": "1.0",
+  "request": "create a simple circuit schematic for a motor controller",
+  "status": "generated",
+  "format": "structured",
+  "components": [
+    {
+      "id": "component_1",
+      "name": "motor",
+      "type": "primary",
+      "value": null
+    },
+    {
+      "id": "component_2",
+      "name": "controller",
+      "type": "component",
+      "value": null
+    }
+  ],
+  "connections": [
+    {
+      "from": "component_1",
+      "to": "component_2",
+      "signal": "connection"
+    }
+  ],
+  "component_count": 2,
+  "connection_count": 1
+}

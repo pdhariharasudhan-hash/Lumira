@@ -51,6 +51,8 @@ class ReflectionModule(
                 prediction=state.prediction,
 
                 state=state.reflection,
+
+                mode=state.mode,
             )
         )
 

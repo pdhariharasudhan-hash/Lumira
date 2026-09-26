@@ -15,6 +15,9 @@ from app.services.artifacts.artifact_manager_service import (
 )
 
 
+from app.services.history.pipeline_history_service import PipelineHistoryService
+
+
 class UnifiedSearchService:
 
     def __init__(self):
@@ -30,6 +33,8 @@ class UnifiedSearchService:
         self.artifacts = (
             ArtifactManagerService()
         )
+
+        self.pipeline_history = PipelineHistoryService()
 
     # ==========================
     # PROJECT SEARCH
@@ -177,6 +182,27 @@ class UnifiedSearchService:
         return {}
 
     # ==========================
+    # PIPELINE HISTORY SEARCH
+    # ==========================
+
+    def search_pipeline_history(
+        self,
+        query: str
+    ) -> List[Dict]:
+
+        if not isinstance(query, str):
+            return []
+
+        query = query.strip()
+
+        if not query:
+            return []
+
+        return self.pipeline_history.search(
+            query
+        )
+
+    # ==========================
     # FEATURE HISTORY SEARCH
     # ==========================
 
@@ -237,6 +263,11 @@ class UnifiedSearchService:
 
             "feature_history":
             self.search_feature_history(
+                query
+            ),
+
+            "pipeline_history":
+            self.search_pipeline_history(
                 query
             )
         }

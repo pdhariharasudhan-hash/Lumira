@@ -37,6 +37,10 @@ from pydantic import BaseModel, Field
 
 from app.services.brain.brain_context import BrainContext
 
+from app.services.modes.models.mode_state import (
+    ModeState,
+)
+
 from app.services.conversation.conversation_models import (
     ConversationState,
 )
@@ -157,6 +161,14 @@ class BrainState(BaseModel):
     user_input: str = ""
 
     # ----------------------------------
+    # Operating Mode State
+    # ----------------------------------
+
+    mode: ModeState = Field(
+        default_factory=ModeState
+    )
+
+    # ----------------------------------
     # Strongly Typed Intelligence States
     # ----------------------------------
 
@@ -228,6 +240,8 @@ class BrainState(BaseModel):
         self.execution_context = BrainContext()
 
         self.user_input = ""
+
+        self.mode = ModeState()
 
         self.conversation = ConversationState()
 

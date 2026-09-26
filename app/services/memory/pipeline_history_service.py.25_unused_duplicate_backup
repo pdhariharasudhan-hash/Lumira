@@ -1,0 +1,292 @@
+﻿from __future__ import annotations
+
+import json
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+
+class PipelineHistoryService:
+    """
+    Persistent deterministic history for Lumira pipeline activity.
+
+    Stores commands, runs, failures, successes, artifacts, and projects
+    in memory/pipeline_history.json.
+    """
+
+    def __init__(self, storage_path: Optional[str] = None) -> None:
+        if storage_path is None:
+            storage_path = "memory/pipeline_history.json"
+
+        self.storage_path = Path(storage_path)
+        self.storage_path.parent.mkdir(parents=True, exist_ok=True)
+        self._ensure_storage()
+
+    def _ensure_storage(self) -> None:
+        if not self.storage_path.exists():
+            self._write({
+                "version": "1.0",
+                "commands": [],
+                "runs": [],
+                "failures": [],
+                "successes": [],
+                "artifacts": [],
+                "projects": [],
+            })
+
+    def _read(self) -> Dict[str, Any]:
+        try:
+            data = json.loads(self.storage_path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            data = {}
+
+        if not isinstance(data, dict):
+            data = {}
+
+        defaults = {
+            "version": "1.0",
+            "commands": [],
+            "runs": [],
+            "failures": [],
+            "successes": [],
+            "artifacts": [],
+            "projects": [],
+        }
+
+        for key, value in defaults.items():
+            if key not in data:
+                data[key] = value
+
+        return data
+
+    def _write(self, data: Dict[str, Any]) -> None:
+        self.storage_path.parent.mkdir(parents=True, exist_ok=True)
+        self.storage_path.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+    @staticmethod
+    def _timestamp() -> str:
+        return datetime.now(timezone.utc).isoformat()
+
+    @staticmethod
+    def _id(prefix: str) -> str:
+        return f"{prefix}_{uuid.uuid4().hex}"
+
+    def record_command(
+        self,
+        command: str,
+        *,
+        session_id: Optional[str] = None,
+        project: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        if not isinstance(command, str) or not command.strip():
+            raise ValueError("command is required")
+
+        data = self._read()
+        record = {
+            "id": self._id("cmd"),
+            "command": command.strip(),
+            "session_id": session_id,
+            "project": project,
+            "metadata": dict(metadata or {}),
+            "timestamp": self._timestamp(),
+        }
+        data["commands"].append(record)
+        self._write(data)
+        return record
+
+    def record_run(
+        self,
+        command: str,
+        *,
+        status: str = "started",
+        session_id: Optional[str] = None,
+        project: Optional[str] = None,
+        run_id: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        if not isinstance(command, str) or not command.strip():
+            raise ValueError("command is required")
+
+        data = self._read()
+        record = {
+            "id": run_id or self._id("run"),
+            "command": command.strip(),
+            "status": status,
+            "session_id": session_id,
+            "project": project,
+            "metadata": dict(metadata or {}),
+            "timestamp": self._timestamp(),
+        }
+        data["runs"].append(record)
+        self._write(data)
+        return record
+
+    def record_success(
+        self,
+        run_id: str,
+        *,
+        result: Optional[Dict[str, Any]] = None,
+        artifacts: Optional[List[str]] = None,
+        project: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        if not isinstance(run_id, str) or not run_id.strip():
+            raise ValueError("run_id is required")
+
+        data = self._read()
+        record = {
+            "id": self._id("success"),
+            "run_id": run_id,
+            "result": dict(result or {}),
+            "artifacts": list(artifacts or []),
+            "project": project,
+            "timestamp": self._timestamp(),
+        }
+        data["successes"].append(record)
+
+        for run in data["runs"]:
+            if run.get("id") == run_id:
+                run["status"] = "success"
+                break
+
+        self._write(data)
+        return record
+
+    def record_failure(
+        self,
+        run_id: str,
+        *,
+        error: str,
+        stage: Optional[str] = None,
+        project: Optional[str] = None,
+        recovered: bool = False,
+    ) -> Dict[str, Any]:
+        if not isinstance(run_id, str) or not run_id.strip():
+            raise ValueError("run_id is required")
+        if not isinstance(error, str) or not error.strip():
+            raise ValueError("error is required")
+
+        data = self._read()
+        record = {
+            "id": self._id("failure"),
+            "run_id": run_id,
+            "error": error.strip(),
+            "stage": stage,
+            "project": project,
+            "recovered": bool(recovered),
+            "timestamp": self._timestamp(),
+        }
+        data["failures"].append(record)
+
+        for run in data["runs"]:
+            if run.get("id") == run_id:
+                run["status"] = "recovered" if recovered else "failure"
+                break
+
+        self._write(data)
+        return record
+
+    def record_artifact(
+        self,
+        artifact_id: str,
+        *,
+        artifact_type: Optional[str] = None,
+        source: Optional[str] = None,
+        project: Optional[str] = None,
+        path: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        if not isinstance(artifact_id, str) or not artifact_id.strip():
+            raise ValueError("artifact_id is required")
+
+        data = self._read()
+        record = {
+            "id": self._id("artifact"),
+            "artifact_id": artifact_id,
+            "artifact_type": artifact_type,
+            "source": source,
+            "project": project,
+            "path": path,
+            "timestamp": self._timestamp(),
+        }
+        data["artifacts"].append(record)
+        self._write(data)
+        return record
+
+    def record_project(
+        self,
+        project: str,
+        *,
+        version: Optional[str] = None,
+        action: str = "updated",
+        path: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        if not isinstance(project, str) or not project.strip():
+            raise ValueError("project is required")
+
+        data = self._read()
+        record = {
+            "id": self._id("project"),
+            "project": project.strip(),
+            "version": version,
+            "action": action,
+            "path": path,
+            "metadata": dict(metadata or {}),
+            "timestamp": self._timestamp(),
+        }
+        data["projects"].append(record)
+        self._write(data)
+        return record
+
+    def get_history(self) -> Dict[str, Any]:
+        return self._read()
+
+    def get_commands(self) -> List[Dict[str, Any]]:
+        return list(self._read()["commands"])
+
+    def get_runs(self) -> List[Dict[str, Any]]:
+        return list(self._read()["runs"])
+
+    def get_failures(self) -> List[Dict[str, Any]]:
+        return list(self._read()["failures"])
+
+    def get_successes(self) -> List[Dict[str, Any]]:
+        return list(self._read()["successes"])
+
+    def get_artifacts(self) -> List[Dict[str, Any]]:
+        return list(self._read()["artifacts"])
+
+    def get_projects(self) -> List[Dict[str, Any]]:
+        return list(self._read()["projects"])
+
+    def get_run(self, run_id: str) -> Optional[Dict[str, Any]]:
+        for run in self._read()["runs"]:
+            if run.get("id") == run_id:
+                return run
+        return None
+
+    def clear(self) -> None:
+        self._write({
+            "version": "1.0",
+            "commands": [],
+            "runs": [],
+            "failures": [],
+            "successes": [],
+            "artifacts": [],
+            "projects": [],
+        })
+
+    def stats(self) -> Dict[str, int]:
+        data = self._read()
+        return {
+            "commands": len(data["commands"]),
+            "runs": len(data["runs"]),
+            "failures": len(data["failures"]),
+            "successes": len(data["successes"]),
+            "artifacts": len(data["artifacts"]),
+            "projects": len(data["projects"]),
+        }

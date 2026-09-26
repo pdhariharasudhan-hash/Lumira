@@ -1,0 +1,305 @@
+import json
+"""
+Deterministic Generator capability service.
+"""
+
+from typing import Any, Dict
+
+
+class GeneratorCapabilityService:
+
+    def image_generation(self, request):
+        return self._result("image_generation", request, "image generation")
+
+    def schematic_generation(self, request):
+        if not isinstance(request, str):
+            request = ''
+
+        request = request.strip()
+
+        if not request:
+            return {
+                'success': False,
+                'capability': 'schematic_generation',
+                'status': 'reject',
+                'error': 'request is required',
+            }
+
+        words = [
+            word.strip('.,!?;:()[]{}')
+            for word in request.split()
+        ]
+        words = [word for word in words if word]
+
+        stop_words = {
+            'a', 'an', 'the', 'for', 'to', 'of', 'and', 'with',
+            'my', 'simple', 'schematic', 'generate', 'generation',
+            'create', 'draw', 'show', 'make', 'circuit',
+        }
+
+        concepts = []
+
+        for word in words:
+            normalized = word.lower()
+            if normalized not in stop_words and normalized not in concepts:
+                concepts.append(normalized)
+
+        if not concepts:
+            concepts = ['circuit']
+
+        components = [{
+            'id': 'component_1',
+            'name': concepts[0],
+            'type': 'primary',
+            'value': None,
+        }]
+
+        for index, concept in enumerate(concepts[1:6], start=2):
+            components.append({
+                'id': f'component_{index}',
+                'name': concept,
+                'type': 'component',
+                'value': None,
+            })
+
+        connections = [{
+            'from': 'component_1',
+            'to': f'component_{index}',
+            'signal': 'connection',
+        } for index in range(2, len(components) + 1)]
+
+        schematic = {
+            'type': 'schematic',
+            'version': '1.0',
+            'request': request,
+            'status': 'generated',
+            'format': 'structured',
+            'components': components,
+            'connections': connections,
+            'component_count': len(components),
+            'connection_count': len(connections),
+        }
+
+        try:
+            import json
+            from app.services.artifacts.artifact_manager_service import ArtifactManagerService
+            artifact = ArtifactManagerService().create_artifact(
+                artifact_type='schematics',
+                content=json.dumps(schematic, indent=2),
+                source='schematic_generation',
+                extension='json',
+            )
+        except Exception as exc:
+            return {
+                'success': False,
+                'capability': 'schematic_generation',
+                'status': 'reject',
+                'request': request,
+                'schematic': schematic,
+                'error': str(exc),
+            }
+
+        return {
+            'success': True,
+            'capability': 'schematic_generation',
+            'status': 'accept',
+            'request': request,
+            'schematic': schematic,
+            'artifact': artifact,
+        }
+
+    def diagram_generation(self, request):
+        if not isinstance(request, str):
+            request = ""
+
+        request = request.strip()
+
+        if not request:
+            return {
+                "success": False,
+                "capability": "diagram_generation",
+                "status": "reject",
+                "error": "request is required",
+            }
+
+        words = [
+            word.strip(".,!?;:()[]{}")
+            for word in request.split()
+        ]
+
+        words = [
+            word
+            for word in words
+            if word
+        ]
+
+        if not words:
+            return {
+                "success": False,
+                "capability": "diagram_generation",
+                "status": "reject",
+                "error": "request is required",
+            }
+
+        # Deterministic concept extraction.
+        #
+        # The first meaningful token becomes the subject.
+        # Remaining unique meaningful tokens become supporting
+        # concepts. This is intentionally deterministic and does
+        # not claim semantic understanding beyond the request.
+        stop_words = {
+            "a",
+            "an",
+            "the",
+            "for",
+            "to",
+            "of",
+            "and",
+            "with",
+            "my",
+            "simple",
+            "diagram",
+            "generate",
+            "generation",
+            "create",
+            "draw",
+            "show",
+            "make",
+        }
+
+        concepts = []
+
+        for word in words:
+            normalized = word.lower()
+
+            if normalized in stop_words:
+                continue
+
+            if normalized not in concepts:
+                concepts.append(normalized)
+
+        if not concepts:
+            concepts = ["request"]
+
+        subject = concepts[0]
+
+        supporting = concepts[1:5]
+
+        nodes = [
+            {
+                "id": "node_1",
+                "label": subject,
+                "type": "primary",
+            }
+        ]
+
+        for index, concept in enumerate(
+            supporting,
+            start=2,
+        ):
+            nodes.append(
+                {
+                    "id": f"node_{index}",
+                    "label": concept,
+                    "type": "component",
+                }
+            )
+
+        edges = []
+
+        for index in range(
+            2,
+            len(nodes) + 1,
+        ):
+            edges.append(
+                {
+                    "source": "node_1",
+                    "target": f"node_{index}",
+                    "relation": "contains",
+                }
+            )
+
+        diagram = {
+            "type": "diagram",
+            "version": "1.0",
+            "request": request,
+            "status": "generated",
+            "layout": "hierarchical",
+            "direction": "top_down",
+            "nodes": nodes,
+            "edges": edges,
+            "node_count": len(nodes),
+            "edge_count": len(edges),
+        }
+
+        artifact = None
+
+        try:
+            from app.services.artifacts.artifact_manager_service import (
+                ArtifactManagerService,
+            )
+
+            artifact_manager = ArtifactManagerService()
+
+            artifact = artifact_manager.create_artifact(
+                artifact_type="diagrams",
+                content=json.dumps(
+                    diagram,
+                    indent=2,
+                ),
+                source="diagram_generation",
+                extension="json",
+            )
+
+        except Exception as exc:
+            return {
+                "success": False,
+                "capability": "diagram_generation",
+                "status": "reject",
+                "request": request,
+                "diagram": diagram,
+                "error": str(exc),
+            }
+
+        return {
+            "success": True,
+            "capability": "diagram_generation",
+            "status": "accept",
+            "request": request,
+            "diagram": diagram,
+            "artifact": artifact,
+        }
+
+    def architecture_diagrams(self, request):
+        return self._result("architecture_diagrams", request, "architecture diagram generation")
+
+    def flowcharts(self, request):
+        return self._result("flowcharts", request, "flowchart generation")
+
+    def ui_design(self, request):
+        return self._result("ui_design", request, "UI design generation")
+
+    def product_concepts(self, request):
+        return self._result("product_concepts", request, "product concept generation")
+
+    def industrial_design(self, request):
+        return self._result("industrial_design", request, "industrial design generation")
+
+    @staticmethod
+    def _result(capability, request, objective):
+        return {
+            "success": True,
+            "capability": capability,
+            "request": request.strip() if isinstance(request, str) else "",
+            "objective": objective,
+            "steps": [
+                "define generation objective",
+                "define requirements",
+                "define structural constraints",
+                "generate concept",
+                "verify requirements",
+                "prepare artifact output",
+            ],
+            "status": "accept",
+        }
+

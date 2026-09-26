@@ -1,0 +1,35 @@
+{
+  "type": "generated_image",
+  "version": "1.0",
+  "request": "create an image of a futuristic cyberdeck",
+  "status": "generated",
+  "subject": "futuristic",
+  "format": "structured_image_spec",
+  "composition": {
+    "layout": "centered_subject",
+    "orientation": "landscape",
+    "framing": "medium"
+  },
+  "visual_elements": [
+    {
+      "id": "element_1",
+      "name": "futuristic",
+      "role": "primary_subject"
+    },
+    {
+      "id": "element_2",
+      "name": "background",
+      "role": "environment"
+    },
+    {
+      "id": "element_3",
+      "name": "lighting",
+      "role": "illumination"
+    }
+  ],
+  "rendering": {
+    "style": "clean_digital",
+    "detail": "high",
+    "lighting": "balanced"
+  }
+}

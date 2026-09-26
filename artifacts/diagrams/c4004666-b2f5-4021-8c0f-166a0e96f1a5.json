@@ -1,0 +1,29 @@
+{
+  "type": "diagram",
+  "version": "1.0",
+  "request": "create a simple diagram for a todo api",
+  "status": "generated",
+  "layout": "hierarchical",
+  "direction": "top_down",
+  "nodes": [
+    {
+      "id": "node_1",
+      "label": "todo",
+      "type": "primary"
+    },
+    {
+      "id": "node_2",
+      "label": "api",
+      "type": "component"
+    }
+  ],
+  "edges": [
+    {
+      "source": "node_1",
+      "target": "node_2",
+      "relation": "contains"
+    }
+  ],
+  "node_count": 2,
+  "edge_count": 1
+}

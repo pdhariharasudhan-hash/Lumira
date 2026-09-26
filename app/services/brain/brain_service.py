@@ -47,6 +47,14 @@ from app.services.brain.brain_state import (
     BrainState,
 )
 
+from app.services.modes.mode_detection_service import (
+    ModeDetectionService,
+)
+
+from app.services.modes.mode_manager_service import (
+    ModeManagerService,
+)
+
 from app.services.history.command_history_service import (
     CommandHistoryService,
 )
@@ -83,6 +91,10 @@ class BrainService:
 
         self.pipeline_history = (
             PipelineHistoryService()
+        )
+
+        self.mode_detector = (
+            ModeDetectionService()
         )
 
     def _create_pipeline(self):
@@ -125,6 +137,47 @@ class BrainService:
         )
 
         return state
+
+    def _resolve_mode(
+        self,
+        state: BrainState,
+    ) -> None:
+        """
+        Resolve the operating mode for one Brain request.
+
+        Mode detection is reusable and deterministic.
+
+        Mode management is deliberately request-local so
+        one Brain execution cannot leak its active mode
+        into another independent execution.
+        """
+
+        if not state.user_input.strip():
+            return
+
+        detection = self.mode_detector.detect(
+            state.user_input
+        )
+
+        if not detection.selected_mode:
+            return
+
+        mode_manager = ModeManagerService()
+
+        mode_manager.activate(
+            mode_id=detection.selected_mode,
+            reason="mode_detection",
+            confidence=detection.top_score,
+            manual=False,
+        )
+
+        state.mode = (
+            mode_manager
+            .get_state()
+            .model_copy(
+                deep=True
+            )
+        )
 
     def _record_command(
         self,
@@ -200,6 +253,14 @@ class BrainService:
 
         state = self.create_state(
             request
+        )
+
+        # ----------------------------------
+        # Resolve operating mode
+        # ----------------------------------
+
+        self._resolve_mode(
+            state
         )
 
         # ----------------------------------

@@ -51,6 +51,7 @@ class DecisionModule(BrainModule):
             reasoning=state.reasoning,
             constraints=state.constraints,
             state=state.decision,
+            mode=state.mode,
         )
 
         return state

@@ -1,0 +1,61 @@
+{
+  "type": "industrial_design",
+  "version": "1.0",
+  "request": "create an industrial design for a smart soldering assistant",
+  "status": "generated",
+  "subject": "smart",
+  "form": {
+    "style": "functional_modern",
+    "geometry": "compact_enclosure",
+    "ergonomics": "hand_operable",
+    "surface": "smooth_protective"
+  },
+  "materials": [
+    {
+      "name": "enclosure",
+      "material": "engineering_plastic",
+      "purpose": "protective_body"
+    },
+    {
+      "name": "frame",
+      "material": "aluminum",
+      "purpose": "structural_support"
+    },
+    {
+      "name": "fasteners",
+      "material": "steel",
+      "purpose": "assembly"
+    }
+  ],
+  "components": [
+    {
+      "id": "part_1",
+      "name": "smart",
+      "role": "primary_product_body"
+    },
+    {
+      "id": "part_2",
+      "name": "control_interface",
+      "role": "user_interaction"
+    },
+    {
+      "id": "part_3",
+      "name": "power_module",
+      "role": "power_management"
+    },
+    {
+      "id": "part_4",
+      "name": "mounting_structure",
+      "role": "mechanical_support"
+    }
+  ],
+  "manufacturing_stages": [
+    "concept_modeling",
+    "prototype_fabrication",
+    "assembly_validation",
+    "production_preparation"
+  ],
+  "material_count": 3,
+  "component_count": 4,
+  "manufacturing_stage_count": 4
+}

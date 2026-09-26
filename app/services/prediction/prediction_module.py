@@ -54,6 +54,8 @@ class PredictionModule(
                 decision=state.decision,
 
                 state=state.prediction,
+
+                mode=state.mode,
             )
         )
 

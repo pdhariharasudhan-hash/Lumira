@@ -8,6 +8,15 @@ from app.services.command_parser_service import (
     CommandParserService
 )
 
+from app.services.brain.brain_request import (
+    BrainRequest
+)
+
+from app.services.brain.brain_service import (
+    BrainService
+)
+
+
 from app.services.capabilities.capability_router_service import (
     CapabilityRouterService
 )
@@ -38,7 +47,7 @@ def command(
         request.input
     )
 
-    context.set_pipeline_stage(
+    context.set_stage(
         "command"
     )
 
@@ -83,6 +92,22 @@ def command(
             context.get_context()
         }
 
+    brain = BrainService()
+
+    brain_request = BrainRequest(
+        message=request.input
+    )
+
+    brain_state = brain.create_state(
+        brain_request
+    )
+
+    brain._resolve_mode(
+        brain_state
+    )
+
+    mode_state = brain_state.mode
+
     result = (
         CapabilityRouterService()
         .execute(
@@ -93,7 +118,8 @@ def command(
             parsed[
                 "payload"
             ]
-        )
+        ,
+            mode_state=mode_state)
     )
 
     return {

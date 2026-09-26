@@ -1,0 +1,55 @@
+{
+    "type": "blueprint",
+    "version": "1.0",
+    "idea": "build a simple todo api blueprint artifact e2e",
+    "objective": "build todo api",
+    "scope": "small",
+    "priority": "high",
+    "status": "generated",
+    "steps": [
+        {
+            "id": "step_1",
+            "action": "create todo storage",
+            "inputs": {},
+            "expected_output": "todos initialized",
+            "dependencies": []
+        },
+        {
+            "id": "step_2",
+            "action": "implement todo POST route",
+            "inputs": {},
+            "expected_output": "todo POST endpoint created",
+            "dependencies": [
+                "step_1"
+            ]
+        },
+        {
+            "id": "step_3",
+            "action": "implement todo GET route",
+            "inputs": {},
+            "expected_output": "todo GET endpoint created",
+            "dependencies": [
+                "step_1"
+            ]
+        },
+        {
+            "id": "step_4",
+            "action": "implement todo PUT route",
+            "inputs": {},
+            "expected_output": "todo PUT endpoint created",
+            "dependencies": [
+                "step_1"
+            ]
+        },
+        {
+            "id": "step_5",
+            "action": "implement todo DELETE route",
+            "inputs": {},
+            "expected_output": "todo DELETE endpoint created",
+            "dependencies": [
+                "step_1"
+            ]
+        }
+    ],
+    "step_count": 5
+}

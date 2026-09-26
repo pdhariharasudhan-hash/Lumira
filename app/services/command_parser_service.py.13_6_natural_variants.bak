@@ -1,0 +1,228 @@
+﻿from typing import Any, Dict
+
+
+class CommandParserService:
+    """
+    Deterministic natural-language command parser.
+
+    Converts recognized user commands into capability
+    requests without executing anything.
+    """
+
+    def parse(self, command: str) -> Dict[str, Any]:
+        if not isinstance(command, str):
+            return {
+                "success": False,
+                "message": "Command must be a string",
+            }
+
+        text = command.strip().lower()
+
+        if not text:
+            return {
+                "success": False,
+                "message": "Command cannot be empty",
+            }
+
+        # ----------------------------------------------------
+        # IMAGE GENERATION
+        # ----------------------------------------------------
+
+        if "generate image" in text:
+            return {
+                "success": True,
+                "capability": "generate_image",
+                "payload": {
+                    "prompt": command,
+                    "image_type": "image",
+                },
+            }
+
+        # ----------------------------------------------------
+        # SEARCH
+        # ----------------------------------------------------
+
+        if text.startswith("search "):
+            return {
+                "success": True,
+                "capability": "search",
+                "payload": {
+                    "query": command[7:].strip(),
+                },
+            }
+
+        # ----------------------------------------------------
+        # FEATURE CONTROL
+        # ----------------------------------------------------
+
+        if text.startswith("activate "):
+            return {
+                "success": True,
+                "capability": "activate_feature",
+                "payload": {
+                    "feature": command[9:].strip(),
+                },
+            }
+
+        if text.startswith("disable "):
+            return {
+                "success": True,
+                "capability": "deactivate_feature",
+                "payload": {
+                    "feature": command[8:].strip(),
+                },
+            }
+
+        if text == "list features":
+            return {
+                "success": True,
+                "capability": "list_features",
+                "payload": {},
+            }
+
+        # ----------------------------------------------------
+        # BUILDER
+        # ----------------------------------------------------
+
+        builder_rules = [
+            ("generate project", "project_generation"),
+            ("create project", "project_generation"),
+            ("version project", "project_versioning"),
+            ("debug", "debugging"),
+            ("develop", "project_engineering"),
+            ("build", "project_engineering"),
+        ]
+
+        for phrase, capability in builder_rules:
+            if phrase in text:
+                return {
+                    "success": True,
+                    "capability": capability,
+                    "payload": {
+                        "idea": command,
+                    },
+                }
+
+        # ----------------------------------------------------
+        # OPERATIONS
+        # ----------------------------------------------------
+
+        operations_rules = [
+            ("automate", "workflow_automation"),
+            ("schedule", "scheduled_tasks"),
+            ("monitor", "monitoring"),
+            ("execute", "workflow_automation"),
+            ("run", "workflow_automation"),
+        ]
+
+        for phrase, capability in operations_rules:
+            if phrase in text:
+                return {
+                    "success": True,
+                    "capability": capability,
+                    "payload": {
+                        "command": command,
+                    },
+                }
+
+        # ----------------------------------------------------
+        # RESEARCH
+        # ----------------------------------------------------
+
+        research_rules = [
+            ("find information", "knowledge_retrieval"),
+            ("investigate", "knowledge_retrieval"),
+            ("compare", "comparison"),
+            ("research", "technical_research"),
+        ]
+
+        for phrase, capability in research_rules:
+            if phrase in text:
+                return {
+                    "success": True,
+                    "capability": capability,
+                    "payload": {
+                        "query": command,
+                    },
+                }
+
+        # ----------------------------------------------------
+        # CREATOR
+        # ----------------------------------------------------
+
+        creator_rules = [
+            ("create a presentation", "presentations"),
+            ("create presentation", "presentations"),
+            ("create a poster", "posters"),
+            ("create poster", "posters"),
+            ("create a thumbnail", "thumbnails"),
+            ("create thumbnail", "thumbnails"),
+            ("write script", "scripts"),
+            ("create a post", "marketing_assets"),
+            ("create post", "marketing_assets"),
+            ("write", "content_planning"),
+        ]
+
+        for phrase, capability in creator_rules:
+            if phrase in text:
+                return {
+                    "success": True,
+                    "capability": capability,
+                    "payload": {
+                        "content": command,
+                    },
+                }
+
+        # ----------------------------------------------------
+        # GROWTH
+        # ----------------------------------------------------
+
+        growth_rules = [
+            ("create business plan", "growth_strategy"),
+            ("create marketing strategy", "growth_strategy"),
+            ("analyze market", "market_analysis"),
+            ("analyze revenue", "revenue_analysis"),
+            ("improve product", "product_improvement"),
+            ("grow users", "user_growth"),
+            ("analyze competition", "competitive_analysis"),
+            ("optimize", "optimization"),
+        ]
+
+        for phrase, capability in growth_rules:
+            if phrase in text:
+                return {
+                    "success": True,
+                    "capability": capability,
+                    "payload": {
+                        "request": command,
+                    },
+                }
+
+        # ----------------------------------------------------
+        # PERSONAL
+        # ----------------------------------------------------
+
+        personal_rules = [
+            ("remember", "personal_context"),
+            ("set goal", "goals"),
+            ("create task", "tasks"),
+            ("plan", "planning"),
+            ("remind", "reminders"),
+            ("take note", "notes"),
+        ]
+
+        for phrase, capability in personal_rules:
+            if phrase in text:
+                return {
+                    "success": True,
+                    "capability": capability,
+                    "payload": {
+                        "request": command,
+                    },
+                }
+
+        return {
+            "success": False,
+            "message": "Unknown command",
+        }
+

@@ -1,0 +1,163 @@
+from app.services.features.feature_activation_service import (
+    FeatureActivationService
+)
+
+from app.services.image.image_generation_service import (
+    ImageGenerationService
+)
+
+from app.services.search.unified_search_service import (
+    UnifiedSearchService
+)
+
+from app.services.capabilities.mode_capability_service import (
+    ModeCapabilityService
+)
+
+from app.services.modes.models.mode_state import (
+    ModeState
+)
+
+
+class CapabilityRouterService:
+
+    def __init__(self):
+
+        self.features = (
+            FeatureActivationService()
+        )
+
+        self.images = (
+            ImageGenerationService()
+        )
+
+        self.search = (
+            UnifiedSearchService()
+        )
+
+        self.mode_capabilities = (
+            ModeCapabilityService()
+        )
+
+    # ==========================
+    # MAIN ROUTER
+    # ==========================
+
+    def execute(
+        self,
+        capability: str,
+        payload: dict = None,
+        mode_state: ModeState = None,
+    ):
+
+        payload = payload or {}
+
+        if mode_state is not None:
+            resolution = (
+                self.mode_capabilities.resolve(
+                    mode_state,
+                    capability,
+                )
+            )
+
+            if not resolution["allowed"]:
+                return {
+                    "success": False,
+                    "message": (
+                        "Capability restricted by active mode: "
+                        + resolution["mode"]
+                    ),
+                    "mode": resolution["mode"],
+                    "capability": resolution["capability"],
+                    "restricted": True,
+                    "priority": resolution["priority"],
+                }
+
+        capability = (
+            capability
+            .strip()
+            .lower()
+        )
+
+        # --------------------------
+        # FEATURE ACTIVATION
+        # --------------------------
+
+        if capability == "activate_feature":
+
+            return self.features.activate(
+
+                payload.get(
+                    "feature"
+                )
+            )
+
+        if capability == "deactivate_feature":
+
+            return self.features.deactivate(
+
+                payload.get(
+                    "feature"
+                )
+            )
+
+        if capability == "feature_status":
+
+            return self.features.status(
+
+                payload.get(
+                    "feature"
+                )
+            )
+
+        if capability == "list_features":
+
+            return self.features.list_features()
+
+        # --------------------------
+        # IMAGE GENERATION
+        # --------------------------
+
+        if capability == "generate_image":
+
+            return self.images.generate(
+
+                prompt=
+                payload.get(
+                    "prompt",
+                    ""
+                ),
+
+                image_type=
+                payload.get(
+                    "image_type",
+                    "image"
+                )
+            )
+
+        # --------------------------
+        # SEARCH
+        # --------------------------
+
+        if capability == "search":
+
+            return self.search.search_all(
+
+                payload.get(
+                    "query",
+                    ""
+                )
+            )
+
+        # --------------------------
+        # UNKNOWN
+        # --------------------------
+
+        return {
+
+            "success":
+            False,
+
+            "message":
+            f"Unknown capability: {capability}"
+        }

@@ -1,0 +1,50 @@
+{
+  "type": "flowchart",
+  "version": "1.0",
+  "request": "create a simple flowchart for a todo api",
+  "status": "generated",
+  "layout": "linear",
+  "direction": "top_down",
+  "subject": "todo",
+  "nodes": [
+    {
+      "id": "node_1",
+      "label": "Start",
+      "type": "start"
+    },
+    {
+      "id": "node_2",
+      "label": "todo",
+      "type": "process"
+    },
+    {
+      "id": "node_3",
+      "label": "api",
+      "type": "process"
+    },
+    {
+      "id": "node_4",
+      "label": "End",
+      "type": "end"
+    }
+  ],
+  "edges": [
+    {
+      "source": "node_1",
+      "target": "node_2",
+      "relation": "next"
+    },
+    {
+      "source": "node_2",
+      "target": "node_3",
+      "relation": "next"
+    },
+    {
+      "source": "node_3",
+      "target": "node_4",
+      "relation": "next"
+    }
+  ],
+  "node_count": 4,
+  "edge_count": 3
+}

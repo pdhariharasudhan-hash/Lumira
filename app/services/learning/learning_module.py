@@ -49,6 +49,8 @@ class LearningModule(
                 reflection=state.reflection,
 
                 state=state.learning,
+
+                mode=state.mode,
             )
         )
 

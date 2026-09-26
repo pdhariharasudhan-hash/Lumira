@@ -1,0 +1,325 @@
+from app.services.features.feature_activation_service import (
+    FeatureActivationService
+)
+
+from app.services.image.image_generation_service import (
+    ImageGenerationService
+)
+
+from app.services.search.unified_search_service import (
+    UnifiedSearchService
+)
+
+from app.services.capabilities.mode_capability_service import (
+    ModeCapabilityService
+)
+
+from app.services.modes.models.mode_state import (
+    ModeState
+)
+
+
+
+from app.services.builder.builder_service import (
+    BuilderService
+)
+
+from app.services.execution.execute_service import (
+    ExecuteService
+)
+
+from app.services.code.code_service import (
+    CodeService
+)
+
+
+class CapabilityRouterService:
+
+    def __init__(self):
+
+        self.features = (
+            FeatureActivationService()
+        )
+
+        self.images = (
+            ImageGenerationService()
+        )
+
+        self.search = (
+            UnifiedSearchService()
+        )
+
+        self.builder = (
+            BuilderService()
+        )
+
+        self.executor = (
+            ExecuteService()
+        )
+
+        self.code = (
+            CodeService()
+        )
+
+
+        self.mode_capabilities = (
+            ModeCapabilityService()
+        )
+
+    # ==========================
+    # MAIN ROUTER
+    # ==========================
+
+    @staticmethod
+    def _with_mode(
+        result,
+        mode_state=None,
+    ):
+        if not isinstance(result, dict):
+            result = {
+                "success": True,
+                "result": result,
+            }
+
+        output = dict(result)
+
+        if mode_state is not None:
+            output["mode"] = mode_state.active_mode
+
+        return output
+
+
+    def execute(
+        self,
+        capability: str,
+        payload: dict = None,
+        mode_state: ModeState = None,
+    ):
+
+        payload = payload or {}
+
+        if mode_state is not None:
+            resolution = (
+                self.mode_capabilities.resolve(
+                    mode_state,
+                    capability,
+                )
+            )
+
+            if not resolution["allowed"]:
+                return {
+                    "success": False,
+                    "message": (
+                        "Capability restricted by active mode: "
+                        + resolution["mode"]
+                    ),
+                    "mode": resolution["mode"],
+                    "capability": resolution["capability"],
+                    "restricted": True,
+                    "priority": resolution["priority"],
+                }
+
+        capability = (
+            capability
+            .strip()
+            .lower()
+        )
+
+        # --------------------------
+        # FEATURE ACTIVATION
+        # --------------------------
+
+        if capability == "activate_feature":
+
+            return self.features.activate(
+
+                payload.get(
+                    "feature"
+                )
+            )
+
+        if capability == "deactivate_feature":
+
+            return self.features.deactivate(
+
+                payload.get(
+                    "feature"
+                )
+            )
+
+        if capability == "feature_status":
+
+            return self.features.status(
+
+                payload.get(
+                    "feature"
+                )
+            )
+
+        if capability == "list_features":
+
+            return self.features.list_features()
+
+        # --------------------------
+        # BUILDER / PROJECT ENGINEERING
+        # --------------------------
+
+        if capability == "project_engineering":
+
+            idea = payload.get(
+                "idea",
+                payload.get(
+                    "request",
+                    payload.get(
+                        "command",
+                        ""
+                    )
+                )
+            )
+
+            return self._with_mode(
+                self.builder.build(
+                    idea
+                ),
+                mode_state
+            )
+
+        if capability == "code_generation":
+
+            idea = payload.get(
+                "idea",
+                payload.get(
+                    "request",
+                    ""
+                )
+            )
+
+            builder_result = (
+                self.builder.build(
+                    idea
+                )
+            )
+
+            if builder_result.get("status") != "accept":
+
+                return self._with_mode(
+                    {
+                        "success": False,
+                        "status": builder_result.get(
+                            "status",
+                            "reject"
+                        ),
+                        "builder": builder_result,
+                    },
+                    mode_state
+                )
+
+            execution_result = (
+                self.executor.execute(
+                    idea,
+                    builder_result
+                )
+            )
+
+            if execution_result.get("status") != "accept":
+
+                return self._with_mode(
+                    {
+                        "success": False,
+                        "status": execution_result.get(
+                            "status",
+                            "reject"
+                        ),
+                        "builder": builder_result,
+                        "execution": execution_result,
+                    },
+                    mode_state
+                )
+
+            code_result = (
+                self.code.generate(
+                    idea,
+                    execution_result
+                )
+            )
+
+            return self._with_mode(
+                {
+                    "success": True,
+                    "status": code_result.get(
+                        "status",
+                        "accept"
+                    ),
+                    "builder": builder_result,
+                    "execution": execution_result,
+                    "code": code_result,
+                },
+                mode_state
+            )
+
+
+        # --------------------------
+        # IMAGE GENERATION
+        # --------------------------
+
+        if capability == "generate_image":
+
+            return self.images.generate(
+
+                prompt=
+                payload.get(
+                    "prompt",
+                    ""
+                ),
+
+                image_type=
+                payload.get(
+                    "image_type",
+                    "image"
+                )
+            )
+
+        # --------------------------
+        # SEARCH
+        # --------------------------
+
+        if capability == "search":
+
+            return self._with_mode(
+
+
+                self.search.search_all(
+
+
+                    payload.get(
+
+
+                        "query",
+
+
+                        ""
+
+
+                    )
+
+
+                ),
+
+
+                mode_state
+
+
+            )
+
+        # --------------------------
+        # UNKNOWN
+        # --------------------------
+
+        return {
+
+            "success":
+            False,
+
+            "message":
+            f"Unknown capability: {capability}"
+        }

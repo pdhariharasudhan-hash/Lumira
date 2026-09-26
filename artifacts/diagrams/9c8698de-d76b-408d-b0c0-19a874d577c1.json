@@ -1,0 +1,50 @@
+{
+  "type": "architecture_diagram",
+  "version": "1.0",
+  "request": "create a simple architecture diagram for a todo api",
+  "status": "generated",
+  "layout": "layered",
+  "direction": "top_down",
+  "subject": "todo",
+  "layers": [
+    {
+      "id": "layer_1",
+      "name": "presentation",
+      "order": 1
+    },
+    {
+      "id": "layer_2",
+      "name": "application",
+      "order": 2
+    },
+    {
+      "id": "layer_3",
+      "name": "data",
+      "order": 3
+    }
+  ],
+  "components": [
+    {
+      "id": "component_1",
+      "name": "todo",
+      "layer": "application",
+      "type": "primary"
+    },
+    {
+      "id": "component_2",
+      "name": "api",
+      "layer": "presentation",
+      "type": "service"
+    }
+  ],
+  "connections": [
+    {
+      "from": "component_1",
+      "to": "component_2",
+      "relation": "depends_on"
+    }
+  ],
+  "layer_count": 3,
+  "component_count": 2,
+  "connection_count": 1
+}

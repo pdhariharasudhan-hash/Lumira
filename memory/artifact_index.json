@@ -62,6 +62,503 @@
       "source": "image_generation",
       "file": "artifacts\\images\\fd5461a6-eee6-475a-92d2-6e5268fea7dc.txt",
       "timestamp": "2026-06-09 19:45:58"
+    },
+    {
+      "artifact_id": "9d06bbc4-7b02-4db0-90c3-ac7eb9a03cc9",
+      "type": "images",
+      "source": "image_generation",
+      "file": "artifacts\\images\\9d06bbc4-7b02-4db0-90c3-ac7eb9a03cc9.txt",
+      "timestamp": "2026-09-16 19:21:18"
+    },
+    {
+      "artifact_id": "8d85538e-ccb2-426a-b73a-68d5ebca9e1d",
+      "type": "images",
+      "source": "image_generation",
+      "file": "artifacts\\images\\8d85538e-ccb2-426a-b73a-68d5ebca9e1d.txt",
+      "timestamp": "2026-09-16 19:22:56"
+    },
+    {
+      "artifact_id": "b226714e-735c-4e79-93e5-aec84b23dafb",
+      "type": "diagrams",
+      "source": "lumira_e2e_test",
+      "file": "artifacts\\diagrams\\b226714e-735c-4e79-93e5-aec84b23dafb.txt",
+      "timestamp": "2026-09-19 22:09:25"
+    },
+    {
+      "artifact_id": "5177bc7b-6c28-4b2f-b335-438275a483e3",
+      "type": "diagrams",
+      "source": "lumira_router_e2e",
+      "file": "artifacts\\diagrams\\5177bc7b-6c28-4b2f-b335-438275a483e3.txt",
+      "timestamp": "2026-09-19 22:09:25"
+    },
+    {
+      "artifact_id": "73073ea1-410a-4678-b41f-7c705c0e6c49",
+      "type": "blueprints",
+      "source": "blueprint_generation",
+      "file": "artifacts\\blueprints\\73073ea1-410a-4678-b41f-7c705c0e6c49.json",
+      "timestamp": "2026-09-19 22:27:25"
+    },
+    {
+      "artifact_id": "9a7035df-2deb-4493-ae18-f600e4253b9a",
+      "type": "blueprints",
+      "source": "blueprint_generation",
+      "file": "artifacts\\blueprints\\9a7035df-2deb-4493-ae18-f600e4253b9a.json",
+      "timestamp": "2026-09-19 22:28:02"
+    },
+    {
+      "artifact_id": "77addf67-b733-41d7-937a-437122c9456c",
+      "type": "blueprints",
+      "source": "blueprint_generation",
+      "file": "artifacts\\blueprints\\77addf67-b733-41d7-937a-437122c9456c.json",
+      "timestamp": "2026-09-19 22:28:51"
+    },
+    {
+      "artifact_id": "54245b4b-c70d-4203-8b95-21d60000f4d9",
+      "type": "diagrams",
+      "source": "diagram_generation",
+      "file": "artifacts\\diagrams\\54245b4b-c70d-4203-8b95-21d60000f4d9.json",
+      "timestamp": "2026-09-19 22:40:20"
+    },
+    {
+      "artifact_id": "e2bc8f7e-3a1e-469b-83d7-7abb2d50bdb1",
+      "type": "diagrams",
+      "source": "diagram_generation",
+      "file": "artifacts\\diagrams\\e2bc8f7e-3a1e-469b-83d7-7abb2d50bdb1.json",
+      "timestamp": "2026-09-19 22:40:20"
+    },
+    {
+      "artifact_id": "8488ad11-530c-4667-a0b1-c763f96a70f6",
+      "type": "diagrams",
+      "source": "diagram_generation",
+      "file": "artifacts\\diagrams\\8488ad11-530c-4667-a0b1-c763f96a70f6.json",
+      "timestamp": "2026-09-19 22:40:20"
+    },
+    {
+      "artifact_id": "51f5090f-3283-4008-82eb-de2fe9f227af",
+      "type": "schematics",
+      "source": "schematic_generation",
+      "file": "artifacts\\schematics\\51f5090f-3283-4008-82eb-de2fe9f227af.json",
+      "timestamp": "2026-09-19 22:48:43"
+    },
+    {
+      "artifact_id": "c09db1c1-abd9-4cb8-ae41-79d34da7b454",
+      "type": "schematics",
+      "source": "schematic_generation",
+      "file": "artifacts\\schematics\\c09db1c1-abd9-4cb8-ae41-79d34da7b454.json",
+      "timestamp": "2026-09-19 22:48:43"
+    },
+    {
+      "artifact_id": "817d285a-a23c-4a21-80bc-e3e60ab869c3",
+      "type": "diagrams",
+      "source": "architecture_diagrams",
+      "file": "artifacts\\diagrams\\817d285a-a23c-4a21-80bc-e3e60ab869c3.json",
+      "timestamp": "2026-09-19 22:53:24"
+    },
+    {
+      "artifact_id": "54763d35-4f8e-40dd-8706-ec15dafeff33",
+      "type": "diagrams",
+      "source": "architecture_diagrams",
+      "file": "artifacts\\diagrams\\54763d35-4f8e-40dd-8706-ec15dafeff33.json",
+      "timestamp": "2026-09-19 22:54:31"
+    },
+    {
+      "artifact_id": "49fedf20-59fa-441f-a894-a9c51276e630",
+      "type": "diagrams",
+      "source": "architecture_diagrams",
+      "file": "artifacts\\diagrams\\49fedf20-59fa-441f-a894-a9c51276e630.json",
+      "timestamp": "2026-09-19 22:54:31"
+    },
+    {
+      "artifact_id": "387b94b8-d8a8-42b2-b689-256ad0e59008",
+      "type": "diagrams",
+      "source": "architecture_diagrams",
+      "file": "artifacts\\diagrams\\387b94b8-d8a8-42b2-b689-256ad0e59008.json",
+      "timestamp": "2026-09-19 22:54:31"
+    },
+    {
+      "artifact_id": "44060ab8-2d6d-4196-82ae-808cfbe0036b",
+      "type": "diagrams",
+      "source": "architecture_diagrams",
+      "file": "artifacts\\diagrams\\44060ab8-2d6d-4196-82ae-808cfbe0036b.json",
+      "timestamp": "2026-09-19 22:54:31"
+    },
+    {
+      "artifact_id": "a21cccb0-ae50-4e6c-9430-25fa6635b89a",
+      "type": "diagrams",
+      "source": "diagram_generation",
+      "file": "artifacts\\diagrams\\a21cccb0-ae50-4e6c-9430-25fa6635b89a.json",
+      "timestamp": "2026-09-19 22:54:32"
+    },
+    {
+      "artifact_id": "81e3d2ff-c40e-4069-8241-3018a0cb9a71",
+      "type": "schematics",
+      "source": "schematic_generation",
+      "file": "artifacts\\schematics\\81e3d2ff-c40e-4069-8241-3018a0cb9a71.json",
+      "timestamp": "2026-09-19 22:54:32"
+    },
+    {
+      "artifact_id": "9c8698de-d76b-408d-b0c0-19a874d577c1",
+      "type": "diagrams",
+      "source": "architecture_diagrams",
+      "file": "artifacts\\diagrams\\9c8698de-d76b-408d-b0c0-19a874d577c1.json",
+      "timestamp": "2026-09-19 22:54:32"
+    },
+    {
+      "artifact_id": "826fd526-d4a4-48ea-8cae-4586dc8cf10b",
+      "type": "diagrams",
+      "source": "flowcharts",
+      "file": "artifacts\\diagrams\\826fd526-d4a4-48ea-8cae-4586dc8cf10b.json",
+      "timestamp": "2026-09-19 22:56:03"
+    },
+    {
+      "artifact_id": "47a90490-f46a-482f-be0b-c25d618ed547",
+      "type": "diagrams",
+      "source": "flowcharts",
+      "file": "artifacts\\diagrams\\47a90490-f46a-482f-be0b-c25d618ed547.json",
+      "timestamp": "2026-09-19 22:56:03"
+    },
+    {
+      "artifact_id": "4f39947e-6f89-44cb-a62c-21fc0d63a1f1",
+      "type": "diagrams",
+      "source": "flowcharts",
+      "file": "artifacts\\diagrams\\4f39947e-6f89-44cb-a62c-21fc0d63a1f1.json",
+      "timestamp": "2026-09-19 22:56:03"
+    },
+    {
+      "artifact_id": "438b9a8f-c6b7-4612-aa92-12edd2c42059",
+      "type": "diagrams",
+      "source": "flowcharts",
+      "file": "artifacts\\diagrams\\438b9a8f-c6b7-4612-aa92-12edd2c42059.json",
+      "timestamp": "2026-09-19 22:56:03"
+    },
+    {
+      "artifact_id": "f8ec5087-2677-4313-8ebc-7517f4f848e4",
+      "type": "diagrams",
+      "source": "diagram_generation",
+      "file": "artifacts\\diagrams\\f8ec5087-2677-4313-8ebc-7517f4f848e4.json",
+      "timestamp": "2026-09-19 22:56:04"
+    },
+    {
+      "artifact_id": "0499efc0-9a32-4dd3-8b77-ee061d340b56",
+      "type": "schematics",
+      "source": "schematic_generation",
+      "file": "artifacts\\schematics\\0499efc0-9a32-4dd3-8b77-ee061d340b56.json",
+      "timestamp": "2026-09-19 22:56:04"
+    },
+    {
+      "artifact_id": "ffc17dff-6cb3-46dc-8d97-2e18805bf174",
+      "type": "diagrams",
+      "source": "architecture_diagrams",
+      "file": "artifacts\\diagrams\\ffc17dff-6cb3-46dc-8d97-2e18805bf174.json",
+      "timestamp": "2026-09-19 22:56:04"
+    },
+    {
+      "artifact_id": "97b48cc5-038d-4298-8b54-0034da458449",
+      "type": "diagrams",
+      "source": "flowcharts",
+      "file": "artifacts\\diagrams\\97b48cc5-038d-4298-8b54-0034da458449.json",
+      "timestamp": "2026-09-19 22:56:04"
+    },
+    {
+      "artifact_id": "2de15972-c849-4f9a-9515-f2a58d8cdcd1",
+      "type": "diagrams",
+      "source": "ui_design",
+      "file": "artifacts\\diagrams\\2de15972-c849-4f9a-9515-f2a58d8cdcd1.json",
+      "timestamp": "2026-09-19 22:57:37"
+    },
+    {
+      "artifact_id": "1c434f76-617f-4059-8d93-63328af79628",
+      "type": "diagrams",
+      "source": "ui_design",
+      "file": "artifacts\\diagrams\\1c434f76-617f-4059-8d93-63328af79628.json",
+      "timestamp": "2026-09-19 22:57:38"
+    },
+    {
+      "artifact_id": "fc2ef2f8-770c-4eeb-bfb8-079361992191",
+      "type": "diagrams",
+      "source": "ui_design",
+      "file": "artifacts\\diagrams\\fc2ef2f8-770c-4eeb-bfb8-079361992191.json",
+      "timestamp": "2026-09-19 22:57:38"
+    },
+    {
+      "artifact_id": "d43bab81-47e8-42d2-a19f-a1676951f6a0",
+      "type": "diagrams",
+      "source": "ui_design",
+      "file": "artifacts\\diagrams\\d43bab81-47e8-42d2-a19f-a1676951f6a0.json",
+      "timestamp": "2026-09-19 22:57:38"
+    },
+    {
+      "artifact_id": "cb569000-11a4-40d1-94f2-893696241019",
+      "type": "diagrams",
+      "source": "diagram_generation",
+      "file": "artifacts\\diagrams\\cb569000-11a4-40d1-94f2-893696241019.json",
+      "timestamp": "2026-09-19 22:57:38"
+    },
+    {
+      "artifact_id": "f4e8b309-1c75-47f0-bb64-8a974f788937",
+      "type": "schematics",
+      "source": "schematic_generation",
+      "file": "artifacts\\schematics\\f4e8b309-1c75-47f0-bb64-8a974f788937.json",
+      "timestamp": "2026-09-19 22:57:38"
+    },
+    {
+      "artifact_id": "50dcb10a-7329-4431-945f-c2cdeb4ed7d9",
+      "type": "diagrams",
+      "source": "architecture_diagrams",
+      "file": "artifacts\\diagrams\\50dcb10a-7329-4431-945f-c2cdeb4ed7d9.json",
+      "timestamp": "2026-09-19 22:57:38"
+    },
+    {
+      "artifact_id": "f5f692ea-b045-4f36-998b-1106d5a32bc7",
+      "type": "diagrams",
+      "source": "flowcharts",
+      "file": "artifacts\\diagrams\\f5f692ea-b045-4f36-998b-1106d5a32bc7.json",
+      "timestamp": "2026-09-19 22:57:38"
+    },
+    {
+      "artifact_id": "4eda1ef1-ee72-448f-bdc7-5706ced2135e",
+      "type": "diagrams",
+      "source": "ui_design",
+      "file": "artifacts\\diagrams\\4eda1ef1-ee72-448f-bdc7-5706ced2135e.json",
+      "timestamp": "2026-09-19 22:57:38"
+    },
+    {
+      "artifact_id": "2e927b56-517f-47ea-96e7-62779cae7d98",
+      "type": "blueprints",
+      "source": "product_concepts",
+      "file": "artifacts\\blueprints\\2e927b56-517f-47ea-96e7-62779cae7d98.json",
+      "timestamp": "2026-09-19 22:59:07"
+    },
+    {
+      "artifact_id": "ee2b84b5-ae0c-491c-a10d-b6565d94f4a1",
+      "type": "blueprints",
+      "source": "product_concepts",
+      "file": "artifacts\\blueprints\\ee2b84b5-ae0c-491c-a10d-b6565d94f4a1.json",
+      "timestamp": "2026-09-19 22:59:07"
+    },
+    {
+      "artifact_id": "0efd0b97-b63c-4ac5-b6e8-99eb9e690089",
+      "type": "blueprints",
+      "source": "product_concepts",
+      "file": "artifacts\\blueprints\\0efd0b97-b63c-4ac5-b6e8-99eb9e690089.json",
+      "timestamp": "2026-09-19 22:59:07"
+    },
+    {
+      "artifact_id": "d5cb5fcb-cd22-45ae-bbf1-d1ceffb812fa",
+      "type": "blueprints",
+      "source": "product_concepts",
+      "file": "artifacts\\blueprints\\d5cb5fcb-cd22-45ae-bbf1-d1ceffb812fa.json",
+      "timestamp": "2026-09-19 22:59:07"
+    },
+    {
+      "artifact_id": "fb141cdf-2769-4fbc-be46-bceee2cf34ff",
+      "type": "diagrams",
+      "source": "diagram_generation",
+      "file": "artifacts\\diagrams\\fb141cdf-2769-4fbc-be46-bceee2cf34ff.json",
+      "timestamp": "2026-09-19 22:59:07"
+    },
+    {
+      "artifact_id": "799908f6-469b-4fdf-a237-9dd24f851032",
+      "type": "schematics",
+      "source": "schematic_generation",
+      "file": "artifacts\\schematics\\799908f6-469b-4fdf-a237-9dd24f851032.json",
+      "timestamp": "2026-09-19 22:59:07"
+    },
+    {
+      "artifact_id": "ec5170c1-0919-4eda-92a1-bec7c35f72ca",
+      "type": "diagrams",
+      "source": "architecture_diagrams",
+      "file": "artifacts\\diagrams\\ec5170c1-0919-4eda-92a1-bec7c35f72ca.json",
+      "timestamp": "2026-09-19 22:59:08"
+    },
+    {
+      "artifact_id": "4c573c60-ee1f-4b19-9ea4-0fb060f5a37e",
+      "type": "diagrams",
+      "source": "flowcharts",
+      "file": "artifacts\\diagrams\\4c573c60-ee1f-4b19-9ea4-0fb060f5a37e.json",
+      "timestamp": "2026-09-19 22:59:08"
+    },
+    {
+      "artifact_id": "9c1f2132-a817-4dbb-b052-7c5143f149ab",
+      "type": "diagrams",
+      "source": "ui_design",
+      "file": "artifacts\\diagrams\\9c1f2132-a817-4dbb-b052-7c5143f149ab.json",
+      "timestamp": "2026-09-19 22:59:08"
+    },
+    {
+      "artifact_id": "ca46450b-adc8-4624-902c-7c8160b862a8",
+      "type": "blueprints",
+      "source": "product_concepts",
+      "file": "artifacts\\blueprints\\ca46450b-adc8-4624-902c-7c8160b862a8.json",
+      "timestamp": "2026-09-19 22:59:08"
+    },
+    {
+      "artifact_id": "c09d952e-066c-4d7b-89f2-f874aa523f46",
+      "type": "blueprints",
+      "source": "industrial_design",
+      "file": "artifacts\\blueprints\\c09d952e-066c-4d7b-89f2-f874aa523f46.json",
+      "timestamp": "2026-09-19 23:01:11"
+    },
+    {
+      "artifact_id": "581b3e59-7dfe-4e20-88fb-fd1065323042",
+      "type": "blueprints",
+      "source": "industrial_design",
+      "file": "artifacts\\blueprints\\581b3e59-7dfe-4e20-88fb-fd1065323042.json",
+      "timestamp": "2026-09-19 23:01:11"
+    },
+    {
+      "artifact_id": "a95b4584-fe33-4b56-98f9-7c7e4eb50bc9",
+      "type": "blueprints",
+      "source": "industrial_design",
+      "file": "artifacts\\blueprints\\a95b4584-fe33-4b56-98f9-7c7e4eb50bc9.json",
+      "timestamp": "2026-09-19 23:01:11"
+    },
+    {
+      "artifact_id": "38caab0b-e74e-4fc1-91c7-0f281f078912",
+      "type": "blueprints",
+      "source": "industrial_design",
+      "file": "artifacts\\blueprints\\38caab0b-e74e-4fc1-91c7-0f281f078912.json",
+      "timestamp": "2026-09-19 23:01:11"
+    },
+    {
+      "artifact_id": "3f4473a9-202a-45c4-bc2e-832afca33ff5",
+      "type": "diagrams",
+      "source": "diagram_generation",
+      "file": "artifacts\\diagrams\\3f4473a9-202a-45c4-bc2e-832afca33ff5.json",
+      "timestamp": "2026-09-19 23:01:12"
+    },
+    {
+      "artifact_id": "4e9f9bb3-2fab-44e8-b9ce-90d2e1b4687d",
+      "type": "schematics",
+      "source": "schematic_generation",
+      "file": "artifacts\\schematics\\4e9f9bb3-2fab-44e8-b9ce-90d2e1b4687d.json",
+      "timestamp": "2026-09-19 23:01:12"
+    },
+    {
+      "artifact_id": "d065fe70-436b-4e3e-9a7e-a9061a8d5954",
+      "type": "diagrams",
+      "source": "architecture_diagrams",
+      "file": "artifacts\\diagrams\\d065fe70-436b-4e3e-9a7e-a9061a8d5954.json",
+      "timestamp": "2026-09-19 23:01:12"
+    },
+    {
+      "artifact_id": "9ec3a1b5-10a3-488e-869c-acbce97b669f",
+      "type": "diagrams",
+      "source": "flowcharts",
+      "file": "artifacts\\diagrams\\9ec3a1b5-10a3-488e-869c-acbce97b669f.json",
+      "timestamp": "2026-09-19 23:01:12"
+    },
+    {
+      "artifact_id": "9c2ca9fb-2008-45fc-a3a2-5bdaa543d2f9",
+      "type": "diagrams",
+      "source": "ui_design",
+      "file": "artifacts\\diagrams\\9c2ca9fb-2008-45fc-a3a2-5bdaa543d2f9.json",
+      "timestamp": "2026-09-19 23:01:12"
+    },
+    {
+      "artifact_id": "199ee5d2-7535-4b2c-b340-c43ddb519177",
+      "type": "blueprints",
+      "source": "product_concepts",
+      "file": "artifacts\\blueprints\\199ee5d2-7535-4b2c-b340-c43ddb519177.json",
+      "timestamp": "2026-09-19 23:01:12"
+    },
+    {
+      "artifact_id": "6d29f2b1-887b-46ef-b779-840a7a8a36b8",
+      "type": "blueprints",
+      "source": "industrial_design",
+      "file": "artifacts\\blueprints\\6d29f2b1-887b-46ef-b779-840a7a8a36b8.json",
+      "timestamp": "2026-09-19 23:01:12"
+    },
+    {
+      "artifact_id": "a915d7be-4f9c-4d5e-9b24-99c5e39e2ffa",
+      "type": "images",
+      "source": "image_generation",
+      "file": "artifacts\\images\\a915d7be-4f9c-4d5e-9b24-99c5e39e2ffa.json",
+      "timestamp": "2026-09-19 23:02:40"
+    },
+    {
+      "artifact_id": "ba7c936b-01d9-4e6a-ac9a-322a1ca4883d",
+      "type": "images",
+      "source": "image_generation",
+      "file": "artifacts\\images\\ba7c936b-01d9-4e6a-ac9a-322a1ca4883d.json",
+      "timestamp": "2026-09-19 23:02:41"
+    },
+    {
+      "artifact_id": "de533f02-1f7a-467c-aab8-b46d4d506fa8",
+      "type": "images",
+      "source": "image_generation",
+      "file": "artifacts\\images\\de533f02-1f7a-467c-aab8-b46d4d506fa8.json",
+      "timestamp": "2026-09-19 23:02:41"
+    },
+    {
+      "artifact_id": "6d1f54e1-eb5c-40bb-8355-7e693ffa9a58",
+      "type": "images",
+      "source": "image_generation",
+      "file": "artifacts\\images\\6d1f54e1-eb5c-40bb-8355-7e693ffa9a58.json",
+      "timestamp": "2026-09-19 23:02:41"
+    },
+    {
+      "artifact_id": "c4004666-b2f5-4021-8c0f-166a0e96f1a5",
+      "type": "diagrams",
+      "source": "diagram_generation",
+      "file": "artifacts\\diagrams\\c4004666-b2f5-4021-8c0f-166a0e96f1a5.json",
+      "timestamp": "2026-09-19 23:02:41"
+    },
+    {
+      "artifact_id": "276fc41f-28b1-4334-9fdf-4e46f6ea7a6e",
+      "type": "schematics",
+      "source": "schematic_generation",
+      "file": "artifacts\\schematics\\276fc41f-28b1-4334-9fdf-4e46f6ea7a6e.json",
+      "timestamp": "2026-09-19 23:02:41"
+    },
+    {
+      "artifact_id": "a4ed6718-1261-4f5b-b714-021fa6eac47e",
+      "type": "diagrams",
+      "source": "architecture_diagrams",
+      "file": "artifacts\\diagrams\\a4ed6718-1261-4f5b-b714-021fa6eac47e.json",
+      "timestamp": "2026-09-19 23:02:41"
+    },
+    {
+      "artifact_id": "544c762a-2188-4ab4-a78f-083f5aea8543",
+      "type": "diagrams",
+      "source": "flowcharts",
+      "file": "artifacts\\diagrams\\544c762a-2188-4ab4-a78f-083f5aea8543.json",
+      "timestamp": "2026-09-19 23:02:41"
+    },
+    {
+      "artifact_id": "36645593-cd7c-4473-8c07-12ae8b673c42",
+      "type": "diagrams",
+      "source": "ui_design",
+      "file": "artifacts\\diagrams\\36645593-cd7c-4473-8c07-12ae8b673c42.json",
+      "timestamp": "2026-09-19 23:02:42"
+    },
+    {
+      "artifact_id": "731995cb-b795-4253-8de7-1423311d7431",
+      "type": "blueprints",
+      "source": "product_concepts",
+      "file": "artifacts\\blueprints\\731995cb-b795-4253-8de7-1423311d7431.json",
+      "timestamp": "2026-09-19 23:02:42"
+    },
+    {
+      "artifact_id": "201a291b-7abc-459a-ba67-1b913224bf70",
+      "type": "blueprints",
+      "source": "industrial_design",
+      "file": "artifacts\\blueprints\\201a291b-7abc-459a-ba67-1b913224bf70.json",
+      "timestamp": "2026-09-19 23:02:42"
+    },
+    {
+      "artifact_id": "3ace702f-6082-417c-8fe2-7ceadca8f197",
+      "type": "images",
+      "source": "image_generation",
+      "file": "artifacts\\images\\3ace702f-6082-417c-8fe2-7ceadca8f197.json",
+      "timestamp": "2026-09-19 23:02:42"
+    },
+    {
+      "artifact_id": "ce7391bf-14f8-443b-94ce-188472107213",
+      "type": "blueprints",
+      "source": "industrial_design",
+      "file": "artifacts\\blueprints\\ce7391bf-14f8-443b-94ce-188472107213.json",
+      "timestamp": "2026-09-23 19:54:25"
     }
   ]
 }

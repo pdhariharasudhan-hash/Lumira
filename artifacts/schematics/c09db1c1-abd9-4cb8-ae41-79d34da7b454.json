@@ -1,0 +1,41 @@
+{
+  "type": "schematic",
+  "version": "1.0",
+  "request": "create a simple circuit schematic for a battery motor controller",
+  "status": "generated",
+  "format": "structured",
+  "components": [
+    {
+      "id": "component_1",
+      "name": "battery",
+      "type": "primary",
+      "value": null
+    },
+    {
+      "id": "component_2",
+      "name": "motor",
+      "type": "component",
+      "value": null
+    },
+    {
+      "id": "component_3",
+      "name": "controller",
+      "type": "component",
+      "value": null
+    }
+  ],
+  "connections": [
+    {
+      "from": "component_1",
+      "to": "component_2",
+      "signal": "connection"
+    },
+    {
+      "from": "component_1",
+      "to": "component_3",
+      "signal": "connection"
+    }
+  ],
+  "component_count": 3,
+  "connection_count": 2
+}

@@ -1,8 +1,8 @@
 {
-  "current_goal": "build stock predictor",
-  "active_project": "expense_api",
+  "current_goal": "remind me",
+  "active_project": null,
   "active_version": null,
   "current_stage": "command",
-  "last_command": "search expense",
+  "last_command": "remind me",
   "artifacts": []
 }

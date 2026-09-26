@@ -21,6 +21,10 @@ from app.services.decision.decision_models import (
     DecisionState,
 )
 
+from app.services.modes.models.mode_state import (
+    ModeState,
+)
+
 
 class PredictionService:
     """
@@ -35,6 +39,7 @@ class PredictionService:
         planner: PlannerState,
         decision: DecisionState,
         state: PredictionState,
+        mode: ModeState | None = None,
     ) -> PredictionState:
         """
         Analyze the current execution plan and produce
@@ -49,13 +54,15 @@ class PredictionService:
 
         state.identified_risks = (
             self._risks(
-                planner
+                planner,
+                mode,
             )
         )
 
         state.bottlenecks = (
             self._bottlenecks(
-                planner
+                planner,
+                mode,
             )
         )
 
@@ -115,10 +122,14 @@ class PredictionService:
     def _risks(
         self,
         planner: PlannerState,
+        mode: ModeState | None = None,
     ) -> list[str]:
         """
         Identify likely risks resulting from
         the current execution plan.
+
+        Mode provides prediction context only.
+        PlannerState remains authoritative.
         """
 
         risks: list[str] = []
@@ -135,6 +146,31 @@ class PredictionService:
                 "required dependencies are unresolved."
             )
 
+        mode_risks = {
+            "builder":
+                "Implementation changes may introduce technical defects.",
+            "research":
+                "Insufficient evidence may reduce prediction reliability.",
+            "generator":
+                "Generated artifacts may require validation before use.",
+            "creator":
+                "Output quality may require additional refinement.",
+            "growth":
+                "Predicted outcomes may vary because growth assumptions can change.",
+            "operations":
+                "Operational execution may be affected by runtime conditions.",
+            "assistant":
+                "User requirements may change during execution.",
+        }
+
+        if mode is not None:
+            risk = mode_risks.get(
+                mode.active_mode
+            )
+
+            if risk:
+                risks.append(risk)
+
         return risks
 
     # ----------------------------------
@@ -144,9 +180,15 @@ class PredictionService:
     def _bottlenecks(
         self,
         planner: PlannerState,
+        mode: ModeState | None = None,
     ) -> list[str]:
         """
         Identify current execution bottlenecks.
+
+        Planner blockers and dependencies remain the
+        authoritative bottlenecks.
+
+        Mode may add deterministic contextual bottlenecks.
         """
 
         bottlenecks: list[str] = []
@@ -160,6 +202,33 @@ class PredictionService:
             bottlenecks.extend(
                 planner.dependencies
             )
+
+        mode_bottlenecks = {
+            "builder":
+                "implementation_validation",
+            "research":
+                "evidence_validation",
+            "generator":
+                "artifact_validation",
+            "creator":
+                "content_refinement",
+            "growth":
+                "assumption_validation",
+            "operations":
+                "runtime_validation",
+            "assistant":
+                "requirement_clarification",
+        }
+
+        if mode is not None:
+            bottleneck = mode_bottlenecks.get(
+                mode.active_mode
+            )
+
+            if bottleneck:
+                bottlenecks.append(
+                    bottleneck
+                )
 
         return bottlenecks
 

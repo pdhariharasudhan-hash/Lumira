@@ -53,6 +53,8 @@ class PlannerModule(
                 reasoning=state.reasoning,
 
                 state=state.planner,
+
+                mode=state.mode,
             )
         )
 

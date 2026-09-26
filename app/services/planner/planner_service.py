@@ -37,6 +37,10 @@ from app.services.planner.plan_registry import (
     PlanRegistry,
 )
 
+from app.services.modes.models.mode_state import (
+    ModeState,
+)
+
 
 class PlannerService:
     """
@@ -51,6 +55,76 @@ class PlannerService:
         self.decomposer = GoalDecomposer()
 
         self.registry = PlanRegistry()
+
+    # ----------------------------------
+    # Mode-aware Planning
+    # ----------------------------------
+
+    def _priorities_for_mode(
+        self,
+        mode: ModeState | None,
+    ) -> list[str]:
+        """
+        Return deterministic planning priorities.
+
+        Mode provides execution context only.
+        DecisionState remains authoritative.
+        """
+
+        priorities = [
+            "Correctness",
+            "Reliability",
+            "Performance",
+        ]
+
+        if mode is None:
+            return priorities
+
+        mode_priorities = {
+            "builder": [
+                "Correctness",
+                "Reliability",
+                "Implementation",
+            ],
+            "research": [
+                "Evidence Quality",
+                "Correctness",
+                "Source Validation",
+            ],
+            "generator": [
+                "Output Quality",
+                "Correctness",
+                "Artifact Validity",
+            ],
+            "creator": [
+                "Content Quality",
+                "Correctness",
+                "Audience Fit",
+            ],
+            "growth": [
+                "Impact",
+                "Feasibility",
+                "Growth Potential",
+            ],
+            "operations": [
+                "Reliability",
+                "Safety",
+                "Execution Efficiency",
+            ],
+            "assistant": [
+                "Correctness",
+                "Clarity",
+                "User Alignment",
+            ],
+            "personal": priorities,
+        }
+
+        return list(
+            mode_priorities.get(
+                mode.active_mode,
+                priorities,
+            )
+        )
 
     # ----------------------------------
     # Existing Planner API
@@ -93,6 +167,7 @@ class PlannerService:
         decision: DecisionState,
         reasoning: ReasoningState,
         state: PlannerState,
+        mode: ModeState | None = None,
     ) -> PlannerState:
         """
         Convert DecisionState into a Brain execution plan.
@@ -114,11 +189,9 @@ class PlannerService:
             decision.accepted_constraints
         )
 
-        state.priorities = [
-            "Correctness",
-            "Reliability",
-            "Performance",
-        ]
+        state.priorities = (
+            self._priorities_for_mode(mode)
+        )
 
         state.milestones = []
 
