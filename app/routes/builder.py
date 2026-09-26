@@ -16,6 +16,41 @@ router = APIRouter()
 builder_service = BuilderService()
 
 
+def analyze_build_request(content: str) -> Dict[str, Any]:
+    text = (content or "").strip()
+
+    if not text:
+        return {
+            "objective": "",
+            "scope": "small",
+            "suggested_steps": [],
+            "priority": "medium",
+            "status": "refine",
+            "reason": "empty input"
+        }
+
+    result = builder_service.build(text)
+
+    if not validate_builder_output(result):
+        return {
+            "objective": "fallback build plan",
+            "scope": "small",
+            "suggested_steps": [
+                {
+                    "id": "step_1",
+                    "action": "create fallback script",
+                    "inputs": {},
+                    "expected_output": "fallback created",
+                    "dependencies": []
+                }
+            ],
+            "priority": "medium",
+            "status": "fallback"
+        }
+
+    return result
+
+
 def validate_builder_output(
     result: Dict[str, Any]
 ) -> bool:

@@ -37,11 +37,11 @@ def main_brain_flow(content: str) -> dict:
         }
 
     # -------- STEP 3: EXECUTE --------
-    execution = analyze_execution_request(text)
+    execution = analyze_execution_request(text, build)
 
-    if execution["status"] == "refine":
+    if execution["status"] in {"refine", "reject"}:
         return {
-            "stage": "execute",
+            "stage": "builder",
             "status": "needs_refinement",
             "validation": validation,
             "builder": build,
@@ -49,7 +49,7 @@ def main_brain_flow(content: str) -> dict:
         }
 
     # -------- STEP 4: CODE --------
-    code = analyze_code_request(text)
+    code = analyze_code_request(text, execution)
 
     return {
         "stage": "complete",

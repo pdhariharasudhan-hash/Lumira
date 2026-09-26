@@ -13,6 +13,28 @@ router = APIRouter()
 execute_service = ExecuteService()
 
 
+def analyze_execution_request(content: str, builder: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    text = (content or "").strip()
+    builder_payload = builder or {"suggested_steps": []}
+
+    if not text:
+        return {
+            "execution_order": [],
+            "today_task": None,
+            "task_steps": [],
+            "expected_output": "nothing generated",
+            "blockers": ["no input provided"],
+            "status": "refine"
+        }
+
+    result = execute_service.execute(text, builder_payload)
+
+    if not validate_execute_output(result):
+        result["status"] = "refine"
+
+    return result
+
+
 class ExecuteRequest(BaseModel):
     input: str
     builder: Dict[str, Any]

@@ -204,6 +204,10 @@ class BrainState(BaseModel):
         default_factory=PlannerState
     )
 
+    plan: Dict[str, Any] = Field(
+        default_factory=dict
+    )
+
     prediction: PredictionState = Field(
         default_factory=PredictionState
     )
@@ -258,6 +262,8 @@ class BrainState(BaseModel):
         self.decision = DecisionState()
 
         self.planner = PlannerState()
+
+        self.plan = {}
 
         self.prediction = PredictionState()
 

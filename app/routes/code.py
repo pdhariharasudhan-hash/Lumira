@@ -13,6 +13,37 @@ router = APIRouter()
 code_service = CodeService()
 
 
+def analyze_code_request(content: str, execute: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    text = (content or "").strip()
+    execution_payload = execute or {"status": "accept"}
+
+    if not text:
+        return {
+            "code_target": "fallback_project",
+            "files": {"main.py": "print('fallback')"},
+            "file_plan": ["main.py"],
+            "implementation_steps": ["Generate fallback"],
+            "test_steps": ["Run python main.py"],
+            "priority": "low",
+            "status": "fallback"
+        }
+
+    result = code_service.generate(text, execution_payload)
+
+    if not validate_code_output(result):
+        return {
+            "code_target": "fallback_project",
+            "files": {"main.py": "print('fallback')"},
+            "file_plan": ["main.py"],
+            "implementation_steps": ["Generate fallback"],
+            "test_steps": ["Run python main.py"],
+            "priority": "low",
+            "status": "fallback"
+        }
+
+    return result
+
+
 class CodeRequest(BaseModel):
     input: str
     execute: Dict[str, Any]

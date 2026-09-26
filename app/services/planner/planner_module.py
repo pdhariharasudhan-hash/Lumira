@@ -58,4 +58,14 @@ class PlannerModule(
             )
         )
 
+        state.plan = {
+            "execution_steps": list(state.planner.execution_steps),
+            "dependencies": list(state.planner.dependencies),
+            "priorities": list(state.planner.priorities),
+            "milestones": list(state.planner.milestones),
+            "execution_order": list(state.planner.execution_order),
+            "completion_criteria": list(state.planner.completion_criteria),
+            "confidence": state.planner.confidence,
+        }
+
         return state

@@ -26,6 +26,10 @@ from app.routes.health import (
     router as health_router
 )
 
+from app.routes.brain import (
+    router as brain_router
+)
+
 from app.routes.run import (
     router as run_router
 )
@@ -115,6 +119,11 @@ app.include_router(
 
 app.include_router(
     health_router
+)
+
+app.include_router(
+    brain_router,
+    tags=["Brain"]
 )
 
 app.include_router(
