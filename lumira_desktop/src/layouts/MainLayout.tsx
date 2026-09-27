@@ -6,6 +6,9 @@ import "./MainLayout.css";
 type BrainResponse = {
 	success?: boolean;
 	session_id?: string;
+	message?: string;
+	detail?: string;
+	clarification_required?: boolean;
 	data?: {
 		stage?: string;
 		status?: string;
@@ -52,11 +55,19 @@ function MainLayout() {
 	const [isSending, setIsSending] = useState(false);
 	const [session, setSession] = useState<SessionRecord | null>(null);
 	const [isRestoringSession, setIsRestoringSession] = useState(() => Boolean(window.localStorage.getItem("lumira.sessionId")));
+	const [connectionStatus, setConnectionStatus] = useState<"checking" | "online" | "offline">("checking");
+	const [sessionError, setSessionError] = useState<string | null>(null);
 
 	useEffect(() => {
+		void fetch("/health")
+			.then((response) => {
+				if (!response.ok) throw new Error("Health check failed");
+				setConnectionStatus("online");
+			})
+			.catch(() => setConnectionStatus("offline"));
+
 		const storedId = window.localStorage.getItem("lumira.sessionId");
 		if (!storedId) {
-			setIsRestoringSession(false);
 			return;
 		}
 
@@ -78,21 +89,27 @@ function MainLayout() {
 			})
 			.catch(() => {
 				window.localStorage.removeItem("lumira.sessionId");
+				setSessionError("The saved session could not be restored. Start a new session to continue.");
 			})
 			.finally(() => setIsRestoringSession(false));
 	}, []);
 
 	async function startNewSession() {
-		const response = await fetch("/sessions", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ workspace_id: "default" }),
-		});
-		if (!response.ok) throw new Error("Could not create a new session");
-		const created = (await response.json()) as SessionRecord;
-		window.localStorage.setItem("lumira.sessionId", created.session_id);
-		setSession(created);
-		setMessages([]);
+		try {
+			setSessionError(null);
+			const response = await fetch("/sessions", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ workspace_id: "default" }),
+			});
+			if (!response.ok) throw new Error("Could not create a new session");
+			const created = (await response.json()) as SessionRecord;
+			window.localStorage.setItem("lumira.sessionId", created.session_id);
+			setSession(created);
+			setMessages([]);
+		} catch (error) {
+			setSessionError(error instanceof Error ? error.message : "Could not create a new session.");
+		}
 	}
 
 	async function submitPrompt(event: FormEvent<HTMLFormElement>) {
@@ -117,8 +134,21 @@ function MainLayout() {
 			});
 			const result = (await response.json()) as BrainResponse;
 
-			if (!response.ok || result.success === false || result.result?.success === false) {
-				throw new Error(result.error || `Request failed (${response.status})`);
+			if (!response.ok) {
+				throw new Error(result.detail || result.error || result.message || `Request failed (${response.status})`);
+			}
+
+			if (result.clarification_required) {
+				setMessages((current) =>
+					current.map((message, index) =>
+						index === current.length - 1 ? { ...message, response: result } : message,
+					),
+				);
+				return;
+			}
+
+			if (result.success === false || result.result?.success === false) {
+				throw new Error(result.error || result.message || result.detail || "The request could not be completed.");
 			}
 
 			const sessionId = result.session_id ?? result.data?.state?.execution_context?.session_id;
@@ -169,7 +199,7 @@ function MainLayout() {
 				</div>
 				<div className="rail-footer">
 					<span className="connection-dot" />
-					<span>Local core</span>
+					<span>{connectionStatus === "online" ? "Local core" : connectionStatus === "checking" ? "Checking core" : "Core offline"}</span>
 				</div>
 			</aside>
 
@@ -180,10 +210,14 @@ function MainLayout() {
 						<h1>Workbench</h1>
 						{session && <div className="session-context">Session {session.session_id.slice(0, 8)} · {session.status}{session.current_goal ? ` · ${session.current_goal}` : ""}</div>}
 					</div>
-					<div className="runtime-label"><span className="connection-dot" /> CORE READY</div>
+					<div className="runtime-label">
+						<span className="connection-dot" />
+						{connectionStatus === "online" ? "CORE READY" : connectionStatus === "checking" ? "CONNECTING" : "CORE OFFLINE"}
+					</div>
 				</header>
 
 				<section className="conversation" aria-live="polite">
+					{sessionError && <p className="run-error session-error">{sessionError}</p>}
 					{messages.length === 0 ? (
 						<div className="welcome-state">
 							<div className="welcome-mark"><FiCpu aria-hidden="true" /></div>
@@ -213,6 +247,7 @@ function MainLayout() {
 													</span>
 												</div>
 												<div className="run-status">{status.replaceAll("_", " ")}</div>
+												{message.response.message && <p className="run-error">{message.response.message}</p>}
 												{message.response.result?.saved_path && <p className="saved-path">Saved to {message.response.result.saved_path}</p>}
 												<pre>{JSON.stringify(output, null, 2)}</pre>
 											</div>

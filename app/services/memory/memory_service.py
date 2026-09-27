@@ -627,6 +627,19 @@ class MemoryService:
             []
         )
 
+    def remove_artifact(self, artifact_id: str) -> bool:
+        def remove(memory):
+            records = memory.setdefault("artifacts", [])
+            remaining = [
+                record
+                for record in records
+                if record.get("artifact_id") != artifact_id
+            ]
+            memory["artifacts"] = remaining
+            return len(remaining) != len(records)
+
+        return bool(self.store.update(remove, self._default_memory()))
+
     # ==========================
     # FEATURE HISTORY
     # ==========================

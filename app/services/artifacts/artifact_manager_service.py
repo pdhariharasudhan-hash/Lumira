@@ -2,6 +2,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any
 import json
+import re
 import uuid
 
 from app.services.memory.memory_service import (
@@ -115,10 +116,11 @@ class ArtifactManagerService:
     ) -> Dict[str, Any]:
 
         if artifact_type not in SUPPORTED_ARTIFACT_TYPES:
-
-                    raise ValueError(
-                        f"Unsupported artifact type: {artifact_type}"
-                    )
+            raise ValueError(
+                f"Unsupported artifact type: {artifact_type}"
+            )
+        if not re.fullmatch(r"[A-Za-z0-9]{1,12}", extension):
+            raise ValueError("Artifact extension must be alphanumeric and 1-12 characters")
 
         artifact_id = str(
             uuid.uuid4()
@@ -212,6 +214,53 @@ class ArtifactManagerService:
         return index[
             "artifacts"
         ]
+
+    def get_artifact_path(self, artifact_id: str) -> Path | None:
+        artifact = self.get_artifact(artifact_id)
+        if artifact is None:
+            return None
+
+        path = Path(artifact["file"]).resolve()
+        base = self.base_path.resolve()
+        if path == base or base not in path.parents:
+            raise ValueError("Artifact path is outside the artifact store")
+        return path
+
+    def delete_artifact(self, artifact_id: str) -> bool:
+        index = self._load_index()
+        artifacts = index.get("artifacts", [])
+        artifact = next(
+            (
+                item
+                for item in artifacts
+                if item.get("artifact_id") == artifact_id
+            ),
+            None,
+        )
+        if artifact is None:
+            return False
+
+        path = self.get_artifact_path(artifact_id)
+        if path and path.exists():
+            path.unlink()
+
+        index["artifacts"] = [
+            item
+            for item in artifacts
+            if item.get("artifact_id") != artifact_id
+        ]
+        self._save_index(index)
+        self.memory.remove_artifact(artifact_id)
+        return True
+
+    def stats(self) -> dict:
+        artifacts = self.get_all_artifacts()
+        counts = {artifact_type: 0 for artifact_type in SUPPORTED_ARTIFACT_TYPES}
+        for artifact in artifacts:
+            artifact_type = artifact.get("type")
+            if artifact_type in counts:
+                counts[artifact_type] += 1
+        return {"total": len(artifacts), "by_type": counts}
 
     def search(
         self,

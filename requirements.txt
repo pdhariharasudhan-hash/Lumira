@@ -1,5 +1,7 @@
 fastapi==0.115.12
-uvicorn==0.34.0
+httpx
 pydantic==2.11.3
-requests==2.32.3
+pytest
 python-multipart==0.0.32
+requests==2.32.3
+uvicorn==0.34.0

@@ -338,3 +338,32 @@ def test_missing_memory_key_keeps_not_found_status(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     response = TestClient(app).get("/memory/not-a-known-key")
     assert response.status_code == 404
+
+
+def test_artifact_api_supports_crud_and_content(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    client = TestClient(app)
+
+    created = client.post(
+        "/artifacts",
+        json={
+            "type": "exports",
+            "content": "exported report",
+            "source": "test",
+            "extension": "md",
+        },
+    )
+    assert created.status_code == 201
+    artifact = created.json()["artifact"]
+    artifact_id = artifact["artifact_id"]
+
+    listed = client.get("/artifacts", params={"artifact_type": "exports"})
+    assert listed.status_code == 200
+    assert listed.json()["artifacts"][0]["artifact_id"] == artifact_id
+    assert client.get(f"/artifacts/{artifact_id}").json()["artifact"]["source"] == "test"
+    assert client.get(f"/artifacts/{artifact_id}/content").text == "exported report"
+    assert client.get("/artifacts/stats").json()["stats"]["total"] == 1
+
+    deleted = client.delete(f"/artifacts/{artifact_id}")
+    assert deleted.status_code == 200
+    assert client.get(f"/artifacts/{artifact_id}").status_code == 404

@@ -1,0 +1,1 @@
+- [Replit package installation scope](replit-package-install.md) — nested app dependency installs can affect root manifests; inspect status after package-manager operations.

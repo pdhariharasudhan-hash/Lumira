@@ -70,6 +70,10 @@ from app.routes.voice_capture import (
     router as voice_capture_router
 )
 
+from app.routes.artifacts import (
+    router as artifacts_router
+)
+
 from app.routes.command import (
     router as command_router
 )
@@ -182,6 +186,11 @@ app.include_router(
 app.include_router(
     voice_capture_router,
     tags=["Voice Capture"]
+)
+
+app.include_router(
+    artifacts_router,
+    tags=["Artifacts"]
 )
 
 app.include_router(

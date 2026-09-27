@@ -33,11 +33,12 @@ Handoff 11 baseline: `b189a68` (`Integrate ULTRON cognitive and project flows`)
 
 - Added `POST/GET /sessions`, `GET /sessions/{id}`, and pause/resume/close lifecycle endpoints; `GET /brain/state/{session_id}` exposes structured durable state; `GET /memory/relevant` performs targeted session/project/goal retrieval; `/goals` supports create/list/update through `MemoryService`.
 - `/brain` and `/command` resolve sessions, restore context and relevant memory before cognition, execute the existing Brain pipeline, then persist session/cognitive state. `/command` persists capability outcomes and only consolidates verified generated-project lessons.
+- General artifact create/list/read/content/delete/stats APIs now expose the existing `ArtifactManagerService` without replacing voice/generation integrations.
 - Desktop stores only the active session ID in local storage, sends it with backend requests, restores recent messages/session/project/goal after reload, resumes paused sessions, and exposes “New session” through the session API. Backend remains authoritative.
 
 ### Verified Results
 
-- Backend: **30 tests passed** with `.venv\\Scripts\\python.exe -m pytest`.
+- Backend: **31 tests passed** with `pytest -q`.
 - `python -m compileall app`: passed. Backend imports: passed.
 - `npm --prefix lumira_desktop run build`: passed. `npm --prefix lumira_desktop run lint`: passed.
 - `git diff --check`: passed before this documentation update; rerun before commit.
@@ -70,6 +71,7 @@ Handoff 11 baseline: `b189a68` (`Integrate ULTRON cognitive and project flows`)
 - Integrated `/command` with the cognitive Brain before capability execution and exposed Brain state/trace in its response.
 - Connected conversation intent and language fields to the existing intent classifier and Tamil/English script detector.
 - Added API/project command routing to project generation, retained selected project and version across follow-up instructions, and fixed continuation to save under the active project name.
+- Added general artifact API coverage over the existing artifact manager, including safe extensions, content delivery, store-boundary validation, and deletion.
 - Added persistent explicit mode selection to execution context while retaining automatic mode detection when no manual mode is selected.
 - Corrected project entity selection so `FastAPI` and authentication features do not override the requested `expense` project name. Template lookup is rooted at the repository rather than the process working directory.
 - Replaced generated sample plaintext authentication with PBKDF2 password hashes, signed expiring HS256 bearer tokens, and auth dependencies on generated list/create/update/delete routes.
@@ -112,7 +114,7 @@ Handoff 11 baseline: `b189a68` (`Integrate ULTRON cognitive and project flows`)
 - Verified project-generation lessons are durably consolidated; generic runtime LearningState lessons are not all promoted, by design.
 - AgentManager/CodeAgent/ResearchAgent and WorkflowEngine remain a separate `/run` implementation. They are not wired as the main `/command` orchestration and should not be considered integrated into the authoritative path.
 - Recovery retries are executable and traced. A dedicated recovery inspection/resume API and durable failed-stage recovery ledger are not present.
-- Artifact management is available internally and via voice/generation paths; there is no dedicated general artifact CRUD API. Unified search now covers its 11 implemented sources.
+- Artifact management is available internally, via voice/generation paths, and through the general `/artifacts` CRUD/content/stats API. Unified search now covers its 11 implemented sources.
 - Generated auth users are in-memory. If `JWT_SECRET_KEY` is not configured, a cryptographically random key is generated per process and tokens do not survive a restart. Production projects still need persistent user storage, key management, throttling, and broader authorization policy.
 - Generated API code is statically validated and exercised with the local FastAPI TestClient in regression coverage; the generator does not run a generated project's own external test suite automatically.
 - No frontend unit/e2e test script or test files are configured. The live browser smoke covers the Brain path; project generation and auth are verified through the API/generated-app TestClient.
@@ -123,7 +125,7 @@ Handoff 11 baseline: `b189a68` (`Integrate ULTRON cognitive and project flows`)
 1. Integrate the existing agent registry/manager into the primary capability orchestration, or formally retire the duplicate legacy path after migration tests.
 2. Expand verified learning consolidation to additional reviewed workflows and expose recovery state/resume operations with failure-history tests.
 3. Configure and operationally test real speech-to-text, transcript summarization, and image-rendering providers; add Tamil-English semantic understanding beyond script detection.
-4. Add explicit general artifact APIs and expand search only when additional concrete data sources are supported.
+4. Expand search only when additional concrete data sources are supported.
 5. Harden generated project auth with persistent users, deployment key provisioning, rate limiting, and application-specific authorization; run each generated project's own test suite.
 6. Add frontend automated tests and broader browser coverage for project generation, persisted modes, recovery/error display, and voice-provider limitations.
 7. Replace deprecated UTC timestamp calls in the wider existing codebase in a separate, scoped maintenance change.
