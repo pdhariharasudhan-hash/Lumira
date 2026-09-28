@@ -20,6 +20,10 @@ from app.services.code.code_service import (
 from app.services.features.feature_detector import (
     FeatureDetector
 )
+from app.services.builder.builder_service import BuilderService
+from app.services.execution.execute_service import ExecuteService
+from app.services.validation.code_validation_service import CodeValidationService
+from app.services.projects.project_paths import resolve_project_path
 
 
 class ProjectLifecycleService:
@@ -111,18 +115,9 @@ class ProjectLifecycleService:
         version: str
     ):
 
-        project_folder = (
+        project_folder = resolve_project_path(project_name, version)
 
-            Path(
-                "generated"
-            )
-
-            / project_name
-
-            / version
-        )
-
-        if not project_folder.exists():
+        if project_folder is None or not project_folder.is_dir():
 
             return {
 
@@ -134,6 +129,7 @@ class ProjectLifecycleService:
             }
 
         result = {}
+        total_bytes = 0
 
         metadata_file = (
 
@@ -141,7 +137,11 @@ class ProjectLifecycleService:
             / "metadata.json"
         )
 
-        if metadata_file.exists():
+        if metadata_file.is_file():
+            if metadata_file.stat().st_size > 100_000:
+                return {"success": False, "message": "Project metadata exceeds the read limit"}
+            if project_folder.resolve() not in metadata_file.resolve().parents:
+                return {"success": False, "message": "Project metadata is outside the version directory"}
 
             with open(
                 metadata_file,
@@ -166,6 +166,14 @@ class ProjectLifecycleService:
             ):
 
                 continue
+
+            resolved_file = file.resolve()
+            if project_folder.resolve() not in resolved_file.parents or not file.is_file():
+                continue
+            file_size = file.stat().st_size
+            total_bytes += file_size
+            if file_size > 2_000_000 or total_bytes > 10_000_000:
+                return {"success": False, "message": "Project version exceeds the read limit"}
 
             with open(
                 file,
@@ -202,32 +210,28 @@ class ProjectLifecycleService:
         instruction: str
     ):
 
+        if not isinstance(metadata, dict) or not isinstance(instruction, str) or not instruction.strip() or len(instruction) > 10000:
+            return {"success": False, "status": "reject", "error": "A project and a non-empty instruction under 10000 characters are required."}
+
         old_idea = (
             metadata.get(
                 "idea",
                 ""
             )
         )
+        if not isinstance(old_idea, str):
+            return {"success": False, "status": "reject", "error": "Stored project idea is invalid."}
 
-        features = (
-            metadata.get(
-                "features",
-                []
-            )
-        )
+        stored_features = metadata.get("features", [])
+        stored_instructions = metadata.get("instructions", [])
+        if not isinstance(stored_features, list) or not all(isinstance(item, str) for item in stored_features):
+            return {"success": False, "status": "reject", "error": "Stored project features are invalid."}
+        if not isinstance(stored_instructions, list) or not all(isinstance(item, str) for item in stored_instructions):
+            return {"success": False, "status": "reject", "error": "Stored project instructions are invalid."}
+        features = list(stored_features)
+        instructions = list(stored_instructions)
 
-        instructions = (
-            metadata.get(
-                "instructions",
-                []
-            )
-        )
-
-        instruction = (
-            instruction
-            .strip()
-            .lower()
-        )
+        instruction = instruction.strip().lower()
 
         instructions.append(
             instruction
@@ -255,53 +259,49 @@ class ProjectLifecycleService:
             + instruction
         ).strip()
 
+        builder_result = BuilderService().build(new_idea)
+        if builder_result.get("status") != "accept":
+            return {"success": False, "status": builder_result.get("status", "refine"), "builder": builder_result}
+
+        execution_result = ExecuteService().execute(new_idea, builder_result)
+        if execution_result.get("status") != "accept":
+            return {"success": False, "status": execution_result.get("status", "refine"), "builder": builder_result, "execution": execution_result}
+
         generated = (
 
             CodeService()
             .generate(
                 new_idea,
-                {}
+                execution_result
             )
         )
 
-        project_name = metadata.get(
-            "project",
-            generated["code_target"],
-        )
+        validation = CodeValidationService().validate(generated.get("files", {}))
+        if not validation["valid"]:
+            return {"success": False, "status": "reject", "validation": validation, "builder": builder_result, "execution": execution_result, "code": generated}
 
-        save_location = (
+        project_name = metadata.get("project") or generated.get("code_target")
+        if not isinstance(project_name, str) or not project_name.strip():
+            return {"success": False, "status": "reject", "error": "Stored project name is invalid."}
 
-            ProjectWriter()
-            .save(
-
+        try:
+            save_location = ProjectWriter().save(
                 project_name,
-
-                generated[
-                    "files"
-                ],
-
+                generated["files"],
                 {
-
-                    "idea":
-                    new_idea,
-
-                    "instructions":
-                    instructions,
-
-                    "features":
-                    features,
-
-                    "project_type":
-                    "api",
-
-                    "entity":
-                    project_name,
-
-                    "project":
-                    project_name,
-                }
+                    "idea": new_idea,
+                    "instructions": instructions,
+                    "features": features,
+                    "project_type": "api",
+                    "entity": project_name,
+                    "project": project_name,
+                    "builder": builder_result,
+                    "execution": execution_result,
+                    "validation": validation,
+                },
             )
-        )
+        except (OSError, ValueError) as error:
+            return {"success": False, "status": "reject", "error": f"Project save failed: {error}", "builder": builder_result, "execution": execution_result, "validation": validation}
 
         return {
 
@@ -318,5 +318,11 @@ class ProjectLifecycleService:
             instructions,
 
             "features":
-            features
+            features,
+
+            "builder": builder_result,
+
+            "execution": execution_result,
+
+            "validation": validation
         }

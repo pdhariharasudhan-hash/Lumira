@@ -33,19 +33,12 @@ def analyze_build_request(content: str) -> Dict[str, Any]:
 
     if not validate_builder_output(result):
         return {
-            "objective": "fallback build plan",
+            "objective": text,
             "scope": "small",
-            "suggested_steps": [
-                {
-                    "id": "step_1",
-                    "action": "create fallback script",
-                    "inputs": {},
-                    "expected_output": "fallback created",
-                    "dependencies": []
-                }
-            ],
+            "suggested_steps": [],
             "priority": "medium",
-            "status": "fallback"
+            "status": "refine",
+            "reasons": ["The request does not form a valid implementation plan."],
         }
 
     return result
@@ -74,9 +67,12 @@ def validate_builder_output(
     ):
         return False
 
-    if len(
-        result["suggested_steps"]
-    ) == 0:
+    status = result.get("status")
+    if status not in {"accept", "refine"}:
+        return False
+    if status == "accept" and not result["suggested_steps"]:
+        return False
+    if len(result["suggested_steps"]) > BuilderService.MAX_PLAN_STEPS:
         return False
 
     return True
@@ -93,29 +89,16 @@ def builder_endpoint(
         content
     )
 
-    if not validate_builder_output(
-        result
-    ):
-
-        result = {
-            "objective": "fallback build plan",
-            "scope": "small",
-            "suggested_steps": [
-                {
-                    "id": "step_1",
-                    "action": "create fallback script",
-                    "inputs": {},
-                    "expected_output": "fallback created",
-                    "dependencies": []
-                }
-            ],
-            "priority": "medium",
-            "status": "fallback"
-        }
+    if not validate_builder_output(result):
+        return build_structured_response(
+            endpoint="builder",
+            status="error",
+            data={"module": "builder", "result": {"status": "reject", "error": "builder returned an invalid plan"}},
+        )
 
     return build_structured_response(
         endpoint="builder",
-        status="ok",
+        status="ok" if result["status"] == "accept" else "refine",
         data={
             "module": "builder",
             "result": result
@@ -129,4 +112,4 @@ def builder_endpoint(
 
 
 
-    
+

@@ -106,6 +106,11 @@ class PlannerService:
                 "Feasibility",
                 "Growth Potential",
             ],
+            "business": [
+                "Evidence Quality",
+                "Financial Feasibility",
+                "Operational Readiness",
+            ],
             "operations": [
                 "Reliability",
                 "Safety",

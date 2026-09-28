@@ -1,7 +1,8 @@
 from typing import Dict, Any
+import json
 
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 from app.services.execution.execute_service import ExecuteService
 from app.services.response.response_service import (
@@ -30,14 +31,28 @@ def analyze_execution_request(content: str, builder: Dict[str, Any] | None = Non
     result = execute_service.execute(text, builder_payload)
 
     if not validate_execute_output(result):
-        result["status"] = "refine"
+        return {
+            "execution_order": [],
+            "today_task": None,
+            "task_steps": [],
+            "expected_output": "",
+            "blockers": ["Execution service returned an invalid plan."],
+            "status": "refine",
+        }
 
     return result
 
 
 class ExecuteRequest(BaseModel):
-    input: str
+    input: str = Field(max_length=10000)
     builder: Dict[str, Any]
+
+    @field_validator("builder")
+    @classmethod
+    def builder_payload_is_bounded(cls, value):
+        if len(json.dumps(value, ensure_ascii=False)) > 200_000:
+            raise ValueError("builder payload exceeds 200000 characters")
+        return value
 
 
 def validate_execute_output(
@@ -74,38 +89,22 @@ def validate_execute_output(
     ):
         return False
 
-    if len(execution_order) == 0:
-        return False
-
-    if not isinstance(
-        today_task,
-        str
-    ):
-        return False
-
-    if not isinstance(
-        task_steps,
-        list
-    ):
-        return False
-
-    if not isinstance(
-        expected_output,
-        str
-    ):
-        return False
-
-    if not isinstance(
-        blockers,
-        list
-    ):
-        return False
-
     if status not in [
         "accept",
         "refine",
         "reject"
     ]:
+        return False
+
+    if not isinstance(task_steps, list) or not isinstance(blockers, list):
+        return False
+
+    if status == "accept":
+        if not execution_order or not isinstance(today_task, str):
+            return False
+        if not isinstance(expected_output, str) or not expected_output:
+            return False
+    elif execution_order and not isinstance(today_task, str):
         return False
 
     return True
@@ -121,14 +120,22 @@ def execute_endpoint(
         payload.builder
     )
 
-    if not validate_execute_output(
-        result
-    ):
-        result["status"] = "refine"
+    valid_result = validate_execute_output(result)
+    if not valid_result:
+        result = {
+            "execution_order": [],
+            "today_task": None,
+            "task_steps": [],
+            "expected_output": "",
+            "blockers": ["Execution service returned an invalid plan."],
+            "status": "refine",
+        }
+
+    response_status = "ok" if valid_result and result["status"] == "accept" else "refine"
 
     return build_structured_response(
         endpoint="execute",
-        status="ok",
+        status=response_status,
         data={
             "module": "execute",
             "result": result

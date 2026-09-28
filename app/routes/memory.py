@@ -1,4 +1,7 @@
-from fastapi import APIRouter, HTTPException
+import json
+
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from app.services.memory.memory_service import MemoryService, MemoryValidationError
 from app.services.sessions.session_manager_service import (
@@ -10,17 +13,21 @@ router = APIRouter()
 memory_service = MemoryService()
 
 
+class MemoryUpdatePayload(BaseModel):
+    key: str = Field(min_length=1, max_length=200)
+    value: object
+
+
 # ==========================
 # CREATE / UPDATE MEMORY
 # ==========================
 @router.post("/memory")
-def set_memory(payload: dict):
+def set_memory(payload: MemoryUpdatePayload):
     try:
-        key = payload.get("key")
-        value = payload.get("value")
-
-        if not key:
-            raise MemoryValidationError("key is required")
+        key = payload.key
+        value = payload.value
+        if len(json.dumps(value, ensure_ascii=False)) > 250_000:
+            raise MemoryValidationError("memory value exceeds the 250000-character limit")
 
         updated_memory = memory_service.update(key, value)
 
@@ -37,14 +44,18 @@ def set_memory(payload: dict):
     except Exception as e:
         if isinstance(e, HTTPException):
             raise
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Memory update failed safely") from e
 
 
 # ==========================
 # GET SINGLE VALUE
 # ==========================
 @router.get("/memory/relevant")
-def get_relevant_memory(q: str = "", session_id: str | None = None, project_id: str | None = None):
+def get_relevant_memory(
+    q: str = Query(default="", max_length=500),
+    session_id: str | None = Query(default=None, max_length=128),
+    project_id: str | None = Query(default=None, max_length=100),
+):
     if session_id:
         session = SessionManagerService().get_session(session_id)
         if session is None:

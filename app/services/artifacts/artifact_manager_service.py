@@ -1,12 +1,16 @@
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any
-import json
+import os
 import re
 import uuid
 
 from app.services.memory.memory_service import (
     MemoryService
+)
+from app.services.persistence.atomic_json_store import (
+    AtomicJsonStore,
+    PersistenceIntegrityError,
 )
 
 SUPPORTED_ARTIFACT_TYPES = {
@@ -17,21 +21,57 @@ SUPPORTED_ARTIFACT_TYPES = {
     "diagrams",
     "blueprints",
     "schematics",
-    "exports"
+    "exports",
+    "reports",
+    "video",
+    "pdf",
+    "generated_files",
 }
 
 
 class ArtifactManagerService:
 
-    def __init__(self):
+    MAX_CONTENT_LENGTH = 1_000_000
+    MAX_BINARY_CONTENT_BYTES = 25_000_000
+    BINARY_FORMATS = {
+        "audio": {"wav", "mp3", "m4a", "ogg", "webm"},
+        "images": {"png", "jpg", "jpeg", "webp"},
+        "video": {"mp4", "webm"},
+        "pdf": {"pdf"},
+        "generated_files": {"zip"},
+    }
 
-        self.base_path = Path(
-            "artifacts"
-        )
+    @staticmethod
+    def _has_binary_signature(artifact_type: str, content: bytes, extension: str) -> bool:
+        if artifact_type == "images":
+            return {
+                "png": content.startswith(b"\x89PNG\r\n\x1a\n"),
+                "jpg": content.startswith(b"\xff\xd8\xff"),
+                "jpeg": content.startswith(b"\xff\xd8\xff"),
+                "webp": content.startswith(b"RIFF") and content[8:12] == b"WEBP",
+            }.get(extension, False)
+        if artifact_type == "audio":
+            return {
+                "wav": len(content) >= 12 and content[:4] == b"RIFF" and content[8:12] == b"WAVE",
+                "mp3": content.startswith(b"ID3") or (len(content) >= 2 and content[0] == 0xFF and content[1] & 0xE0 == 0xE0),
+                "m4a": len(content) >= 12 and content[4:8] == b"ftyp" and content[8:12] in {b"M4A ", b"isom", b"mp42"},
+                "ogg": content.startswith(b"OggS"),
+                "webm": content.startswith(b"\x1aE\xdf\xa3"),
+            }.get(extension, False)
+        if artifact_type == "video":
+            return (extension == "mp4" and len(content) >= 12 and content[4:8] == b"ftyp") or (extension == "webm" and content.startswith(b"\x1aE\xdf\xa3"))
+        if artifact_type == "pdf":
+            return content.startswith(b"%PDF-")
+        if artifact_type == "generated_files":
+            return extension == "zip" and content.startswith((b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"))
+        return False
 
-        self.index_path = Path(
-            "memory/artifact_index.json"
-        )
+    def __init__(self, base_path: str | Path = "artifacts", index_path: str | Path = "memory/artifact_index.json"):
+
+        self.base_path = Path(base_path)
+
+        self.index_path = Path(index_path)
+        self.store = AtomicJsonStore(self.index_path)
 
         self.memory = (
             MemoryService()
@@ -41,17 +81,7 @@ class ArtifactManagerService:
 
     def _ensure_storage(self):
 
-        artifact_types = [
-
-            "audio",
-            "transcripts",
-            "summaries",
-            "images",
-            "diagrams",
-            "blueprints",
-            "schematics",
-            "exports"
-        ]
+        artifact_types = sorted(SUPPORTED_ARTIFACT_TYPES)
 
         self.base_path.mkdir(
             parents=True,
@@ -74,38 +104,30 @@ class ArtifactManagerService:
         )
 
         if not self.index_path.exists():
-
-            self.index_path.write_text(
-                json.dumps(
-                    {
-                        "artifacts": []
-                    },
-                    indent=2
-                ),
-                encoding="utf-8"
-            )
+            self.store.write({"artifacts": []})
 
     def _load_index(self):
+        return self._validate_index(self.store.read({"artifacts": []}))
 
-        return json.loads(
-            self.index_path.read_text(
-                encoding="utf-8"
-            )
-        )
+    def _validate_index(self, data):
+        if not isinstance(data, dict) or not isinstance(data.get("artifacts"), list):
+            raise PersistenceIntegrityError("Artifact index must contain an artifacts list")
+        required = {"artifact_id", "type", "source", "file", "timestamp"}
+        for record in data["artifacts"]:
+            if not isinstance(record, dict) or not required.issubset(record):
+                raise PersistenceIntegrityError("Artifact index contains an incomplete record")
+            if record["type"] not in SUPPORTED_ARTIFACT_TYPES:
+                raise PersistenceIntegrityError("Artifact index contains an unsupported artifact type")
+            if not all(isinstance(record[field], str) and record[field] for field in required):
+                raise PersistenceIntegrityError("Artifact index contains invalid record fields")
+        return data
 
     def _save_index(
         self,
         data
     ):
 
-        self.index_path.write_text(
-            json.dumps(
-                data,
-                indent=2,
-                ensure_ascii=False
-            ),
-            encoding="utf-8"
-        )
+        self.store.write(self._validate_index(data))
 
     def create_artifact(
         self,
@@ -121,6 +143,15 @@ class ArtifactManagerService:
             )
         if not re.fullmatch(r"[A-Za-z0-9]{1,12}", extension):
             raise ValueError("Artifact extension must be alphanumeric and 1-12 characters")
+        extension = extension.lower()
+        if artifact_type in {"audio", "video", "pdf", "generated_files"}:
+            raise ValueError(f"{artifact_type} artifacts must be created from validated binary content")
+        if artifact_type == "images" and extension != "json":
+            raise ValueError("Image specifications may be text JSON; rendered images require validated binary content")
+        if not isinstance(content, str) or len(content) > self.MAX_CONTENT_LENGTH:
+            raise ValueError(f"Artifact content must be at most {self.MAX_CONTENT_LENGTH} characters")
+        if not isinstance(source, str) or len(source) > 500:
+            raise ValueError("Artifact source must be at most 500 characters")
 
         artifact_id = str(
             uuid.uuid4()
@@ -143,15 +174,17 @@ class ArtifactManagerService:
             / filename
         )
 
-        artifact_path.write_text(
-            content,
-            encoding="utf-8"
-        )
+        temporary_path = artifact_path.with_name(f".{artifact_path.name}.tmp")
+        temporary_path.write_text(content, encoding="utf-8")
+        os.replace(temporary_path, artifact_path)
 
         record = {
 
             "artifact_id":
             artifact_id,
+
+            "owner_id":
+            "local",
 
             "type":
             artifact_type,
@@ -168,22 +201,76 @@ class ArtifactManagerService:
             timestamp
         }
 
-        index = self._load_index()
+        try:
+            self.register_artifact(record)
+        except Exception:
+            artifact_path.unlink(missing_ok=True)
+            raise
 
-        index[
-            "artifacts"
-        ].append(
-            record
-        )
+        return record
 
-        self._save_index(
-            index
-        )
+    def register_artifact(self, record: dict) -> dict:
+        record = dict(record)
+        record.setdefault("owner_id", "local")
+        record["source"] = self.memory._safe_text(record.get("source", ""))
+        self._validate_index({"artifacts": [record]})
+        path = Path(record["file"]).resolve()
+        base = self.base_path.resolve()
+        if path == base or base not in path.parents:
+            raise ValueError("Artifact path is outside the artifact store")
+        if not path.is_file():
+            raise ValueError("Artifact content must exist inside the artifact store")
 
-        self.memory.add_artifact(
-            record
-        )
+        def append_record(index):
+            self._validate_index(index)
+            if any(item["artifact_id"] == record["artifact_id"] for item in index["artifacts"]):
+                raise PersistenceIntegrityError("Artifact identifier already exists")
+            index["artifacts"].append(record)
 
+        self.store.update(append_record, {"artifacts": []})
+        self.memory.add_artifact(record)
+        return record
+
+    def create_binary_artifact(
+        self,
+        artifact_type: str,
+        content: bytes,
+        source: str,
+        extension: str,
+    ) -> dict:
+        if artifact_type not in SUPPORTED_ARTIFACT_TYPES:
+            raise ValueError(f"Unsupported artifact type: {artifact_type}")
+        if not isinstance(content, bytes) or not content or len(content) > self.MAX_BINARY_CONTENT_BYTES:
+            raise ValueError(f"Binary artifact content must contain 1 to {self.MAX_BINARY_CONTENT_BYTES} bytes")
+        if not re.fullmatch(r"[A-Za-z0-9]{1,12}", extension):
+            raise ValueError("Artifact extension must be alphanumeric and 1-12 characters")
+        if not isinstance(source, str) or len(source) > 500:
+            raise ValueError("Artifact source must be at most 500 characters")
+        extension = extension.lower()
+        allowed_extensions = self.BINARY_FORMATS.get(artifact_type)
+        if allowed_extensions is None or extension not in allowed_extensions:
+            raise ValueError("Binary artifact type and extension are not supported")
+        if not self._has_binary_signature(artifact_type, content, extension):
+            raise ValueError("Binary artifact content does not match its declared format signature")
+
+        artifact_id = str(uuid.uuid4())
+        artifact_path = self.base_path / artifact_type / f"{artifact_id}.{extension}"
+        temporary_path = artifact_path.with_name(f".{artifact_path.name}.tmp")
+        temporary_path.write_bytes(content)
+        os.replace(temporary_path, artifact_path)
+        record = {
+            "artifact_id": artifact_id,
+            "owner_id": "local",
+            "type": artifact_type,
+            "source": source,
+            "file": str(artifact_path),
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        try:
+            self.register_artifact(record)
+        except Exception:
+            artifact_path.unlink(missing_ok=True)
+            raise
         return record
 
     def get_artifact(
@@ -227,31 +314,33 @@ class ArtifactManagerService:
         return path
 
     def delete_artifact(self, artifact_id: str) -> bool:
-        index = self._load_index()
-        artifacts = index.get("artifacts", [])
-        artifact = next(
-            (
-                item
-                for item in artifacts
-                if item.get("artifact_id") == artifact_id
-            ),
-            None,
-        )
+        removed = {}
+
+        def remove_record(index):
+            self._validate_index(index)
+            artifacts = index["artifacts"]
+            artifact = next((item for item in artifacts if item.get("artifact_id") == artifact_id), None)
+            if artifact is None:
+                return False
+            path = Path(artifact["file"]).resolve()
+            base = self.base_path.resolve()
+            if path == base or base not in path.parents:
+                raise ValueError("Artifact path is outside the artifact store")
+            removed["path"] = path
+            removed["artifact"] = artifact
+            index["artifacts"] = [item for item in artifacts if item.get("artifact_id") != artifact_id]
+            return True
+
+        deleted = self.store.update(remove_record, {"artifacts": []})
+        artifact = removed.get("artifact")
         if artifact is None:
             return False
 
-        path = self.get_artifact_path(artifact_id)
-        if path and path.exists():
+        path = removed["path"]
+        if path.exists():
             path.unlink()
-
-        index["artifacts"] = [
-            item
-            for item in artifacts
-            if item.get("artifact_id") != artifact_id
-        ]
-        self._save_index(index)
         self.memory.remove_artifact(artifact_id)
-        return True
+        return deleted
 
     def stats(self) -> dict:
         artifacts = self.get_all_artifacts()

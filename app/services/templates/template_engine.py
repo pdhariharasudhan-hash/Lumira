@@ -78,15 +78,15 @@ class TemplateEngine:
             )
 
 
-            sections[
-                "routes"
-            ].extend(
-
-                data.get(
-                    "routes",
-                    []
-                )
-            )
+            routes = data.get("routes", [])
+            if isinstance(routes, str):
+                routes = [routes]
+            sections["routes"].extend(routes)
+            # Older feature templates used a singular `route` key. Accept it
+            # so those feature implementations actually reach generated apps.
+            route = data.get("route")
+            if isinstance(route, str) and route:
+                sections["routes"].append(route)
 
 
             sections[

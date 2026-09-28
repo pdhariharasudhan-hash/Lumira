@@ -1,296 +1,789 @@
-import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
-import { FiArrowUp, FiCpu, FiPlus } from "react-icons/fi";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, FormEvent, KeyboardEvent } from "react";
+import {
+	FiArrowUp, FiChevronDown, FiCode, FiCpu, FiCrosshair, FiMenu, FiPaperclip,
+	FiSearch, FiSettings, FiSliders, FiX,
+} from "react-icons/fi";
+import { api, ApiError, type JsonObject } from "../api/client";
+import { ChatSidebar, type ChatSession } from "../components/Chat/Chat";
+import { RightPanel, type RightTab } from "../components/RightPanel/RightPanel";
+import { Sidebar } from "../components/Sidebar/Sidebar";
+import {
+	useAppStore, type LumiraMode, type PanelMode,
+	type WorkspacePage,
+} from "../store/appStore";
 import "./MainLayout.css";
 
-type BrainResponse = {
+type SessionRecord = ChatSession & {
+	workspace_id?: string;
+	active_mode?: string | null;
+	active_version?: string | null;
+	goal_id?: string | null;
+	context_snapshots?: unknown[];
+};
+
+type ApiResponse = JsonObject & {
 	success?: boolean;
 	session_id?: string;
 	message?: string;
-	detail?: string;
+	detail?: unknown;
 	clarification_required?: boolean;
-	data?: {
-		stage?: string;
-		status?: string;
-		state?: {
-			execution_context?: { session_id?: string };
-			[key: string]: unknown;
-		};
-		[key: string]: unknown;
-	};
-	result?: {
-		capability?: string;
-		status?: string;
-		project_name?: string;
-		saved_path?: string;
-		success?: boolean;
-		[key: string]: unknown;
-	};
-	context?: {
-		active_project?: string | null;
-		current_goal?: string | null;
-	};
-	error?: string;
+	result?: JsonObject;
+	context?: JsonObject;
 };
 
 type Message = {
+	id: string;
 	prompt?: string;
 	transcript?: string;
-	response?: BrainResponse;
+	response?: ApiResponse;
 	error?: string;
+	pending?: boolean;
 };
 
-type SessionRecord = {
-	session_id: string;
-	status: string;
-	active_project?: string | null;
-	current_goal?: string | null;
-	recent_messages?: Array<{ role: string; content: string }>;
+type ProjectRecord = { project: string; versions?: number; latest?: JsonObject | null };
+
+const PAGE_TITLES: Record<WorkspacePage, string> = {
+	chats: "AI Workspace", projects: "Projects", artifacts: "Artifacts", memory: "Memory",
+	goals: "Goals", search: "Unified Search", generator: "Generator", business: "Business",
+	operations: "Operations", settings: "Workspace Settings",
 };
+
+function object(value: unknown): JsonObject {
+	return value !== null && typeof value === "object" && !Array.isArray(value) ? value as JsonObject : {};
+}
+
+function records(value: unknown, key: string): JsonObject[] {
+	const list = object(value)[key];
+	return Array.isArray(list) ? list.map(object) : [];
+}
+
+function projectRecords(value: unknown): ProjectRecord[] {
+	return records(value, "projects")
+		.filter((item) => typeof item.project === "string")
+		.map((item) => ({
+			project: stringValue(item.project),
+			versions: typeof item.versions === "number" ? item.versions : undefined,
+			latest: item.latest ? object(item.latest) : null,
+		}));
+}
+
+function stringValue(value: unknown, fallback = "") {
+	return typeof value === "string" ? value : fallback;
+}
+
+function safeDisplay(value: unknown, key = ""): unknown {
+	if (/password|api[_-]?key|jwt[_-]?secret|credential|chain[_-]?of[_-]?thought|hidden[_-]?prompt|private[_-]?state/i.test(key)) return "[redacted]";
+	if (Array.isArray(value)) return value.map((item) => safeDisplay(item));
+	if (value && typeof value === "object") {
+		return Object.fromEntries(Object.entries(value).map(([childKey, child]) => [childKey, safeDisplay(child, childKey)]));
+	}
+	if (typeof value === "string" && value.length > 20_000) return `${value.slice(0, 20_000)}… [truncated]`;
+	return value;
+}
+
+function formatError(error: unknown): { message: string; response: ApiResponse } {
+	if (error instanceof ApiError) {
+		const detail = object(error.body.detail);
+		const result = Object.keys(detail).length ? detail : { status: "failed", code: `http_${error.status}`, message: error.message };
+		return { message: error.message, response: { success: false, result } };
+	}
+	const message = error instanceof Error ? error.message : "The request failed.";
+	return { message, response: { success: false, result: { status: "failed", code: "request_failed", message } } };
+}
+
+function modeFromSession(value?: string | null): LumiraMode | null {
+	if (value === "creator" || value === "generator" || value === "business" || value === "operations") return value;
+	return null;
+}
+
+function titleForMode(mode: LumiraMode) {
+	return mode === "auto" ? "Auto Category" : `${mode[0].toUpperCase()}${mode.slice(1)}`;
+}
+
+function isPanelMode(value: string): value is PanelMode {
+	return value === "full" || value === "compact" || value === "hidden";
+}
+
+function cyclePanel(mode: PanelMode): PanelMode {
+	return mode === "full" ? "compact" : mode === "compact" ? "hidden" : "full";
+}
+
+function panelWidth(mode: PanelMode, width: number, compactWidth: number) {
+	return mode === "hidden" ? null : mode === "compact" ? `${compactWidth}px` : `${width}px`;
+}
 
 function MainLayout() {
+	const promptInputRef = useRef<HTMLTextAreaElement>(null);
+	const searchInputRef = useRef<HTMLInputElement>(null);
+	const voiceFileRef = useRef<HTMLInputElement>(null);
+	const attachmentFileRef = useRef<HTMLInputElement>(null);
 	const [prompt, setPrompt] = useState("");
 	const [workflow, setWorkflow] = useState<"brain" | "project">("brain");
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [isSending, setIsSending] = useState(false);
 	const [session, setSession] = useState<SessionRecord | null>(null);
+	const [sessions, setSessions] = useState<SessionRecord[]>([]);
 	const [isRestoringSession, setIsRestoringSession] = useState(() => Boolean(window.localStorage.getItem("lumira.sessionId")));
 	const [connectionStatus, setConnectionStatus] = useState<"checking" | "online" | "offline">("checking");
 	const [sessionError, setSessionError] = useState<string | null>(null);
+	const [actionNotice, setActionNotice] = useState<string | null>(null);
+	const [pageData, setPageData] = useState<JsonObject | null>(null);
+	const [pageLoading, setPageLoading] = useState(false);
+	const [pageError, setPageError] = useState<string | null>(null);
+	const [pageRevision, setPageRevision] = useState(0);
+	const [searchQuery, setSearchQuery] = useState("");
+	const [searchResult, setSearchResult] = useState<JsonObject | null>(null);
+	const [searchBusy, setSearchBusy] = useState(false);
+	const [goalTitle, setGoalTitle] = useState("");
+	const [goalObjective, setGoalObjective] = useState("");
+	const [goalBusy, setGoalBusy] = useState(false);
+	const [projects, setProjects] = useState<ProjectRecord[]>([]);
+	const [projectVersions, setProjectVersions] = useState<string[]>([]);
+	const [projectFiles, setProjectFiles] = useState<string[]>([]);
+	const [runs, setRuns] = useState<JsonObject[]>([]);
+	const [selectedFile, setSelectedFile] = useState<string | null>(null);
+	const [fileContent, setFileContent] = useState<string | null>(null);
+	const [fileLoading, setFileLoading] = useState(false);
+	const [rightTab, setRightTab] = useState<RightTab>("files");
+	const [apiPaths, setApiPaths] = useState<string[]>([]);
+	const [quickToolsOpen, setQuickToolsOpen] = useState(false);
+	const [voiceBusy, setVoiceBusy] = useState(false);
+
+	const navMode = useAppStore((state) => state.navMode);
+	const chatMode = useAppStore((state) => state.chatMode);
+	const rightMode = useAppStore((state) => state.rightMode);
+	const navWidth = useAppStore((state) => state.navWidth);
+	const chatWidth = useAppStore((state) => state.chatWidth);
+	const rightWidth = useAppStore((state) => state.rightWidth);
+	const topBarCompact = useAppStore((state) => state.topBarCompact);
+	const inputMode = useAppStore((state) => state.inputMode);
+	const focusMode = useAppStore((state) => state.focusMode);
+	const activePage = useAppStore((state) => state.activePage);
+	const activeMode = useAppStore((state) => state.activeMode);
+	const selectedProject = useAppStore((state) => state.selectedProject);
+	const selectedVersion = useAppStore((state) => state.selectedVersion);
+	const setNavMode = useAppStore((state) => state.setNavMode);
+	const setChatMode = useAppStore((state) => state.setChatMode);
+	const setRightMode = useAppStore((state) => state.setRightMode);
+	const setPanelWidth = useAppStore((state) => state.setPanelWidth);
+	const setTopBarCompact = useAppStore((state) => state.setTopBarCompact);
+	const setInputMode = useAppStore((state) => state.setInputMode);
+	const setFocusMode = useAppStore((state) => state.setFocusMode);
+	const setActivePage = useAppStore((state) => state.setActivePage);
+	const setActiveMode = useAppStore((state) => state.setActiveMode);
+	const setSelectedProject = useAppStore((state) => state.setSelectedProject);
+
+	const effectiveNavMode = focusMode ? "hidden" : navMode;
+	const effectiveChatMode = focusMode ? "hidden" : chatMode;
+	const effectiveRightMode = focusMode ? "hidden" : rightMode;
+	const columns = [
+		panelWidth(effectiveNavMode, navWidth, 62),
+		panelWidth(effectiveChatMode, chatWidth, 66),
+		"minmax(0, 1fr)",
+		panelWidth(effectiveRightMode, rightWidth, 68),
+	].filter((value): value is string => value !== null).join(" ");
+	const currentProject = selectedProject ?? session?.active_project ?? null;
+	const currentTitle = session?.current_goal || currentProject || PAGE_TITLES[activePage];
+
+	const loadSessions = useCallback(async () => {
+		try {
+			const response = await api.listSessions();
+			setSessions(records(response, "sessions") as SessionRecord[]);
+		} catch {
+			// Existing saved sessions remain visible when the backend is temporarily offline.
+		}
+	}, []);
 
 	useEffect(() => {
-		void fetch("/health")
-			.then((response) => {
-				if (!response.ok) throw new Error("Health check failed");
-				setConnectionStatus("online");
-			})
-			.catch(() => setConnectionStatus("offline"));
-
+		let cancelled = false;
+		void api.health().then(() => { if (!cancelled) setConnectionStatus("online"); }).catch(() => { if (!cancelled) setConnectionStatus("offline"); });
+		void loadSessions();
 		const storedId = window.localStorage.getItem("lumira.sessionId");
 		if (!storedId) {
-			return;
+			setIsRestoringSession(false);
+			return () => { cancelled = true; };
 		}
-
-		void fetch(`/sessions/${encodeURIComponent(storedId)}`)
-			.then(async (response) => {
-				if (!response.ok) throw new Error("Session unavailable");
-				let loaded = (await response.json()) as SessionRecord;
-				if (loaded.status === "paused") {
-					const resumed = await fetch(`/sessions/${encodeURIComponent(storedId)}/resume`, { method: "POST" });
-					if (!resumed.ok) throw new Error("Session could not be resumed");
-					loaded = (await resumed.json()) as SessionRecord;
-				}
+		void api.getSession(storedId)
+			.then(async (result) => {
+				let loaded = result as SessionRecord;
+				if (loaded.status === "paused") loaded = await api.resumeSession(storedId) as SessionRecord;
+				if (cancelled) return;
 				setSession(loaded);
-				setMessages((loaded.recent_messages ?? []).map((message) =>
-					message.role === "user"
-						? { prompt: message.content }
-						: { transcript: message.content },
-				));
+				setActiveMode(modeFromSession(loaded.active_mode) ?? "auto");
+				if (loaded.active_project) setSelectedProject(loaded.active_project, loaded.active_version ?? null);
+				setMessages((loaded.recent_messages ?? []).map((item, index) => item.role === "user"
+					? { id: `restored-${index}`, prompt: item.content }
+					: { id: `restored-${index}`, transcript: item.content }));
+				void loadSessions();
 			})
 			.catch(() => {
+				if (cancelled) return;
 				window.localStorage.removeItem("lumira.sessionId");
 				setSessionError("The saved session could not be restored. Start a new session to continue.");
 			})
-			.finally(() => setIsRestoringSession(false));
+			.finally(() => { if (!cancelled) setIsRestoringSession(false); });
+		return () => { cancelled = true; };
+	}, [loadSessions, setActiveMode, setSelectedProject]);
+
+	useEffect(() => {
+		let cancelled = false;
+		async function loadPage() {
+			if (activePage === "chats" || activePage === "search" || activePage === "generator") return;
+			setPageLoading(true);
+			setPageError(null);
+			try {
+				let result: unknown;
+				if (activePage === "projects") result = await api.listProjects();
+				else if (activePage === "artifacts") result = await api.listArtifacts();
+				else if (activePage === "goals") result = await api.listGoals();
+				else if (activePage === "memory") result = await api.getRelevantMemory(searchQuery || "recent activity", session?.session_id);
+				else if (activePage === "business") {
+					const [goals, workflows] = await Promise.all([api.listGoals(), api.listWorkflows("business")]);
+					result = { goals, workflows };
+				} else if (activePage === "operations") {
+					const [workflows, runs] = await Promise.all([api.listWorkflows("operations"), api.listRuns()]);
+					result = { workflows, runs };
+				} else if (activePage === "settings") {
+					const [health, schema] = await Promise.all([api.health(), api.getOpenApi()]);
+					result = { health, schema };
+					const paths = object(schema).paths;
+					if (!cancelled && paths && typeof paths === "object") setApiPaths(Object.keys(paths));
+				}
+				if (!cancelled) setPageData(object(result));
+			} catch (error) {
+				if (!cancelled) setPageError(formatError(error).message);
+			} finally {
+				if (!cancelled) setPageLoading(false);
+			}
+		}
+		void loadPage();
+		return () => { cancelled = true; };
+	}, [activePage, pageRevision, searchQuery, session?.session_id]);
+
+	useEffect(() => {
+		let cancelled = false;
+		void api.listProjects().then((response) => {
+			if (!cancelled) setProjects(projectRecords(response));
+		}).catch(() => undefined);
+		return () => { cancelled = true; };
+	}, [pageRevision]);
+
+	useEffect(() => {
+		let cancelled = false;
+		void api.getOpenApi().then((schema) => {
+			const paths = object(schema).paths;
+			if (!cancelled && paths && typeof paths === "object") setApiPaths(Object.keys(paths));
+		}).catch(() => undefined);
+		return () => { cancelled = true; };
 	}, []);
 
-	async function startNewSession() {
+	useEffect(() => {
+		let cancelled = false;
+		void api.listRuns().then((response) => { if (!cancelled) setRuns(records(response, "runs")); }).catch(() => undefined);
+		return () => { cancelled = true; };
+	}, [pageRevision]);
+
+	useEffect(() => {
+		if (!currentProject) {
+			setProjectVersions([]);
+			setProjectFiles([]);
+			return;
+		}
+		let cancelled = false;
+		void (async () => {
+			try {
+				const versionsResponse = await api.getProjectVersions(currentProject);
+				const versions = Array.isArray(object(versionsResponse).versions)
+					? (object(versionsResponse).versions as unknown[]).filter((item): item is string => typeof item === "string")
+					: [];
+				if (cancelled) return;
+				setProjectVersions(versions);
+				const targetVersion = selectedVersion && versions.includes(selectedVersion) ? selectedVersion : versions.at(-1) ?? null;
+				if (targetVersion !== selectedVersion) setSelectedProject(currentProject, targetVersion);
+				if (!targetVersion) { setProjectFiles([]); return; }
+				const fileResponse = await api.getProjectFiles(currentProject, targetVersion);
+				if (!cancelled) setProjectFiles(Array.isArray(object(fileResponse).files) ? (object(fileResponse).files as unknown[]).filter((item): item is string => typeof item === "string") : []);
+			} catch {
+				if (!cancelled) { setProjectVersions([]); setProjectFiles([]); }
+			}
+		})();
+		return () => { cancelled = true; };
+	}, [currentProject, selectedVersion, pageRevision, setSelectedProject]);
+
+	useEffect(() => {
+		const listener = (event: globalThis.KeyboardEvent) => {
+			const command = event.ctrlKey || event.metaKey;
+			const key = event.key.toLowerCase();
+			if (command && event.shiftKey && key === "b") { event.preventDefault(); setChatMode(cyclePanel(chatMode)); }
+			else if (command && event.shiftKey && key === "f") { event.preventDefault(); setFocusMode(!focusMode); }
+			else if (command && key === "b") { event.preventDefault(); setNavMode(cyclePanel(navMode)); }
+			else if (command && key === "j") { event.preventDefault(); setRightMode(cyclePanel(rightMode)); }
+			else if (command && key === "k") { event.preventDefault(); setActivePage("search"); window.setTimeout(() => searchInputRef.current?.focus(), 0); }
+			else if (event.key === "Escape" && focusMode) setFocusMode(false);
+		};
+		window.addEventListener("keydown", listener);
+		return () => window.removeEventListener("keydown", listener);
+	}, [chatMode, focusMode, navMode, rightMode, setActivePage, setChatMode, setFocusMode, setNavMode, setRightMode]);
+
+	const projectItems = useMemo(() => projects.filter((item) => typeof item.project === "string"), [projects]);
+
+	async function startNewSession(projectId?: string) {
 		try {
 			setSessionError(null);
-			const response = await fetch("/sessions", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ workspace_id: "default" }),
-			});
-			if (!response.ok) throw new Error("Could not create a new session");
-			const created = (await response.json()) as SessionRecord;
+			const created = await api.createSession("default", projectId) as SessionRecord;
 			window.localStorage.setItem("lumira.sessionId", created.session_id);
 			setSession(created);
 			setMessages([]);
+			setSelectedProject(projectId ?? created.active_project ?? null, null);
+			await loadSessions();
+			return created;
 		} catch (error) {
-			setSessionError(error instanceof Error ? error.message : "Could not create a new session.");
+			setSessionError(formatError(error).message);
+			return null;
+		}
+	}
+
+	async function ensureProjectSession(projectId?: string) {
+		if (!projectId || session?.active_project === projectId) return session;
+		return await startNewSession(projectId);
+	}
+
+	async function updateSessionFromServer(sessionId: string) {
+		try {
+			const loaded = await api.getSession(sessionId) as SessionRecord;
+			setSession(loaded);
+			if (loaded.active_project) setSelectedProject(loaded.active_project, loaded.active_version ?? null);
+			setActiveMode(modeFromSession(loaded.active_mode) ?? activeMode);
+		} catch {
+			// The command result remains visible even if the session refresh fails.
+		}
+	}
+
+	async function submitInput(rawInput: string, options: { projectPrefix?: boolean; projectId?: string } = {}) {
+		const input = rawInput.trim();
+		if (!input || isSending || isRestoringSession) return;
+		const actualInput = options.projectPrefix ? `Generate project: ${input}` : input;
+		const messageId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+		setMessages((current) => [...current, { id: messageId, prompt: actualInput, pending: true }]);
+		setIsSending(true);
+		setActionNotice(null);
+		try {
+			const targetSession = await ensureProjectSession(options.projectId);
+			const result = await api.command(actualInput, targetSession?.session_id ?? session?.session_id) as ApiResponse;
+			const sessionId = stringValue(result.session_id);
+			if (sessionId) {
+				window.localStorage.setItem("lumira.sessionId", sessionId);
+				await updateSessionFromServer(sessionId);
+			}
+			setMessages((current) => current.map((message) => message.id === messageId ? { ...message, response: result, pending: false } : message));
+			await loadSessions();
+			setPageRevision((current) => current + 1);
+		} catch (error) {
+			const failure = formatError(error);
+			setMessages((current) => current.map((message) => message.id === messageId ? { ...message, error: failure.message, response: failure.response, pending: false } : message));
+		} finally {
+			setIsSending(false);
 		}
 	}
 
 	async function submitPrompt(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 		const input = prompt.trim();
-		if (!input || isSending || isRestoringSession) return;
-
+		if (!input) return;
 		setPrompt("");
-		setMessages((current) => [...current, { prompt: input }]);
-		setIsSending(true);
+		await submitInput(input, { projectPrefix: workflow === "project" });
+	}
 
+	async function selectProject(projectName: string): Promise<{ files: string[]; version: string | null }> {
+		setSelectedProject(projectName, null);
+		setRightTab("files");
+		setActivePage("projects");
 		try {
-			const isProjectRequest = workflow === "project";
-			const response = await fetch(isProjectRequest ? "/command" : "/brain", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					input: isProjectRequest ? `Generate project: ${input}` : input,
-					session_id: session?.session_id,
-					workspace_id: "default",
-				}),
-			});
-			const result = (await response.json()) as BrainResponse;
-
-			if (!response.ok) {
-				throw new Error(result.detail || result.error || result.message || `Request failed (${response.status})`);
+			const versionsResponse = await api.getProjectVersions(projectName);
+			const versions = Array.isArray(object(versionsResponse).versions)
+				? (object(versionsResponse).versions as unknown[]).filter((item): item is string => typeof item === "string")
+				: [];
+			const version = versions.at(-1) ?? null;
+			setProjectVersions(versions);
+			setSelectedProject(projectName, version);
+			if (version) {
+				const fileResponse = await api.getProjectFiles(projectName, version);
+				const files = Array.isArray(object(fileResponse).files) ? (object(fileResponse).files as unknown[]).filter((item): item is string => typeof item === "string") : [];
+				setProjectFiles(files);
+				return { files, version };
 			}
-
-			if (result.clarification_required) {
-				setMessages((current) =>
-					current.map((message, index) =>
-						index === current.length - 1 ? { ...message, response: result } : message,
-					),
-				);
-				return;
-			}
-
-			if (result.success === false || result.result?.success === false) {
-				throw new Error(result.error || result.message || result.detail || "The request could not be completed.");
-			}
-
-			const sessionId = result.session_id ?? result.data?.state?.execution_context?.session_id;
-			if (sessionId) {
-				window.localStorage.setItem("lumira.sessionId", sessionId);
-				const loadedSession = await fetch(`/sessions/${encodeURIComponent(sessionId)}`);
-				if (loadedSession.ok) setSession((await loadedSession.json()) as SessionRecord);
-			}
-
-			setMessages((current) =>
-				current.map((message, index) =>
-					index === current.length - 1 ? { ...message, response: result } : message,
-				),
-			);
+			setProjectFiles([]);
+			return { files: [], version: null };
 		} catch (error) {
-			const message = error instanceof Error ? error.message : "The request failed.";
-			setMessages((current) =>
-				current.map((item, index) =>
-					index === current.length - 1 ? { ...item, error: message } : item,
-				),
-			);
-		} finally {
-			setIsSending(false);
+			setActionNotice(formatError(error).message);
+			return { files: [], version: null };
 		}
 	}
 
+	async function selectVersion(version: string) {
+		if (!currentProject) return;
+		setSelectedProject(currentProject, version);
+		try {
+			const fileResponse = await api.getProjectFiles(currentProject, version);
+			setProjectFiles(Array.isArray(object(fileResponse).files) ? (object(fileResponse).files as unknown[]).filter((item): item is string => typeof item === "string") : []);
+			setSelectedFile(null);
+			setFileContent(null);
+		} catch (error) {
+			setActionNotice(formatError(error).message);
+		}
+	}
+
+	async function selectFile(file: string, projectName = currentProject, versionName = selectedVersion) {
+		if (!projectName || !versionName) return;
+		setSelectedFile(file);
+		setFileContent(null);
+		setFileLoading(true);
+		setRightTab("code");
+		try {
+			const result = await api.getProjectFile(projectName, versionName, file);
+			if (object(result).success === false) throw new Error(stringValue(object(result).message, "File could not be loaded."));
+			setFileContent(stringValue(object(result).content));
+		} catch (error) {
+			setActionNotice(formatError(error).message);
+		} finally {
+			setFileLoading(false);
+		}
+	}
+
+	async function activateMode(mode: LumiraMode) {
+		if (mode === "auto") { setActiveMode("auto"); return; }
+		try {
+			const response = await api.command(`enter ${mode} mode`, session?.session_id) as ApiResponse;
+			if (response.success === false) throw new Error(stringValue(response.message, `Could not activate ${mode} mode.`));
+			setActiveMode(mode);
+			const sessionId = stringValue(response.session_id);
+			if (sessionId) {
+				window.localStorage.setItem("lumira.sessionId", sessionId);
+				await updateSessionFromServer(sessionId);
+			}
+			setActionNotice(`${titleForMode(mode)} is active for backend routing.`);
+			await loadSessions();
+		} catch (error) {
+			setActionNotice(formatError(error).message);
+		}
+	}
+
+	function navigate(page: WorkspacePage) {
+		setActivePage(page);
+		if (page === "generator" || page === "business" || page === "operations") void activateMode(page);
+		if (page === "search") window.setTimeout(() => searchInputRef.current?.focus(), 0);
+	}
+
+	async function runSearch(query = searchQuery) {
+		const value = query.trim();
+		if (!value) return;
+		setSearchBusy(true);
+		setSearchResult(null);
+		setPageError(null);
+		setActivePage("search");
+		try { setSearchResult(await api.search(value)); }
+		catch (error) { setPageError(formatError(error).message); }
+		finally { setSearchBusy(false); }
+	}
+
+	async function createGoal(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+		if (!goalTitle.trim() || goalBusy) return;
+		setGoalBusy(true);
+		setPageError(null);
+		try {
+			await api.createGoal(goalTitle.trim(), goalObjective.trim());
+			setGoalTitle("");
+			setGoalObjective("");
+			setActionNotice("Goal saved to durable memory.");
+			setPageRevision((current) => current + 1);
+		} catch (error) { setPageError(formatError(error).message); }
+		finally { setGoalBusy(false); }
+	}
+
+	async function uploadVoice(file?: File) {
+		if (!file || voiceBusy) return;
+		setVoiceBusy(true);
+		setActionNotice(null);
+		try {
+			const upload = await api.uploadVoice(file);
+			const artifact = object(object(upload).data).artifact;
+			const artifactId = stringValue(object(artifact).artifact_id);
+			if (!artifactId) throw new Error("Audio upload returned no artifact identifier.");
+			let result: JsonObject = { success: true, capability: "voice_capture", status: "captured", artifact };
+			try { result = { ...result, transcript: await api.transcribeVoice(artifactId) }; }
+			catch (error) { result = { ...result, transcription: formatError(error).response.result }; }
+			setMessages((current) => [...current, { id: `voice-${Date.now()}`, prompt: `Captured voice: ${file.name}`, response: { success: true, result } }]);
+			setActivePage("chats");
+			setPageRevision((current) => current + 1);
+		} catch (error) { setActionNotice(formatError(error).message); }
+		finally {
+			setVoiceBusy(false);
+			if (voiceFileRef.current) voiceFileRef.current.value = "";
+		}
+	}
+
+	async function changeSession(sessionId: string) {
+		try {
+			let loaded = await api.getSession(sessionId) as SessionRecord;
+			if (loaded.status === "paused") loaded = await api.resumeSession(sessionId) as SessionRecord;
+			setSession(loaded);
+			window.localStorage.setItem("lumira.sessionId", sessionId);
+			setActiveMode(modeFromSession(loaded.active_mode) ?? "auto");
+			setSelectedProject(loaded.active_project ?? null, loaded.active_version ?? null);
+			setMessages((loaded.recent_messages ?? []).map((item, index) => item.role === "user" ? { id: `restored-${index}`, prompt: item.content } : { id: `restored-${index}`, transcript: item.content }));
+			setActivePage("chats");
+		} catch (error) { setActionNotice(formatError(error).message); }
+	}
+
+	async function pauseSession(sessionId: string) {
+		try {
+			const updated = await api.pauseSession(sessionId) as SessionRecord;
+			if (session?.session_id === sessionId) setSession(updated);
+			await loadSessions();
+		} catch (error) { setActionNotice(formatError(error).message); }
+	}
+
+	async function closeSession(sessionId: string) {
+		try {
+			await api.closeSession(sessionId);
+			if (session?.session_id === sessionId) {
+				setSession(null);
+				setMessages([]);
+				window.localStorage.removeItem("lumira.sessionId");
+			}
+			await loadSessions();
+		} catch (error) { setActionNotice(formatError(error).message); }
+	}
+
+	async function updateTask(workflowId: string, taskId: string, status: string) {
+		try {
+			await api.updateWorkflowTask(workflowId, taskId, { status });
+			setActionNotice(`Task status changed to ${status}.`);
+			setPageRevision((current) => current + 1);
+		} catch (error) { setActionNotice(formatError(error).message); }
+	}
+
+	async function resumeRun(runId: string) {
+		try {
+			const result = await api.resumeRun(runId);
+			setActionNotice(stringValue(object(result).message, "Recovery request completed."));
+			setPageRevision((current) => current + 1);
+		} catch (error) { setActionNotice(formatError(error).message); }
+	}
+
+	function openProjectFiles(project: string) {
+		void selectProject(project);
+		setRightTab("files");
+		if (focusMode) setFocusMode(false);
+		if (rightMode === "hidden") setRightMode("full");
+	}
+
+	async function projectAction(name: string, action: "run" | "edit" | "modify" | "frontend" | "database" | "deploy" | "docs") {
+		const selected = await selectProject(name);
+		if (action === "run") {
+			setRightTab("preview");
+			setActionNotice("Project execution is unavailable: no sandboxed project runner or preview service is configured.");
+			if (rightMode === "hidden") setRightMode("full");
+			return;
+		}
+		if (action === "edit" || action === "docs") {
+			const documentation = selected.files.includes("README.md") ? "README.md" : selected.files[0];
+			if (!documentation) { setActionNotice("This project version has no readable files."); return; }
+			await selectFile(documentation, name, selected.version);
+			if (rightMode === "hidden") setRightMode("full");
+			return;
+		}
+		if (action === "deploy") {
+			setActivePage("chats");
+			await submitInput(`Automate a deployment plan for ${name}`, { projectId: name });
+			return;
+		}
+		const instructions = {
+			modify: `Add the requested change to ${name}: `,
+			frontend: `Add a frontend to ${name}`,
+			database: `Add a database to ${name}`,
+		};
+		if (action === "modify") {
+			setWorkflow("project");
+			setPrompt(instructions.modify);
+			setActivePage("chats");
+			window.setTimeout(() => promptInputRef.current?.focus(), 0);
+			return;
+		}
+		setActivePage("chats");
+		await submitInput(instructions[action], { projectId: name });
+	}
+
+	function startNewProject() {
+		setActivePage("chats");
+		setWorkflow("project");
+		setPrompt("");
+		window.setTimeout(() => promptInputRef.current?.focus(), 0);
+	}
+
+	function startGeneration() {
+		setActivePage("generator");
+		void activateMode("generator");
+		window.setTimeout(() => promptInputRef.current?.focus(), 0);
+	}
+
+	function setPromptFromTool(text: string, mode?: LumiraMode) {
+		setWorkflow("brain");
+		setActivePage("chats");
+		setPrompt(text);
+		setQuickToolsOpen(false);
+		if (mode) void activateMode(mode);
+		window.setTimeout(() => promptInputRef.current?.focus(), 0);
+	}
+
+	function onPromptKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+		if (event.key === "Enter" && !event.shiftKey) {
+			event.preventDefault();
+			event.currentTarget.form?.requestSubmit();
+		}
+	}
+
+	const projectsInPage = projectRecords(pageData);
+	const artifacts = records(pageData, "artifacts");
+	const goals = activePage === "business" ? records(pageData?.goals, "goals") : records(pageData, "goals");
+	const workflows = activePage === "business" || activePage === "operations" ? records(pageData?.workflows, "workflows") : [];
+	const memoryData = object(pageData?.data);
+
+	const pageContent = () => {
+		if (activePage === "chats") return null;
+		if (pageLoading) return <div className="workspace-empty">Loading {PAGE_TITLES[activePage].toLowerCase()}…</div>;
+		if (pageError) return <div className="workspace-alert error" role="alert">{pageError}</div>;
+		if (activePage === "projects") return <>
+			<div className="workspace-page-heading"><div><span className="eyebrow">WORKSPACE</span><h2>Generated projects</h2><p>Project metadata and versions from Lumira's project store.</p></div><button type="button" className="primary-action" onClick={startNewProject}>New project</button></div>
+			{projectsInPage.length ? <div className="entity-list">{projectsInPage.map((project) => <article className="entity-row" key={project.project}><div className="entity-symbol"><FiCpu /></div><div className="entity-copy"><strong>{project.project}</strong><span>{String(project.latest?.description ?? project.latest?.idea ?? "Generated Lumira project")}</span><small>{project.versions ?? 0} saved versions · {String(project.latest?.status ?? "saved")}</small></div><div className="entity-actions"><button type="button" onClick={() => openProjectFiles(project.project)}>View files</button><button type="button" onClick={() => void projectAction(project.project, "edit")}>Open code</button></div></article>)}</div> : <div className="workspace-empty">No generated projects are recorded yet.</div>}
+		</>;
+		if (activePage === "artifacts") return <>
+			<div className="workspace-page-heading"><div><span className="eyebrow">PERSISTED OUTPUT</span><h2>Artifacts</h2><p>Files registered by Lumira's artifact manager.</p></div></div>
+			{artifacts.length ? <div className="entity-list">{artifacts.map((item) => <article className="entity-row" key={stringValue(item.artifact_id)}><div className="entity-symbol"><FiPaperclip /></div><div className="entity-copy"><strong>{stringValue(item.type, "artifact")}</strong><span>{stringValue(item.source, "Lumira output")}</span><small>{stringValue(item.timestamp)} · {stringValue(item.artifact_id).slice(0, 8)}</small></div><a className="text-link" href={`/artifacts/${encodeURIComponent(stringValue(item.artifact_id))}/content`} target="_blank" rel="noreferrer">Open content</a></article>)}</div> : <div className="workspace-empty">No artifacts have been registered.</div>}
+		</>;
+		if (activePage === "goals") return <>
+			<div className="workspace-page-heading"><div><span className="eyebrow">DURABLE MEMORY</span><h2>Goals</h2><p>Persistent goals and current progress.</p></div></div>
+			<form className="goal-form" onSubmit={(event) => void createGoal(event)}><input aria-label="Goal title" placeholder="New goal title" value={goalTitle} onChange={(event) => setGoalTitle(event.target.value)} /><input aria-label="Goal objective" placeholder="Objective (optional)" value={goalObjective} onChange={(event) => setGoalObjective(event.target.value)} /><button className="primary-action" disabled={!goalTitle.trim() || goalBusy} type="submit">{goalBusy ? "Saving…" : "Create goal"}</button></form>
+			{goals.length ? <div className="entity-list">{goals.map((goal) => <article className="entity-row" key={stringValue(goal.goal_id)}><div className="entity-symbol"><FiCrosshair /></div><div className="entity-copy"><strong>{stringValue(goal.title, "Untitled goal")}</strong><span>{stringValue(goal.objective)}</span><small>{stringValue(goal.status, "active")} · {Number(goal.progress ?? 0)}% complete</small></div><span className="status-pill">{stringValue(goal.priority, "normal")}</span></article>)}</div> : <div className="workspace-empty">No goals are stored yet.</div>}
+		</>;
+		if (activePage === "memory") return <>
+			<div className="workspace-page-heading"><div><span className="eyebrow">DURABLE MEMORY</span><h2>Relevant memory</h2><p>Results are retrieved from the existing memory service for the current session.</p></div><button className="secondary-action" type="button" onClick={() => setPageRevision((value) => value + 1)}>Refresh</button></div>
+			<div className="memory-results"><pre>{JSON.stringify(safeDisplay(memoryData), null, 2)}</pre></div>
+		</>;
+		if (activePage === "search") {
+			const resultGroups = object(searchResult?.results);
+			return <>
+				<div className="workspace-page-heading"><div><span className="eyebrow">UNIFIED SEARCH</span><h2>Search Lumira</h2><p>Projects, files, artifacts, sessions, memory, and history.</p></div></div>
+				<form className="workspace-search" onSubmit={(event) => { event.preventDefault(); void runSearch(); }}><FiSearch /><input ref={searchInputRef} aria-label="Search Lumira" placeholder="Search workspace data" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} /><button className="primary-action" disabled={!searchQuery.trim() || searchBusy}>{searchBusy ? "Searching…" : "Search"}</button></form>
+				{searchResult ? <div className="search-groups">{Object.entries(resultGroups).map(([group, value]) => {
+					const list = Array.isArray(value) ? value : [];
+					return <section className="search-group" key={group}><h3>{group.replaceAll("_", " ")} <small>{list.length}</small></h3>{list.map((item, index) => <pre key={`${group}-${index}`}>{JSON.stringify(safeDisplay(item), null, 2)}</pre>)}</section>;
+				})}</div> : <div className="workspace-empty">Run a search to query Lumira's unified index.</div>}
+			</>;
+		}
+		if (activePage === "generator") return <>
+			<div className="workspace-page-heading"><div><span className="eyebrow">GENERATOR MODE</span><h2>Create with Lumira</h2><p>Local specifications and artifacts work now; rendered media requires a configured provider.</p></div><span className="status-pill">{titleForMode(activeMode)}</span></div>
+			<div className="capability-list"><button type="button" onClick={() => setPromptFromTool("Write a report about ", "generator")}><strong>Document outline</strong><span>Creates a truthful, searchable outline artifact.</span></button><button type="button" onClick={() => setPromptFromTool("Generate a diagram for ", "generator")}><strong>Diagrams & blueprints</strong><span>Creates structured local diagram artifacts.</span></button><button type="button" onClick={() => setPromptFromTool("Generate a video about ", "generator")}><strong>Video generation</strong><span>Routes through the provider boundary; unavailable providers return a structured error.</span></button><button type="button" onClick={() => setPromptFromTool("Generate an image of ", "generator")}><strong>Image generation</strong><span>Routes through the configured image provider and artifact manager.</span></button></div>
+		</>;
+		if (activePage === "business") return <>
+			<div className="workspace-page-heading"><div><span className="eyebrow">BUSINESS MODE</span><h2>Objectives & plans</h2><p>Business workflows use saved goals, tasks, decisions, and artifacts.</p></div><button className="primary-action" type="button" onClick={() => setPromptFromTool("Plan for launching ", "business")}>Create business plan</button></div>
+			<div className="metric-strip"><span>{goals.length} saved goals</span><span>{workflows.length} business plans</span><span>Metrics only appear when real data exists.</span></div>
+			{workflows.length ? <WorkflowList workflows={workflows} onTaskUpdate={updateTask} /> : <div className="workspace-empty">No business workflows are recorded.</div>}
+		</>;
+		if (activePage === "operations") return <>
+			<div className="workspace-page-heading"><div><span className="eyebrow">OPERATIONS MODE</span><h2>Workflows & recovery</h2><p>Track dependencies, blockers, statuses, and persisted execution runs.</p></div><button className="primary-action" type="button" onClick={() => setPromptFromTool("Prepare today's operational tasks for ", "operations")}>Plan operations</button></div>
+			{workflows.length ? <WorkflowList workflows={workflows} onTaskUpdate={updateTask} /> : <div className="workspace-empty">No operations workflows are recorded.</div>}
+			<section className="run-history"><h3>Execution recovery</h3>{runs.length ? runs.map((run, index) => <article className="entity-row" key={stringValue(run.run_id, String(index))}><div className="entity-copy"><strong>{stringValue(run.status, "unknown")}</strong><span>{stringValue(run.goal)}</span><small>{stringValue(run.current_stage ?? run.last_completed_stage, "no stage")}</small></div>{run.status !== "completed" && <button className="secondary-action" type="button" disabled={run.resume_allowed === false} onClick={() => void resumeRun(stringValue(run.run_id))}>{run.resume_allowed === false ? "Reconcile" : "Resume"}</button>}</article>) : <p className="empty-note">No execution runs are recorded.</p>}</section>
+		</>;
+		if (activePage === "settings") return <>
+			<div className="workspace-page-heading"><div><span className="eyebrow">PREFERENCES</span><h2>Workspace settings</h2><p>Panel preferences are saved locally on this device.</p></div></div>
+			<div className="settings-list"><label>Main navigation<select value={navMode} onChange={(event) => isPanelMode(event.target.value) && setNavMode(event.target.value)}><option value="full">Full</option><option value="compact">Icon only</option><option value="hidden">Hidden</option></select></label><label>Chat sidebar<select value={chatMode} onChange={(event) => isPanelMode(event.target.value) && setChatMode(event.target.value)}><option value="full">Full</option><option value="compact">Compact</option><option value="hidden">Hidden</option></select></label><label>Development panel<select value={rightMode} onChange={(event) => isPanelMode(event.target.value) && setRightMode(event.target.value)}><option value="full">Full</option><option value="compact">Compact</option><option value="hidden">Hidden</option></select></label><label>Assistant input<select value={inputMode} onChange={(event) => setInputMode(event.target.value as "full" | "compact" | "hidden")}><option value="full">Full</option><option value="compact">Compact</option><option value="hidden">Hidden</option></select></label></div>
+			<div className="settings-status"><span>Core connection</span><strong>{connectionStatus === "online" ? "Online" : connectionStatus === "checking" ? "Connecting" : "Offline"}</strong><span>Active mode</span><strong>{titleForMode(activeMode)}</strong></div>
+		</>;
+		return <div className="workspace-empty">This workspace view is unavailable.</div>;
+	};
+
+	const renderedPage = pageContent();
+	const layoutStyle = {
+		gridTemplateColumns: columns,
+		"--nav-panel-width": `${navWidth}px`,
+		"--chat-panel-width": `${chatWidth}px`,
+	} as CSSProperties;
+
 	return (
-		<main className="lumira-shell">
-			<aside className="lumira-rail">
-				<a className="lumira-brand" href="/" aria-label="Lumira home">
-					<span className="brand-mark"><FiCpu aria-hidden="true" /></span>
-					<span>LUMIRA</span>
-				</a>
-				<button
-					className="new-session"
-					type="button"
-					onClick={() => void startNewSession()}
-					disabled={isRestoringSession || isSending}
-					title="Start a new session"
-				>
-					<FiPlus aria-hidden="true" />
-					<span>New session</span>
-				</button>
-				<div className="rail-caption">WORKSPACE</div>
-				<div className="workspace-item" aria-current="page">
-					<span className="workspace-dot" />
-					<span>{session?.active_project ?? "Personal workspace"}</span>
-				</div>
-				<div className="rail-footer">
-					<span className="connection-dot" />
-					<span>{connectionStatus === "online" ? "Local core" : connectionStatus === "checking" ? "Checking core" : "Core offline"}</span>
-				</div>
-			</aside>
-
-			<section className="lumira-main">
-				<header className="topbar">
-					<div>
-						<div className="eyebrow">PERSONAL AI SYSTEM</div>
-						<h1>Workbench</h1>
-						{session && <div className="session-context">Session {session.session_id.slice(0, 8)} · {session.status}{session.current_goal ? ` · ${session.current_goal}` : ""}</div>}
+		<main className={`workspace-shell ${focusMode ? "focus-mode" : ""} ${topBarCompact ? "topbar-compact" : ""} ${inputMode === "compact" ? "input-compact" : ""} ${effectiveNavMode === "hidden" ? "nav-hidden" : ""}`} style={layoutStyle} data-testid="workspace-shell">
+			<Sidebar mode={effectiveNavMode} activePage={activePage} width={navWidth} onResize={(change) => setPanelWidth("nav", navWidth + change)} onNavigate={navigate} onToggle={() => setNavMode(cyclePanel(navMode))} />
+			<ChatSidebar mode={effectiveChatMode} sessions={sessions} activeId={session?.session_id} width={chatWidth} onResize={(change) => setPanelWidth("chat", chatWidth + change)} onToggle={() => setChatMode(cyclePanel(chatMode))} onNew={() => void startNewSession()} onSelect={(record) => void changeSession(record.session_id)} onPause={(id) => void pauseSession(id)} onClose={(id) => void closeSession(id)} />
+			<section className="center-workspace" aria-label="Central AI workspace">
+				<header className="workspace-topbar">
+					<div className="topbar-left">
+						<button className="icon-button nav-restore" type="button" aria-label="Toggle main sidebar" title="Toggle sidebar (Ctrl/Cmd+B)" onClick={() => setNavMode(cyclePanel(navMode))}><FiMenu /></button>
+						<div className="topbar-brand"><span className="brand-mark"><FiCpu /></span><span><strong>ULTRON</strong><small>Lumira Core</small></span></div>
+						<label className="mode-select-wrap"><span className="sr-only">Select Lumira mode</span><select aria-label="Select Lumira mode" value={activeMode} onChange={(event) => void activateMode(event.target.value as LumiraMode)}><option value="auto">Auto Category</option><option value="creator">Creator</option><option value="generator">Generator</option><option value="business">Business</option><option value="operations">Operations</option></select><FiChevronDown aria-hidden="true" /></label>
 					</div>
-					<div className="runtime-label">
-						<span className="connection-dot" />
-						{connectionStatus === "online" ? "CORE READY" : connectionStatus === "checking" ? "CONNECTING" : "CORE OFFLINE"}
-					</div>
+					<div className="topbar-project"><strong>{currentProject ?? "Personal workspace"}</strong><span>{session?.status ?? "Ready"}</span></div>
+					<form className="top-search" onSubmit={(event) => { event.preventDefault(); void runSearch(); }}><FiSearch aria-hidden="true" /><input aria-label="Global search" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} onFocus={() => undefined} placeholder="Search…  Ctrl K" /><button type="submit" aria-label="Run global search" disabled={!searchQuery.trim()}><FiArrowUp /></button></form>
+					<div className="quick-actions"><button type="button" onClick={startNewProject}>New Project</button><button type="button" onClick={startGeneration}>Generate</button><button type="button" onClick={() => voiceFileRef.current?.click()} disabled={voiceBusy}>{voiceBusy ? "Saving voice…" : "Capture Voice"}</button><button type="button" onClick={() => navigate("goals")}>Create Goal</button></div>
+					<div className="topbar-tools"><span className={`core-status ${connectionStatus}`}><i />{connectionStatus === "online" ? "CORE READY" : connectionStatus === "checking" ? "CONNECTING" : "OFFLINE"}</span><button className="icon-button" type="button" aria-label={focusMode ? "Exit focus mode" : "Enter focus mode"} title="Focus mode (Ctrl/Cmd+Shift+F)" onClick={() => setFocusMode(!focusMode)}><FiCrosshair /></button><button className="icon-button" type="button" aria-label={topBarCompact ? "Expand top bar" : "Compact top bar"} title="Toggle compact top bar" onClick={() => setTopBarCompact(!topBarCompact)}><FiSliders /></button><button className="icon-button settings-shortcut" type="button" aria-label="Open settings" onClick={() => navigate("settings")}><FiSettings /></button></div>
 				</header>
-
-				<section className="conversation" aria-live="polite">
-					{sessionError && <p className="run-error session-error">{sessionError}</p>}
-					{messages.length === 0 ? (
-						<div className="welcome-state">
-							<div className="welcome-mark"><FiCpu aria-hidden="true" /></div>
-							<p className="eyebrow">LUMIRA / {workflow === "brain" ? "BRAIN" : "PROJECT ENGINE"}</p>
-							<h2>What are we working on?</h2>
-							<p className="welcome-copy">Describe a goal to start a run through the core.</p>
-						</div>
-					) : (
-						<div className="message-list">
-							{messages.map((message, index) => {
-								const output = message.response?.result ?? message.response?.data ?? message.response;
-								const status = message.response?.data?.status ?? message.response?.result?.status ?? "ready";
-								const label = message.response?.result?.project_name
-									? `Project saved: ${message.response.result.project_name}`
-									: message.response?.result?.capability ?? "Core response";
-								return (
-									<article className="run" key={`${message.prompt ?? message.transcript}-${index}`}>
-										{message.prompt && <div className="user-prompt">{message.prompt}</div>}
-										{message.transcript && <p className="assistant-transcript">{message.transcript}</p>}
-										{message.response ? (
-											<div className="run-result">
-												<div className="run-heading">
-													<span className="result-icon"><FiCpu aria-hidden="true" /></span>
-													<strong>{label}</strong>
-													<span className="run-stage">
-														{message.response.data?.stage ?? message.response.result?.status ?? "complete"}
-													</span>
-												</div>
-												<div className="run-status">{status.replaceAll("_", " ")}</div>
-												{message.response.message && <p className="run-error">{message.response.message}</p>}
-												{message.response.result?.saved_path && <p className="saved-path">Saved to {message.response.result.saved_path}</p>}
-												<pre>{JSON.stringify(output, null, 2)}</pre>
-											</div>
-										) : message.error ? (
-											<p className="run-error">{message.error}</p>
-										) : isSending && index === messages.length - 1 ? (
-											<p className="run-pending">Running through the core...</p>
-										) : null}
-									</article>
-								);
-							})}
-						</div>
-					)}
-				</section>
-
-				<div className="composer-wrap">
-					<div className="workflow-switch" role="group" aria-label="Choose workflow">
-						<button className={workflow === "brain" ? "workflow-option active" : "workflow-option"} type="button" aria-pressed={workflow === "brain"} onClick={() => setWorkflow("brain")}>Brain</button>
-						<button className={workflow === "project" ? "workflow-option active" : "workflow-option"} type="button" aria-pressed={workflow === "project"} onClick={() => setWorkflow("project")}>Generate project</button>
-					</div>
-					<form className="composer" onSubmit={submitPrompt}>
-						<textarea
-							aria-label="Describe what you want to work on"
-							placeholder={workflow === "brain" ? "Describe a goal for the Brain..." : "Describe the project to generate..."}
-							value={prompt}
-							onChange={(event) => setPrompt(event.target.value)}
-							onKeyDown={(event) => {
-								if (event.key === "Enter" && !event.shiftKey) {
-									event.preventDefault();
-									event.currentTarget.form?.requestSubmit();
-								}
-							}}
-							rows={2}
-						/>
-						<button className="send-button" type="submit" disabled={!prompt.trim() || isSending || isRestoringSession} aria-label="Send request" title="Send request"><FiArrowUp aria-hidden="true" /></button>
-					</form>
-					<div className="composer-note">
-						{workflow === "brain" ? "Requests are processed by your local Lumira core." : "Generated projects are validated and saved in your workspace."}
-					</div>
-				</div>
+				<div className="center-titlebar"><div><span className="eyebrow">{PAGE_TITLES[activePage].toUpperCase()}</span><h1>{currentTitle}</h1></div><div className="center-status">{currentProject && selectedVersion ? `${selectedVersion} · ` : ""}{titleForMode(activeMode)}</div><button className="icon-button panel-restore" type="button" aria-label="Toggle chat sidebar" title="Toggle chats (Ctrl/Cmd+Shift+B)" onClick={() => setChatMode(cyclePanel(chatMode))}><FiMenu /></button><button className="icon-button panel-restore" type="button" aria-label="Toggle development panel" title="Toggle developer panel (Ctrl/Cmd+J)" onClick={() => setRightMode(cyclePanel(rightMode))}><FiCode /></button></div>
+				{actionNotice && <div className="action-notice" role="status"><span>{actionNotice}</span><button type="button" aria-label="Dismiss notification" onClick={() => setActionNotice(null)}><FiX /></button></div>}
+				{sessionError && <div className="workspace-alert error" role="alert">{sessionError}</div>}
+				{renderedPage ? <section className="workspace-page" aria-label={`${PAGE_TITLES[activePage]} workspace`}>{renderedPage}</section> : <>
+					<section className="conversation" aria-live="polite">
+						{messages.length === 0 ? <div className="welcome-state"><div className="welcome-mark"><FiCpu /></div><p className="eyebrow">LUMIRA / {titleForMode(activeMode).toUpperCase()}</p><h2>What are we working on?</h2><p className="welcome-copy">Send a request through Lumira's routed command pipeline.</p><div className="suggestion-row"><button type="button" onClick={() => setPromptFromTool("Plan for launching ", "business")}>Business plan</button><button type="button" onClick={() => setPromptFromTool("Generate a diagram for ", "generator")}>Generate diagram</button><button type="button" onClick={() => setPromptFromTool("Prepare today's operational tasks for ", "operations")}>Plan operations</button></div></div> : <div className="message-list">{messages.map((message) => {
+							const response = message.response ?? {};
+							const result = object(response.result ?? response.data ?? response);
+							const capability = stringValue(result.capability, "Lumira response");
+							const successful = result.success !== false && response.success !== false;
+							const status = stringValue(result.status, successful ? "completed" : "unavailable");
+							const projectName = stringValue(result.project_name ?? object(result.project).project_name ?? result.code_target);
+							const metadata = object(result.metadata);
+							const isProjectResult = Boolean(projectName) && successful;
+							const safeResult = safeDisplay(Object.fromEntries(Object.entries(result).filter(([key]) => !["brain", "trace", "cognitive_state", "context_snapshots"].includes(key))));
+							return <article className="message-run" key={message.id}>
+								{message.prompt && <div className="user-message">{message.prompt}</div>}
+								{message.transcript && <div className="assistant-message">{message.transcript}</div>}
+								{message.pending && <div className="assistant-pending">Working through the core…</div>}
+								{message.error && <div className="workspace-alert error" role="alert">{message.error}</div>}
+								{message.response && <div className={`result-panel ${successful ? "is-success" : "is-failure"}`}>
+									<div className="result-panel-heading"><span className="result-icon"><FiCpu /></span><strong>{capability.replaceAll("_", " ")}</strong><span className="status-pill">{status.replaceAll("_", " ")}</span></div>
+									{response.clarification_required && <p className="result-message">{stringValue(response.message, "Additional information is required to continue.")}</p>}
+									{typeof result.message === "string" && result.message && <p className="result-message">{result.message}</p>}
+									{isProjectResult && <section className="project-result-card"><div><span className="eyebrow">PROJECT RESULT</span><h3>{projectName}</h3><p>{stringValue(metadata.description ?? metadata.idea ?? result.idea ?? result.request, "Project files were saved by Lumira.")}</p></div><dl><div><dt>Version</dt><dd>{stringValue(metadata.version, stringValue(result.version, "Latest"))}</dd></div><div><dt>Status</dt><dd>{stringValue(metadata.status, status)}</dd></div><div><dt>Created</dt><dd>{stringValue(metadata.created_at ?? result.created_at, "Recorded by the project service")}</dd></div></dl><div className="project-card-actions"><button type="button" onClick={() => openProjectFiles(projectName)}>View Files</button><button type="button" onClick={() => void projectAction(projectName, "run")}>Run Project</button><button type="button" onClick={() => void projectAction(projectName, "edit")}>Open in Editor</button><button type="button" onClick={() => void projectAction(projectName, "modify")}>Modify Project</button><button type="button" onClick={() => void projectAction(projectName, "frontend")}>Add Frontend</button><button type="button" onClick={() => void projectAction(projectName, "database")}>Add Database</button><button type="button" onClick={() => void projectAction(projectName, "deploy")}>Create Deployment Plan</button><button type="button" onClick={() => void projectAction(projectName, "docs")}>Show Documentation</button></div></section>}
+									<details className="result-details"><summary>Structured result</summary><pre>{JSON.stringify(safeResult, null, 2)}</pre></details>
+								</div>}
+							</article>;
+						})}</div>}
+					</section>
+					{inputMode === "hidden" ? <div className="input-restore"><button type="button" onClick={() => setInputMode("full")}>Restore assistant input</button></div> : <div className={`composer-wrap ${inputMode === "compact" ? "is-compact" : ""}`}>
+						{quickToolsOpen && <div className="quick-tools-menu"><button type="button" onClick={startNewProject}>New project workflow</button><button type="button" onClick={startGeneration}>Generator workspace</button><button type="button" onClick={() => navigate("goals")}>Create a durable goal</button></div>}
+						<form className="composer" onSubmit={(event) => void submitPrompt(event)}>
+							<button className="composer-tool" type="button" aria-label="Open tools" aria-expanded={quickToolsOpen} onClick={() => setQuickToolsOpen(!quickToolsOpen)}><FiSliders /></button>
+						<label className="composer-tool file-attach" title="Attach an audio recording"><FiPaperclip /><input ref={attachmentFileRef} type="file" accept="audio/wav,audio/mpeg,audio/mp4,.wav,.mp3,.m4a" aria-label="Attach audio recording" onChange={(event) => void uploadVoice(event.target.files?.[0])} /></label>
+							<textarea ref={promptInputRef} aria-label="Describe what you want to work on" placeholder={workflow === "project" ? "Describe the project to generate…" : "Message Lumira…"} value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={onPromptKeyDown} rows={inputMode === "compact" ? 1 : 2} disabled={isRestoringSession} />
+							<label className="composer-mode"><span className="sr-only">Select Lumira mode</span><select aria-label="Composer mode" value={activeMode} onChange={(event) => void activateMode(event.target.value as LumiraMode)}><option value="auto">Auto</option><option value="creator">Creator</option><option value="generator">Generator</option><option value="business">Business</option><option value="operations">Operations</option></select></label>
+							<button className="send-button" type="submit" disabled={!prompt.trim() || isSending || isRestoringSession} aria-label="Send request" title="Send request"><FiArrowUp /></button>
+						</form>
+						<div className="composer-footer"><span>{isRestoringSession ? "Restoring saved session…" : activeMode === "auto" ? "Auto Category routes your request through Lumira's capability architecture." : `${titleForMode(activeMode)} routes through your active Lumira session.`}</span><div><button type="button" onClick={() => setInputMode(inputMode === "compact" ? "full" : "compact")} aria-label={inputMode === "compact" ? "Expand assistant input" : "Compact assistant input"}>{inputMode === "compact" ? "Expand input" : "Compact input"}</button><button type="button" onClick={() => setInputMode("hidden")}>Hide input</button></div></div>
+					</div>}
+				</>}
+				<input ref={voiceFileRef} className="sr-only" type="file" accept="audio/wav,audio/mpeg,audio/mp4,.wav,.mp3,.m4a" aria-label="Capture voice file" onChange={(event) => void uploadVoice(event.target.files?.[0])} />
 			</section>
+			<RightPanel mode={effectiveRightMode} width={rightWidth} projects={projectItems} project={currentProject} version={selectedVersion} versions={projectVersions} files={projectFiles} selectedFile={selectedFile} fileContent={fileContent} fileLoading={fileLoading} apiPaths={apiPaths} runs={runs} activeTab={rightTab} onToggle={() => setRightMode(cyclePanel(rightMode))} onResize={(change) => setPanelWidth("right", rightWidth + change)} onTabChange={setRightTab} onProjectChange={(project) => project ? void selectProject(project) : setSelectedProject(null)} onVersionChange={(version) => void selectVersion(version)} onFileSelect={(file) => void selectFile(file)} />
 		</main>
 	);
+}
+
+function WorkflowList({ workflows, onTaskUpdate }: { workflows: JsonObject[]; onTaskUpdate: (workflowId: string, taskId: string, status: string) => void }) {
+	if (!workflows.length) return <div className="workspace-empty">No workflows are recorded.</div>;
+	return <div className="workflow-list">{workflows.map((workflow, index) => {
+		const id = stringValue(workflow.workflow_id, `workflow-${index}`);
+		const tasks = Array.isArray(workflow.tasks) ? workflow.tasks.map(object) : [];
+		return <article className="workflow-card" key={id}><header><div><span className="eyebrow">{stringValue(workflow.category, "workflow").toUpperCase()}</span><h3>{stringValue(workflow.title, "Workflow")}</h3><p>{stringValue(workflow.request)}</p></div><span className="status-pill">{stringValue(workflow.status, "planned")}</span></header><div className="workflow-tasks">{tasks.map((task, taskIndex) => <div className="workflow-task" key={stringValue(task.task_id, String(taskIndex))}><div><strong>{stringValue(task.title, `Task ${taskIndex + 1}`)}</strong><span>{stringValue(task.status, "pending")}{Array.isArray(task.dependencies) && task.dependencies.length ? ` · depends on ${task.dependencies.length}` : ""}</span>{typeof task.blocker === "string" && task.blocker && <small className="blocker">Blocker: {task.blocker}</small>}</div><div className="task-actions">{task.status === "pending" && <button type="button" onClick={() => onTaskUpdate(id, stringValue(task.task_id), "in_progress")}>Start</button>}{task.status === "in_progress" && <button type="button" onClick={() => onTaskUpdate(id, stringValue(task.task_id), "completed")}>Complete</button>}</div></div>)}</div></article>;
+	})}</div>;
 }
 
 export default MainLayout;

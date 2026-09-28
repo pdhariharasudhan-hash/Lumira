@@ -18,6 +18,10 @@ class ImageGenerationService:
         self.artifacts = (
             ArtifactManagerService()
         )
+        if provider is None:
+            from app.services.providers.provider_registry import ProviderRegistry
+
+            provider = ProviderRegistry.get("image_generation")
         self.provider = provider
 
     def generate(
@@ -52,12 +56,56 @@ class ImageGenerationService:
                 "message": "No image rendering provider is configured; no image artifact was created.",
             }
 
-        result = self.provider.generate(prompt, image_type)
-        if not isinstance(result, dict) or not result.get("success"):
-            return result if isinstance(result, dict) else {
+        try:
+            result = self.provider.generate(prompt, image_type)
+        except Exception:
+            return {
+                "success": False,
+                "code": "provider_error",
+                "message": "The image provider failed; no image artifact was created.",
+            }
+        if not isinstance(result, dict) or result.get("success") is not True:
+            return {
+                "success": False,
+                "code": "provider_failed",
+                "message": "The image provider did not report a successful render.",
+            }
+
+        image_bytes = result.get("content")
+        extension = str(result.get("extension", "png")).lower()
+        if not isinstance(image_bytes, bytes) or extension not in {"png", "jpg", "jpeg", "webp"}:
+            return {
                 "success": False,
                 "code": "invalid_provider_response",
-                "message": "The image provider returned an invalid response.",
+                "message": "The image provider must return image bytes and a supported image extension.",
+            }
+        signatures = {
+            "png": image_bytes.startswith(b"\x89PNG\r\n\x1a\n"),
+            "jpg": image_bytes.startswith(b"\xff\xd8\xff"),
+            "jpeg": image_bytes.startswith(b"\xff\xd8\xff"),
+            "webp": image_bytes.startswith(b"RIFF") and image_bytes[8:12] == b"WEBP",
+        }
+        if not signatures[extension]:
+            return {
+                "success": False,
+                "code": "invalid_provider_response",
+                "message": "The image provider output does not match its declared image format.",
+            }
+
+        try:
+            artifact = self.artifacts.create_binary_artifact(
+                "images",
+                image_bytes,
+                "image_generation",
+                extension,
+            )
+        except ValueError as error:
+            return {"success": False, "code": "invalid_provider_output", "message": str(error)}
+        except Exception:
+            return {
+                "success": False,
+                "code": "artifact_storage_failed",
+                "message": "The image was rendered but could not be stored as an artifact.",
             }
 
         return {
@@ -71,8 +119,7 @@ class ImageGenerationService:
             "image_type":
             image_type,
 
-            "provider_result":
-            result,
+            "artifact": artifact,
 
             "created":
             datetime.now().strftime(

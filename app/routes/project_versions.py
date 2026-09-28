@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from pathlib import Path
+from app.services.projects.project_paths import resolve_project_path
 
 router = APIRouter()
 
@@ -11,13 +12,9 @@ def get_versions(
     project: str
 ):
 
-    project_path = (
-        Path("generated")
-        / project
-    )
+    project_path = resolve_project_path(project)
 
-
-    if not project_path.exists():
+    if project_path is None or not project_path.is_dir():
 
         return {
 
@@ -34,22 +31,14 @@ def get_versions(
 
     for version in project_path.iterdir():
 
-        if version.is_dir():
+        if version.is_dir() and resolve_project_path(project, version.name) == version.resolve():
 
             versions.append(
                 version.name
             )
 
 
-    versions.sort(
-        key=lambda x:
-        int(
-            x.replace(
-                "v",
-                ""
-            )
-        )
-    )
+    versions.sort(key=lambda value: int(value[1:]))
 
 
     return {

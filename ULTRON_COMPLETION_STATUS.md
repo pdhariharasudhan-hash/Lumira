@@ -1,9 +1,59 @@
 # ULTRON / LUMIRA Completion Status
 
+Status date: 2026-09-27
+
+## Current Completion Assessment
+
+**Classification: PARTIALLY COMPLETE.** The local cognitive and project-generation path is connected and tested; external providers and multi-user deployment remain explicit limitations.
+
+### COMPLETE
+
+- `/brain` and `/command` use the ordered cognitive pipeline. Public responses expose concise goal/readiness and stage diagnostics, not private reasoning state.
+- Project generation follows validation → builder → execution-plan validation → deterministic code generation → source validation → atomic versioned save. A rejected or invalid stage stops the flow.
+- Generated API CRUD records persist in SQLite (up to 1,000 records per account; string fields are bounded). Generated authentication stores salted password hashes and a persistent signing key, and records are scoped to the authenticated account.
+- Sessions, goals, decisions, experiences, verified learning, command/pipeline history, and artifact indexes persist through bounded atomic JSON updates. Credential-like values are redacted from session context, memory, history, project metadata, and public stage traces.
+- Project, file, artifact, search, memory, session, and voice-upload inputs have bounds and path/integrity checks. The backend binds to loopback by default.
+- The desktop uses the backend session and command APIs. Its automated unit suite, production build, and lint pass.
+- Modes and capability policy gate command routing. The agent manager registers planner, code, and research agents with bounded task sizes, timeouts, concurrency, and response sizes.
+- Unified Search searches implemented project/version/file/documentation/artifact/memory/history/session/conversation sources.
+
+### PARTIAL
+
+- `ExecuteService` validates and orders an implementation plan; it does not run arbitrary plan actions or execute generated application code. The end-to-end workflow executes the supported local generation/save stages.
+- Code generation is deterministic and template-based. It does not use an external generator model or synthesize arbitrary application types beyond the implemented templates.
+- Learning promotes verified project-generation outcomes, not every runtime reflection. Recovery retries are traced, but no durable recovery inspection/resume API exists.
+- APIs have no user authentication/authorization for Lumira’s own sessions, memory, projects, and artifacts. The default loopback bind suits a trusted single-user desktop; setting `HOST` to a network interface requires an external access-control boundary.
+- JSON atomic updates are process-local. The supported configuration is one local backend worker, not multi-process or multi-user service deployment.
+
+### BLOCKED BY EXTERNAL DEPENDENCY
+
+- Speech-to-text, transcript summarization, rendered images, and live web research have injectable provider protocols, but no concrete adapter, application-startup configuration, or credentials are available in this repository. Calls without an injected provider return structured unavailable errors. Injected results are bounded/validated and successful transcript, summary, and image outputs flow through Artifact Manager; research requires findings and source references. No results are fabricated.
+- Voice upload and durable audio artifacts work locally. Image generation can return a labeled specification, but does not claim that it is a rendered image.
+
+### REMAINING
+
+- Configure and verify real voice, summary, image, and web-research providers.
+- Add account/access control before exposing the backend beyond loopback; add cross-process storage coordination before running multiple workers.
+- Implement a bounded allowlisted task executor if actual plan actions or generated programs must run. Do not execute arbitrary generated code in the backend process.
+- Expand provider-backed generation, dashboard/UI synthesis, verified learning sources, recovery resume, and automated end-to-end desktop coverage as follow-up work.
+- The final `npm audit` could not reach the npm registry advisory endpoint; no dependency manifests were changed in this implementation turn. Python dependency auditing is unavailable because `pip-audit` is not installed (no packages were installed).
+
+### Current Validation
+
+- Backend: **62 tests passed**. Python `compileall`: passed.
+- Desktop: **18 tests passed**; production build and lint passed.
+- `git diff --check`: passed.
+- `npm audit` could not reach the npm registry advisory endpoint, so the current advisory count could not be confirmed. `pip-audit` is unavailable in the current Python environment; no packages were installed.
+- No dependency manifests were changed in this implementation turn. The prior reviewed desktop lockfile audit was zero vulnerabilities, but this turn could not independently re-query advisories.
+
+---
+
+## Previous Handoff 12 Snapshot (historical)
+
 Status date: 2026-09-26
 Handoff 11 baseline: `b189a68` (`Integrate ULTRON cognitive and project flows`)
 
-## Handoff 12 Status
+## Handoff 12 Status (historical snapshot)
 
 ### Architecture
 

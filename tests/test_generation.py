@@ -5,6 +5,8 @@ from app.services.projects.project_writer import ProjectWriter
 from app.services.brain.brain_executor import BrainExecutor
 from app.services.brain.brain_state import BrainState
 from app.services.image.image_generation_service import ImageGenerationService
+import sys
+from fastapi.testclient import TestClient
 
 
 def test_end_to_end_project_request_flow(tmp_path, monkeypatch):
@@ -22,7 +24,7 @@ def test_end_to_end_project_request_flow(tmp_path, monkeypatch):
 def test_expense_api_name_ignores_framework_and_feature_terms():
     generated = CodeService().generate(
         "Build a FastAPI expense API with authentication",
-        {},
+        {"status": "accept", "execution_order": ["step_1"], "task_steps": ["step_1"]},
     )
 
     assert generated["code_target"] == "expense_api"
@@ -30,6 +32,9 @@ def test_expense_api_name_ignores_framework_and_feature_terms():
     assert "hashlib.pbkdf2_hmac" in source
     assert "hmac.compare_digest" in source
     assert "Depends(get_current_user)" in source
+    assert "README.md" in generated["files"]
+    assert "LUMIRA_AUTH_DATA_DIR" in generated["files"]["README.md"]
+    assert "survive application restarts" in generated["files"]["README.md"]
     compile(source, "generated_expense_api.py", "exec")
 
 
@@ -49,6 +54,8 @@ def test_project_writer_rejects_path_traversal(tmp_path, monkeypatch):
         assert "filenames" in str(error)
     else:
         raise AssertionError("unsafe generated filename was accepted")
+    assert not (tmp_path / "generated" / "expense_api" / "v1").exists()
+    assert not list((tmp_path / "generated" / "expense_api").glob(".*.tmp"))
 
 
 def test_image_generation_requires_a_configured_provider(tmp_path, monkeypatch):
@@ -59,6 +66,41 @@ def test_image_generation_requires_a_configured_provider(tmp_path, monkeypatch):
     assert result["success"] is False
     assert result["code"] == "provider_unavailable"
     assert not list((tmp_path / "artifacts" / "images").glob("*.txt"))
+
+
+def test_generated_optional_routes_execute_against_entity_and_respect_owners(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("LUMIRA_AUTH_DATA_DIR", str(tmp_path / "auth"))
+    monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
+    generated = CodeService().generate(
+        "Build an expense API with authentication, search, pagination, sorting, analytics, and CSV export",
+        {"status": "accept", "execution_order": ["step_1"], "task_steps": ["step_1"]},
+    )
+    source = generated["files"]["main.py"]
+    assert "__VISIBLE_RECORDS__" not in source
+    assert '"/expenses/search"' in source
+    module_name = "generated_feature_app"
+    module = type(sys)(module_name)
+    exec(compile(source, module_name, "exec"), module.__dict__)
+    client = TestClient(module.app)
+
+    for username in ("alice", "bobby"):
+        assert client.post("/register", json={"username": username, "password": "correct-horse-battery"}).status_code == 200
+    alice = client.post("/login", json={"username": "alice", "password": "correct-horse-battery"}).json()["access_token"]
+    bob = client.post("/login", json={"username": "bobby", "password": "correct-horse-battery"}).json()["access_token"]
+    alice_headers = {"Authorization": f"Bearer {alice}"}
+    bob_headers = {"Authorization": f"Bearer {bob}"}
+
+    assert client.post("/expenses", json={"amount": "20", "category": "food"}, headers=alice_headers).status_code == 200
+    assert client.post("/expenses", json={"amount": "5", "category": "travel"}, headers=bob_headers).status_code == 200
+    assert client.get("/expenses/search?query=food", headers=bob_headers).json() == []
+    assert client.get("/expenses/search?query=" + "x" * 501, headers=alice_headers).status_code == 422
+    assert client.get("/expenses/page?page=0", headers=alice_headers).status_code == 422
+    assert client.get("/expenses/analytics", headers=alice_headers).json() == {"total_records": 1, "categories": 1}
+    exported = client.get("/expenses/export", headers=alice_headers)
+    assert exported.status_code == 200
+    assert "20" in exported.text and "5" not in exported.text
+    assert exported.headers["content-type"].startswith("text/csv")
 
 
 def test_brain_executor_recovers_and_retries_failed_stage():

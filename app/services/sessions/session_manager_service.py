@@ -1,6 +1,7 @@
 from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
+import ast
 import re
 from typing import Any
 from uuid import uuid4
@@ -22,6 +23,7 @@ SECRET_PATTERN = re.compile(
 SECRET_KEY_PATTERN = re.compile(
     r"(?i)password|api[_ -]?key|access[_ -]?token|secret|authorization"
 )
+PYTHON_FILE_PATTERN = re.compile(r"(?i)\.pyw?$")
 
 
 def _timestamp() -> str:
@@ -39,21 +41,91 @@ def _redact_secrets(text: str) -> str:
     )
 
 
-def _redact_value(value):
+def _redact_python_source(source: str) -> str:
+    """Redact literal credentials in generated Python while preserving valid syntax."""
+    try:
+        tree = ast.parse(source)
+    except (SyntaxError, ValueError):
+        return _redact_secrets(source)
+
+    lines = source.splitlines(keepends=True)
+    line_offsets = []
+    offset = 0
+    for line in lines:
+        line_offsets.append(offset)
+        offset += len(line.encode("utf-8"))
+
+    edits: set[tuple[int, int]] = set()
+
+    def span(node: ast.AST):
+        start_line = getattr(node, "lineno", None)
+        start_col = getattr(node, "col_offset", None)
+        end_line = getattr(node, "end_lineno", None)
+        end_col = getattr(node, "end_col_offset", None)
+        if None in (start_line, start_col, end_line, end_col):
+            return None
+        return line_offsets[start_line - 1] + start_col, line_offsets[end_line - 1] + end_col
+
+    def names(target: ast.AST) -> list[str]:
+        if isinstance(target, ast.Name):
+            return [target.id]
+        if isinstance(target, ast.Attribute):
+            return [target.attr]
+        if isinstance(target, (ast.Tuple, ast.List)):
+            return [name for item in target.elts for name in names(item)]
+        if isinstance(target, ast.Subscript) and isinstance(target.slice, ast.Constant) and isinstance(target.slice.value, str):
+            return [target.slice.value]
+        return []
+
+    def redact_literal(key: str | None, value: ast.AST) -> None:
+        if not key or not SECRET_KEY_PATTERN.search(key):
+            return
+        if isinstance(value, ast.Constant) and isinstance(value.value, (str, bytes)):
+            location = span(value)
+            if location:
+                edits.add(location)
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                for key in names(target):
+                    redact_literal(key, node.value)
+        elif isinstance(node, ast.AnnAssign):
+            for key in names(node.target):
+                redact_literal(key, node.value)
+        elif isinstance(node, ast.Dict):
+            for key_node, value_node in zip(node.keys, node.values):
+                if isinstance(key_node, ast.Constant) and isinstance(key_node.value, str):
+                    redact_literal(key_node.value, value_node)
+        elif isinstance(node, ast.keyword):
+            redact_literal(node.arg, node.value)
+
+    encoded = source.encode("utf-8")
+    for start, end in sorted(edits, reverse=True):
+        encoded = encoded[:start] + b"'[REDACTED]'" + encoded[end:]
+    return encoded.decode("utf-8")
+
+
+def redact_sensitive_value(value):
     if isinstance(value, str):
         return _redact_secrets(value)
     if isinstance(value, list):
-        return [_redact_value(item) for item in value]
+        return [redact_sensitive_value(item) for item in value]
     if isinstance(value, dict):
         safe = {}
         for key, item in value.items():
-            safe[str(key)] = "[REDACTED]" if SECRET_KEY_PATTERN.search(str(key)) else _redact_value(item)
+            safe_key = str(key)
+            if SECRET_KEY_PATTERN.search(safe_key):
+                safe[safe_key] = "[REDACTED]"
+            elif PYTHON_FILE_PATTERN.search(safe_key) and isinstance(item, str):
+                safe[safe_key] = _redact_python_source(item)
+            else:
+                safe[safe_key] = redact_sensitive_value(item)
         return safe
     return value
 
 
 redact_sensitive_text = _redact_secrets
-redact_sensitive_value = _redact_value
 
 
 class SessionManagerService:
@@ -117,9 +189,14 @@ class SessionManagerService:
         workspace_id: str = "default",
         project_id: str | None = None,
     ) -> dict:
+        if not isinstance(workspace_id, str) or not 1 <= len(workspace_id) <= 100:
+            raise ValueError("workspace_id must contain 1 to 100 characters")
+        if project_id is not None and (not isinstance(project_id, str) or len(project_id) > 100):
+            raise ValueError("project_id must contain at most 100 characters")
         now = _timestamp()
         session = {
             "session_id": str(uuid4()),
+            "owner_id": "local",
             "conversation_id": str(uuid4()),
             "created_at": now,
             "updated_at": now,
@@ -221,7 +298,7 @@ class SessionManagerService:
             "message_id": str(uuid4()),
             "role": role,
             "content": _redact_secrets(content)[:4000],
-            "metadata": deepcopy(metadata or {}),
+            "metadata": redact_sensitive_value(metadata or {}),
             "created_at": _timestamp(),
         }
 
@@ -263,10 +340,10 @@ class SessionManagerService:
             "verification_status": "ready" if verification.get("ready_for_execution") else "not_ready",
             "reflection_status": reflection.get("overall_quality"),
             "confidence": float(reflection.get("confidence") or goal.get("confidence") or 0.0),
-            "blockers": (
+            "blockers": redact_sensitive_value((
                 list(constraints.get("missing_information", []))
                 + list(constraints.get("risks", []))
-            )[:20],
+            )[:20]),
             "updated_at": _timestamp(),
             "source_execution_id": execution.get("execution_id"),
             "schema_version": SESSION_SCHEMA_VERSION,
@@ -336,6 +413,11 @@ class SessionManagerService:
         allowed = {"active_project", "active_version", "active_mode", "current_goal", "goal_id", "project_id"}
         if set(values) - allowed:
             raise ValueError("unsupported session context field")
+        limits = {"active_project": 100, "active_version": 100, "active_mode": 50, "current_goal": 4000, "goal_id": 128, "project_id": 100}
+        for key, value in values.items():
+            if value is not None and (not isinstance(value, str) or len(value) > limits[key]):
+                raise ValueError(f"{key} exceeds its supported length")
+        values = redact_sensitive_value(values)
 
         def update(session):
             session.update(values)
@@ -351,6 +433,9 @@ class SessionManagerService:
         return self._mutate_session(session_id, update)
 
     def add_reference(self, session_id: str, reference: str) -> None:
+        if not isinstance(reference, str) or not reference.strip() or len(reference) > 500:
+            raise ValueError("reference must contain 1 to 500 characters")
+        reference = _redact_secrets(reference)
         def update(session):
             conversation = session.setdefault("conversation", {})
             references = conversation.setdefault("recent_references", [])
@@ -366,9 +451,12 @@ class SessionManagerService:
             "decision": "recent_decision_ids",
             "memory": "recent_memory_ids",
             "experience": "recent_experience_ids",
+            "workflow": "recent_workflow_ids",
         }
         if relation not in fields:
             raise ValueError("unsupported session record relation")
+        if not isinstance(record_id, str) or not record_id or len(record_id) > 128:
+            raise ValueError("record identifier is invalid")
 
         def update(session):
             identifiers = session.setdefault(fields[relation], [])

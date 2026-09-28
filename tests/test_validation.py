@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -19,6 +20,9 @@ def test_brain_route_builds_valid_response(tmp_path, monkeypatch):
     assert payload["success"] is True
     assert payload["data"]["stage"] == "complete"
     assert payload["data"]["state"]["goal"]["primary_goal"]
+    assert "reasoning" not in payload["data"]["state"]
+    assert "decision" not in payload["data"]["state"]
+    assert "relevant_memory" not in payload["data"]["state"]
     session_id = payload["data"]["state"]["execution_context"]["session_id"]
     assert client.get(f"/sessions/{session_id}").status_code == 200
     assert client.get(f"/brain/state/{session_id}").json()["cognitive_state"]["goal"]
@@ -40,6 +44,8 @@ def test_brain_route_builds_valid_response(tmp_path, monkeypatch):
 
 def test_command_route_parses_request(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("LUMIRA_AUTH_DATA_DIR", raising=False)
+    monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
     client = TestClient(app)
     response = client.post("/command", json={"input": "Build a FastAPI expense API with authentication"})
     assert response.status_code == 200
@@ -60,26 +66,69 @@ def test_command_route_parses_request(tmp_path, monkeypatch):
     exec(compile(generated_source, str(generated_path / "main.py"), "exec"), generated_namespace)
     generated_client = TestClient(generated_namespace["app"])
 
-    registered = generated_client.post(
-        "/register",
-        params={"username": "owner", "password": "correct horse"},
-    )
+    credentials = {"username": "owner", "password": "correct horse battery staple"}
+    registered = generated_client.post("/register", json=credentials)
     assert registered.status_code == 200
-    login = generated_client.post(
-        "/login",
-        params={"username": "owner", "password": "correct horse"},
-    )
+    auth_dir = tmp_path / ".lumira_auth"
+    users_document = json.loads((auth_dir / "users.json").read_text(encoding="utf-8"))
+    assert users_document["schema_version"] == 1
+    stored_user = users_document["users"]["owner"]
+    assert credentials["password"] not in json.dumps(users_document)
+    assert len(bytes.fromhex(stored_user["salt"])) == 16
+    assert len(bytes.fromhex(stored_user["password_hash"])) == 32
+    signing_key = (auth_dir / "jwt_signing_key").read_text(encoding="ascii")
+    assert len(signing_key) >= 32
+
+    login = generated_client.post("/login", json=credentials)
     assert login.status_code == 200
     token = login.json()["access_token"]
+    owner_headers = {"Authorization": f"Bearer {token}"}
 
     assert generated_client.get("/expenses").status_code == 401
     assert generated_client.delete("/expenses/0").status_code == 401
     authorized = generated_client.get(
         "/expenses",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=owner_headers,
     )
     assert authorized.status_code == 200
     assert authorized.json() == []
+
+    created_item = generated_client.post(
+        "/expenses",
+        json={"amount": "10", "category": "food"},
+        headers=owner_headers,
+    )
+    assert created_item.status_code == 200
+    assert created_item.json()["expenses"] == [{"amount": "10", "category": "food"}]
+
+    second_credentials = {"username": "another-user", "password": "another secure password"}
+    assert generated_client.post("/register", json=second_credentials).status_code == 200
+    second_login = generated_client.post("/login", json=second_credentials)
+    second_headers = {"Authorization": f"Bearer {second_login.json()['access_token']}"}
+    assert generated_client.get("/expenses", headers=second_headers).json() == []
+    assert generated_client.put(
+        "/expenses/0",
+        json={"amount": "999", "category": "stolen"},
+        headers=second_headers,
+    ).json() == {"success": False}
+    assert generated_client.delete("/expenses/0", headers=second_headers).json() == {"success": False}
+    assert generated_client.get("/expenses", headers=owner_headers).json() == [
+        {"amount": "10", "category": "food"}
+    ]
+
+    # Re-importing the generated app models a process restart. Both the
+    # persistent authentication store and SQLite business records survive it.
+    restarted_namespace = {}
+    exec(compile(generated_source, str(generated_path / "main.py"), "exec"), restarted_namespace)
+    restarted_client = TestClient(restarted_namespace["app"])
+    assert restarted_client.get("/me", headers=owner_headers).json() == {"username": "owner"}
+    assert restarted_client.get("/expenses", headers=owner_headers).json() == [
+        {"amount": "10", "category": "food"}
+    ]
+    restarted_login = restarted_client.post("/login", json=credentials)
+    assert restarted_login.status_code == 200
+    assert restarted_login.json()["access_token"]
+    assert (auth_dir / "jwt_signing_key").read_text(encoding="ascii") == signing_key
 
 
 def test_builder_mode_project_and_followups_keep_context(tmp_path, monkeypatch):
@@ -120,6 +169,13 @@ def test_voice_upload_persists_audio_and_reports_missing_provider(tmp_path, monk
     artifact = uploaded.json()["data"]["artifact"]
     assert artifact["type"] == "audio"
     assert (tmp_path / artifact["file"]).is_file()
+
+    malformed = client.post(
+        "/voice/upload",
+        files={"audio": ("spoofed.wav", b"not audio content", "audio/wav")},
+    )
+    assert malformed.status_code == 400
+    assert len(ArtifactManagerService().get_all_artifacts()) == 1
 
     transcript = client.post(
         "/voice/transcript",
@@ -251,7 +307,11 @@ def test_session_restart_recovers_project_decision_and_scoped_memory(tmp_path, m
         "/command",
         json={"input": "Continue the expense API.", "session_id": session_id},
     ).json()
-    decisions = resumed["brain"]["state"]["relevant_memory"]["decisions"]
+    assert "relevant_memory" not in resumed["brain"]["state"]
+    decisions = restarted_process.get(
+        "/memory/relevant",
+        params={"q": "JWT authentication", "session_id": session_id},
+    ).json()["data"]["decisions"]
     assert any("JWT authentication" in item["decision"] for item in decisions)
     assert all(item["project_id"] != "unrelated_project" for item in decisions)
     assert resumed["context"]["active_project"] == "expense_api"

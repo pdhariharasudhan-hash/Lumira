@@ -11,6 +11,9 @@ from app.services.code.naming_service import (
 
 class BuilderService:
 
+    MAX_INPUT_LENGTH = 10000
+    MAX_PLAN_STEPS = 12
+
     def __init__(
         self
     ):
@@ -27,6 +30,30 @@ class BuilderService:
         self,
         idea: str
     ) -> Dict[str, Any]:
+
+        if not isinstance(idea, str) or not idea.strip() or len(idea) > self.MAX_INPUT_LENGTH:
+            return {
+                "objective": "",
+                "scope": "small",
+                "suggested_steps": [],
+                "priority": "high",
+                "status": "refine",
+                "reasons": ["Provide a non-empty objective under 10000 characters."],
+            }
+
+        from app.routes.validate import analyze_idea
+
+        validation = analyze_idea(idea)
+        if validation["verdict"] == "reject":
+            return {
+                "objective": idea.strip(),
+                "scope": "undetermined",
+                "suggested_steps": [],
+                "priority": "high",
+                "status": "refine",
+                "reasons": validation["weaknesses"] + validation["risks"],
+                "validation": validation,
+            }
 
         result = (
             self.classifier.classify(
@@ -53,6 +80,7 @@ class BuilderService:
 
         step_number = 1
 
+        storage_step_id = None
         if "storage" in actions:
 
             suggested_steps.append(
@@ -73,6 +101,7 @@ class BuilderService:
             )
 
             step_number += 1
+            storage_step_id = "step_1"
 
         route_map = {
 
@@ -100,12 +129,23 @@ class BuilderService:
                         f"{entity} {http} endpoint created",
 
                         "dependencies": [
-                            "step_1"
-                        ]
+                            storage_step_id
+                        ] if storage_step_id else []
                     }
                 )
 
                 step_number += 1
+
+        if not suggested_steps or len(suggested_steps) > self.MAX_PLAN_STEPS:
+            return {
+                "idea": idea,
+                "objective": f"build {entity} api",
+                "scope": "small",
+                "suggested_steps": [],
+                "priority": "high",
+                "status": "refine",
+                "reasons": ["The request does not map to an executable project plan."],
+            }
 
         return {
 

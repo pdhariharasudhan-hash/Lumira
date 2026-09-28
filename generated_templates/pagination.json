@@ -1,4 +1,4 @@
 {
   "feature": "pagination",
-  "route": "\n@app.get(\n    \"/expenses/page\"\n)\ndef paginate(\n    page:int=1,\n    size:int=5\n):\n\n    start=(page-1)*size\n    end=start+size\n\n    return expenses[start:end]\n"
+  "route": "\n@app.get(\n    \"/__COLLECTION__/page\"\n)\ndef paginate(\n    page:int=1,\n    size:int=5__AUTH_PARAMS__\n):\n\n    if page < 1 or size < 1 or size > 100:\n        raise HTTPException(status_code=422, detail='page must be positive and size must be 1..100')\n    start=(page-1)*size\n    return __VISIBLE_RECORDS__[start:start+size]\n"
 }

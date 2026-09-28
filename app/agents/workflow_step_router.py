@@ -57,15 +57,12 @@ class WorkflowStepRouter:
     ):
 
         if step == "validate":
+            from app.routes.validate import analyze_idea
 
-            return {
-
-                "step":
-                step,
-
-                "status":
-                "completed"
-            }
+            validation = analyze_idea(goal)
+            if validation["verdict"] == "reject":
+                return {"success": False, "state": "stopped", "step": step, "validation": validation}
+            return {"success": True, "state": "completed", "step": step, "validation": validation}
 
         if step == "builder":
 
@@ -76,20 +73,29 @@ class WorkflowStepRouter:
             )
 
         if step == "execute":
-
-            return (
-                self.core.execute(
-                    goal
-                )
-            )
+            executor = self.core.registry.get("execute")
+            return executor.execute(goal, context.get("builder"))
 
         if step == "code":
+            from app.services.code.code_service import CodeService
 
-            return (
-                self.code_agent.execute(
-                    goal
-                )
-            )
+            generated = CodeService().generate(goal, context.get("execute", {}))
+            validation = self.validator.validate(generated.get("files", {}))
+            if not validation["valid"]:
+                return {"success": False, "state": "failed", "step": step, "code": "generated_code_invalid", "validation": validation}
+            generated["success"] = True
+            generated["validation"] = validation
+            return generated
+
+        if step == "search":
+            from app.services.search.unified_search_service import UnifiedSearchService
+
+            return {"success": True, "state": "completed", "results": UnifiedSearchService().search_all(goal)}
+
+        if step == "generate_image":
+            from app.services.image.image_generation_service import ImageGenerationService
+
+            return ImageGenerationService().generate(goal)
 
         if step == "save_project":
 
@@ -212,11 +218,4 @@ class WorkflowStepRouter:
                 validation
             }
 
-        return {
-
-            "step":
-            step,
-
-            "status":
-            "unknown"
-        }
+        return {"success": False, "state": "rejected", "step": step, "code": "unsupported_workflow_step", "message": f"Workflow step '{step}' is not implemented."}

@@ -1,6 +1,9 @@
 from pathlib import Path
 from datetime import datetime
-import json
+from app.services.persistence.atomic_json_store import AtomicJsonStore, PersistenceIntegrityError
+from app.services.sessions.session_manager_service import redact_sensitive_text, redact_sensitive_value
+
+MAX_HISTORY_RECORDS = 1000
 
 
 class CommandHistoryService:
@@ -15,29 +18,20 @@ class CommandHistoryService:
             exist_ok=True
         )
 
+        self.store = AtomicJsonStore(self.history_file)
         if not self.history_file.exists():
-            self._write([])
+            self.store.write([])
 
     def _read(self):
-        content = (
-            self.history_file
-            .read_text(encoding="utf-8")
-            .strip()
-        )
-
-        if not content:
-            return []
-
-        return json.loads(content)
+        records = self.store.read([])
+        if not isinstance(records, list):
+            raise PersistenceIntegrityError("Command history must be a list")
+        return records
 
     def _write(self, data):
-        self.history_file.write_text(
-            json.dumps(
-                data,
-                indent=2
-            ),
-            encoding="utf-8"
-        )
+        if not isinstance(data, list):
+            raise PersistenceIntegrityError("Command history must be a list")
+        self.store.write(data[-MAX_HISTORY_RECORDS:])
 
     def record(
         self,
@@ -50,23 +44,25 @@ class CommandHistoryService:
         workspace: str,
         metadata: dict,
     ):
-        history = self._read()
-
         record = {
             "request_id": request_id,
             "execution_id": execution_id,
             "session_id": session_id,
             "project_id": project_id,
-            "message": message,
+            "message": redact_sensitive_text(str(message))[:10000],
             "environment": environment,
             "workspace": workspace,
-            "metadata": metadata,
+            "metadata": redact_sensitive_value(metadata or {}),
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-        history.append(record)
-        self._write(history)
+        def append(history):
+            if not isinstance(history, list):
+                raise PersistenceIntegrityError("Command history must be a list")
+            history.append(record)
+            del history[:-MAX_HISTORY_RECORDS]
 
+        self.store.update(append, [])
         return record
 
     def get_history(self):

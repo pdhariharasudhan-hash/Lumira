@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from app.services.search.unified_search_service import (
     UnifiedSearchService
@@ -11,7 +11,7 @@ router = APIRouter()
     "/search"
 )
 def search(
-    q: str
+    q: str = Query(min_length=1, max_length=500)
 ):
 
     results = (

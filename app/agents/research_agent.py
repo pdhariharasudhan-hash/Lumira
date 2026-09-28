@@ -28,9 +28,10 @@ class ResearchAgent(
         self,
         task: str
     ):
-
         return {
-
-            "research":
-            f"Research completed for: {task}"
+            "success": False,
+            "status": "unavailable",
+            "code": "provider_unavailable",
+            "message": "Research requires a configured search or research provider.",
+            "task": task,
         }

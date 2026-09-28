@@ -6,7 +6,7 @@
   "globals":[],
 
   "routes":[
-    "@app.get(\"/expenses/sort\")\ndef sort_items():\n\n    return sorted(\n        expenses,\n        key=lambda x:x.get(\"amount\")\n    )"
+    "@app.get(\"/__COLLECTION__/sort\")\ndef sort_items(__AUTH_PARAMS__):\n\n    return sorted(\n        __VISIBLE_RECORDS__,\n        key=lambda x: str(x.get(\"amount\", \"\"))\n    )"
   ],
 
   "requirements":[]

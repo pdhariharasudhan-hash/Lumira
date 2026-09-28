@@ -4,9 +4,70 @@ Deterministic Generator capability service.
 """
 
 from typing import Any, Dict
+from typing import Protocol
+
+
+class VideoGenerationProvider(Protocol):
+    def generate(self, prompt: str) -> dict:
+        """Return rendered MP4/WebM bytes or a structured provider failure."""
 
 
 class GeneratorCapabilityService:
+
+    def __init__(self, video_provider: VideoGenerationProvider | None = None):
+        if video_provider is None:
+            from app.services.providers.provider_registry import ProviderRegistry
+
+            video_provider = ProviderRegistry.get("video_generation")
+        self.video_provider = video_provider
+
+    def document_generation(self, request):
+        if not isinstance(request, str) or not request.strip() or len(request) > 10_000:
+            return {"success": False, "status": "rejected", "code": "invalid_request", "message": "Document requests must contain 1 to 10000 characters."}
+        report = {
+            "type": "document_outline",
+            "request": request.strip(),
+            "status": "outline_only",
+            "sections": [
+                {"title": "Objective", "content": request.strip()},
+                {"title": "Scope", "content": "Needs user requirements."},
+                {"title": "Evidence", "content": "No external research provider is configured."},
+                {"title": "Decisions and next steps", "content": "Needs user or verified project data."},
+            ],
+        }
+        try:
+            artifact = self._save_artifact("reports", report, "document_generation")
+        except Exception:
+            return {"success": False, "status": "failed", "code": "artifact_storage_failed", "message": "The document outline could not be saved."}
+        return {"success": True, "status": "accept", "capability": "document_generation", "document": report, "artifact": artifact}
+
+    def video_generation(self, request):
+        if not isinstance(request, str) or not request.strip() or len(request) > 10_000:
+            return {"success": False, "status": "rejected", "code": "invalid_request", "message": "Video requests must contain 1 to 10000 characters."}
+        if self.video_provider is None:
+            return {"success": False, "status": "unavailable", "code": "provider_unavailable", "capability": "video_generation", "message": "No video generation provider is configured; no video artifact was created."}
+        try:
+            result = self.video_provider.generate(request.strip())
+        except Exception:
+            return {"success": False, "status": "failed", "code": "provider_error", "capability": "video_generation", "message": "The video provider failed; no video artifact was created."}
+        content = result.get("content") if isinstance(result, dict) else None
+        extension = str(result.get("extension", "")).lower() if isinstance(result, dict) else ""
+        valid = isinstance(content, bytes) and ((extension == "mp4" and len(content) >= 12 and content[4:8] == b"ftyp") or (extension == "webm" and content.startswith(b"\x1aE\xdf\xa3")))
+        if not isinstance(result, dict) or result.get("success") is not True or not valid:
+            return {"success": False, "status": "failed", "code": "invalid_provider_response", "capability": "video_generation", "message": "The video provider must return valid MP4 or WebM bytes."}
+        try:
+            from app.services.artifacts.artifact_manager_service import ArtifactManagerService
+
+            artifact = ArtifactManagerService().create_binary_artifact("video", content, "video_generation", extension)
+        except Exception:
+            return {"success": False, "status": "failed", "code": "artifact_storage_failed", "message": "The rendered video could not be stored."}
+        return {"success": True, "status": "accept", "capability": "video_generation", "artifact": artifact}
+
+    @staticmethod
+    def _save_artifact(artifact_type: str, value: dict, source: str) -> dict:
+        from app.services.artifacts.artifact_manager_service import ArtifactManagerService
+
+        return ArtifactManagerService().create_artifact(artifact_type, json.dumps(value, ensure_ascii=False), source, "json")
 
     def image_generation(self, request):
         if not isinstance(request, str):

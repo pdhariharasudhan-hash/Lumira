@@ -1,5 +1,5 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from app.services.sessions.session_manager_service import SessionManagerService
 
@@ -7,8 +7,8 @@ router = APIRouter()
 
 
 class SessionCreateRequest(BaseModel):
-    workspace_id: str = "default"
-    project_id: str | None = None
+    workspace_id: str = Field(default="default", min_length=1, max_length=100)
+    project_id: str | None = Field(default=None, max_length=100)
 
 
 def _http_error(error: Exception) -> HTTPException:
@@ -28,7 +28,7 @@ def create_session(request: SessionCreateRequest):
 
 
 @router.get("/sessions")
-def list_sessions(limit: int = 50):
+def list_sessions(limit: int = Query(default=50, ge=0, le=200)):
     try:
         return {"sessions": SessionManagerService().list_sessions(limit)}
     except Exception as exc:

@@ -5,6 +5,7 @@ from app.services.response.response_service import build_structured_response
 from app.services.brain.brain_request import BrainRequest
 from app.services.brain.brain_service import BrainService
 from app.services.sessions.session_manager_service import SessionManagerService
+from app.services.brain.public_brain_view import public_brain_state, public_brain_trace
 
 router = APIRouter()
 
@@ -21,8 +22,8 @@ def main_brain_flow(content: str, session_id: str | None = None, workspace_id: s
     return {
         "stage": "complete" if response.success else "failed",
         "status": "ready_for_build" if response.success else "failed",
-        "state": response.state.model_dump(mode="json") if response.state else None,
-        "trace": response.trace,
+        "state": public_brain_state(response.state),
+        "trace": public_brain_trace(response.trace),
         "error": response.error,
     }
 

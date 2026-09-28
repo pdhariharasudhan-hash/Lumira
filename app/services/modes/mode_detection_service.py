@@ -73,6 +73,12 @@ class ModeDetectionService:
             "scale",
         ],
 
+        "business": [
+            "launch",
+            "business plan",
+            "business idea",
+        ],
+
         "creator": [
             "write",
             "design",
@@ -156,6 +162,13 @@ class ModeDetectionService:
             "profit",
         ],
 
+        "business": [
+            "business",
+            "service",
+            "customers",
+            "launch",
+        ],
+
         "creator": [
             "content",
             "blog",
@@ -206,8 +219,16 @@ class ModeDetectionService:
     PHRASES: Dict[str, Dict[str, float]] = {
 
         "business plan": {
-            "growth": 1.25,
+            "business": 1.5,
         },
+
+        "plan for launching": {"business": 1.5},
+        "launch my business": {"business": 1.5},
+        "business idea": {"business": 1.5},
+        "prepare todays": {"operations": 1.5},
+        "todays development tasks": {"operations": 1.5},
+        "development tasks": {"operations": 1.5},
+        "develop tasks": {"operations": 1.5},
 
         "create a market strategy": {
             "growth": 1.25,
@@ -300,6 +321,8 @@ class ModeDetectionService:
             "increase",
             "scale",
         ],
+
+        "business": ["launch"],
 
         "creator": [
             "write",
@@ -1326,8 +1349,13 @@ class ModeDetectionService:
 
     PHRASE_TASK_MODES: Dict[str, List[str]] = {
         "business plan": [
-            "growth",
+            "business",
         ],
+        "plan for launching": ["business"],
+        "launch my business": ["business"],
+        "business idea": ["business"],
+        "development tasks": ["operations"],
+        "develop tasks": ["operations"],
         "create a market strategy": [
             "growth",
         ],

@@ -179,6 +179,13 @@ class CapabilityRouterService:
 
         payload = payload or {}
 
+        if not isinstance(payload, dict):
+            return {"success": False, "status": "reject", "error": {"code": "validation_error", "message": "Capability payload must be an object."}}
+        for input_key in ("idea", "request", "command", "query"):
+            value = payload.get(input_key)
+            if value is not None and (not isinstance(value, str) or len(value) > 10000):
+                return {"success": False, "status": "reject", "error": {"code": "validation_error", "message": f"{input_key} must be a string no longer than 10000 characters."}}
+
         if mode_state is not None:
             resolution = (
                 self.mode_capabilities.resolve(
@@ -205,6 +212,8 @@ class CapabilityRouterService:
             .strip()
             .lower()
         )
+        if "request" not in payload and isinstance(payload.get("content"), str):
+            payload["request"] = payload["content"]
 
         # --------------------------
         # FEATURE ACTIVATION
@@ -291,6 +300,16 @@ class CapabilityRouterService:
                 ),
                 mode_state
             )
+
+        if capability == "business_plan":
+            request = payload.get("request", payload.get("idea", payload.get("command", "")))
+            result = self.growth.business_plan(
+                request,
+                session_id=payload.get("session_id"),
+                project_id=payload.get("project_id"),
+                goal_id=payload.get("goal_id"),
+            )
+            return self._with_mode(result, mode_state)
 
         if capability == "market_analysis":
 
@@ -768,7 +787,10 @@ class CapabilityRouterService:
 
             return self._with_mode(
                 self.operations.business_operations(
-                    request
+                    request,
+                    session_id=payload.get("session_id"),
+                    project_id=payload.get("project_id"),
+                    goal_id=payload.get("goal_id"),
                 ),
                 mode_state
             )
@@ -788,7 +810,10 @@ class CapabilityRouterService:
 
             return self._with_mode(
                 self.operations.workflow_automation(
-                    request
+                    request,
+                    session_id=payload.get("session_id"),
+                    project_id=payload.get("project_id"),
+                    goal_id=payload.get("goal_id"),
                 ),
                 mode_state
             )
@@ -1182,6 +1207,14 @@ class CapabilityRouterService:
                 ),
                 mode_state
             )
+
+        if capability == "document_generation":
+            request = payload.get("request", payload.get("idea", payload.get("command", "")))
+            return self._with_mode(self.generator.document_generation(request), mode_state)
+
+        if capability == "video_generation":
+            request = payload.get("request", payload.get("idea", payload.get("command", "")))
+            return self._with_mode(self.generator.video_generation(request), mode_state)
 
         if capability == "schematic_generation":
 
@@ -1668,11 +1701,13 @@ class CapabilityRouterService:
                 self.code_validator.validate(files)
             )
 
+            validation_ok = isinstance(validation_result, dict) and validation_result.get("valid") is True
+
             return self._with_mode(
                 {
-                    "success": True,
+                    "success": validation_ok,
                     "capability": "debugging",
-                    "status": "accept",
+                    "status": "accept" if validation_ok else "reject",
                     "builder": builder_result,
                     "execution": execution_result,
                     "code": code_result,
@@ -1717,6 +1752,12 @@ class CapabilityRouterService:
             builder_result = self.builder.build(
                 idea
             )
+
+            if builder_result.get("status") != "accept":
+                return self._with_mode(
+                    {"success": False, "status": builder_result.get("status", "refine"), "builder": builder_result},
+                    mode_state,
+                )
 
             # ------------------------------------------------
             # 2. EXECUTE / PLAN IMPLEMENTATION
@@ -1900,11 +1941,26 @@ class CapabilityRouterService:
             # 7. PERSIST PROJECT + VERSION
             # ------------------------------------------------
 
-            saved_path = self.project_writer.save(
-                project_name,
-                files,
-                metadata,
-            )
+            try:
+                saved_path = self.project_writer.save(
+                    project_name,
+                    files,
+                    metadata,
+                )
+            except (OSError, ValueError) as error:
+                return self._with_mode(
+                    {
+                        "success": False,
+                        "capability": "project_generation",
+                        "status": "reject",
+                        "error": {"code": "project_save_failed", "message": str(error)},
+                        "builder": builder_result,
+                        "execution": execution_result,
+                        "code": code_result,
+                        "validation": validation_result,
+                    },
+                    mode_state,
+                )
 
             # ------------------------------------------------
             # 8. RETURN COMPLETE RESULT
@@ -2088,6 +2144,17 @@ class CapabilityRouterService:
             builder_result = self.builder.build(
                 idea
             )
+
+            if builder_result.get("status") != "accept":
+                return self._with_mode(
+                    {
+                        "success": False,
+                        "capability": "project_generation",
+                        "status": builder_result.get("status", "refine"),
+                        "builder": builder_result,
+                    },
+                    mode_state,
+                )
 
             if not isinstance(
                 builder_result,

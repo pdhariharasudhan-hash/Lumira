@@ -1,4 +1,4 @@
 {
   "feature": "search",
-  "route": "\n@app.get(\n    \"/expenses/search\"\n)\ndef search_items(\n    query: str\n):\n\n    return [\n        item\n        for item in expenses\n        if query.lower()\n        in str(item).lower()\n    ]\n"
+  "route": "\n@app.get(\n    \"/__COLLECTION__/search\"\n)\ndef search_items(\n    query: str = Query(min_length=1, max_length=500)__AUTH_PARAMS__\n):\n\n    return [\n        item\n        for item in __VISIBLE_RECORDS__\n        if query.lower() in str(item).lower()\n    ]\n"
 }

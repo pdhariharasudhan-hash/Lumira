@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.services.memory.memory_service import MemoryService, MemoryValidationError
@@ -7,29 +7,32 @@ router = APIRouter()
 
 
 class GoalCreateRequest(BaseModel):
-    title: str
-    objective: str = ""
-    priority: str = "normal"
-    project_id: str | None = None
-    parent_goal_id: str | None = None
-    blockers: list[str] = Field(default_factory=list)
+    title: str = Field(min_length=1, max_length=500)
+    objective: str = Field(default="", max_length=2000)
+    priority: str = Field(default="normal", max_length=30)
+    project_id: str | None = Field(default=None, max_length=100)
+    parent_goal_id: str | None = Field(default=None, max_length=128)
+    blockers: list[str] = Field(default_factory=list, max_length=20)
 
 
 class GoalUpdateRequest(BaseModel):
-    title: str | None = None
-    objective: str | None = None
-    priority: str | None = None
-    status: str | None = None
+    title: str | None = Field(default=None, max_length=500)
+    objective: str | None = Field(default=None, max_length=2000)
+    priority: str | None = Field(default=None, max_length=30)
+    status: str | None = Field(default=None, max_length=30)
     progress: float | None = None
-    milestones: list[dict] | None = None
-    dependencies: list[str] | None = None
-    blockers: list[str] | None = None
-    project_id: str | None = None
-    artifact_ids: list[str] | None = None
+    milestones: list[dict] | None = Field(default=None, max_length=50)
+    dependencies: list[str] | None = Field(default=None, max_length=50)
+    blockers: list[str] | None = Field(default=None, max_length=20)
+    project_id: str | None = Field(default=None, max_length=100)
+    artifact_ids: list[str] | None = Field(default=None, max_length=50)
 
 
 @router.get("/goals")
-def list_goals(project_id: str | None = None, status: str | None = None):
+def list_goals(
+    project_id: str | None = Query(default=None, max_length=100),
+    status: str | None = Query(default=None, max_length=30),
+):
     try:
         records = MemoryService().get_all().get("goals", [])
     except MemoryValidationError as exc:

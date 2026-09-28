@@ -24,12 +24,48 @@ class CommandParserService:
                 "message": "Command cannot be empty",
             }
 
+        if any(phrase in text for phrase in (
+            "business plan", "plan for launching", "plan to launch",
+            "launch my business", "launch my ", "launching my", "business idea",
+        )):
+            return {
+                "success": True,
+                "capability": "business_plan",
+                "payload": {"request": command},
+            }
+
+        if text.startswith(("generate", "create", "make")) and any(term in text for term in ("video", "clip", "animation")):
+            return {"success": True, "capability": "video_generation", "payload": {"request": command}}
+
+        if text.startswith(("generate", "create", "write", "draft")) and any(term in text for term in ("report", "document", "pdf")):
+            return {"success": True, "capability": "document_generation", "payload": {"request": command}}
+
+        if "today" in text and any(term in text for term in ("tasks", "work", "operations")):
+            return {
+                "success": True,
+                "capability": "business_operations",
+                "payload": {"command": command},
+            }
+
+        if text.startswith(("generate", "create", "design", "make")) and any(
+            term in text for term in ("diagram", "flowchart", "blueprint", "schematic", "architecture diagram", "ui design", "dashboard")
+        ):
+            capability = (
+                "blueprint_generation" if "blueprint" in text else
+                "architecture_diagrams" if "architecture" in text else
+                "flowcharts" if "flowchart" in text else
+                "schematic_generation" if "schematic" in text else
+                "diagram_generation" if "diagram" in text else
+                "ui_design"
+            )
+            return {"success": True, "capability": capability, "payload": {"request": command}}
+
         if "enter " in text and " mode" in text:
             requested_mode = text.split("enter ", 1)[1].split(" mode", 1)[0]
             requested_mode = requested_mode.strip(" .!?").replace(" ", "_")
             supported_modes = {
                 "personal", "builder", "growth", "creator",
-                "generator", "research", "assistant", "operations",
+                "generator", "research", "assistant", "operations", "business",
             }
             if requested_mode in supported_modes:
                 return {

@@ -1,36 +1,36 @@
 from typing import Any, Dict, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # -------------------------
 # GENERIC INPUT (used by builder, validate)
 # -------------------------
 class GenericInput(BaseModel):
-    input: str
-    session_id: Optional[str] = None
-    workspace_id: str = "default"
-    project_id: Optional[str] = None
+    input: str = Field(max_length=10000)
+    session_id: Optional[str] = Field(default=None, max_length=128)
+    workspace_id: str = Field(default="default", min_length=1, max_length=100)
+    project_id: Optional[str] = Field(default=None, max_length=100)
 
 
 # -------------------------
 # VALIDATE
 # -------------------------
 class ValidateRequest(BaseModel):
-    input: str
+    input: str = Field(max_length=10000)
 
 
 # -------------------------
 # BUILDER
 # -------------------------
 class BuilderRequest(BaseModel):
-    input: str
+    input: str = Field(max_length=10000)
 
 
 # -------------------------
 # EXECUTE
 # -------------------------
 class ExecuteRequest(BaseModel):
-    input: str
+    input: str = Field(max_length=10000)
     builder: Dict[str, Any]
 
 
@@ -38,7 +38,7 @@ class ExecuteRequest(BaseModel):
 # CODE
 # -------------------------
 class CodeRequest(BaseModel):
-    input: str
+    input: str = Field(max_length=10000)
     execute: Dict[str, Any]
 
 

@@ -30,6 +30,8 @@ from app.services.lifecycle.project_lifecycle_service import (
 from app.services.sessions.session_manager_service import SessionManagerService
 from app.services.sessions.reference_resolution_service import ReferenceResolutionService
 from app.services.memory.memory_service import MemoryService, MemoryValidationError
+from app.services.brain.public_brain_view import public_brain_state, public_brain_trace
+from app.services.sessions.session_manager_service import redact_sensitive_text
 
 router = APIRouter()
 
@@ -108,13 +110,15 @@ def command(
         return {
             "success": False,
             "brain": {
-                "state": brain_response.state.model_dump(mode="json") if brain_response.state else None,
-                "trace": brain_response.trace,
-                "error": brain_response.error,
+                "state": public_brain_state(brain_response.state),
+                "trace": public_brain_trace(brain_response.trace),
+                "error": redact_sensitive_text(brain_response.error) if brain_response.error else None,
             },
             "context": session,
             "session_id": session["session_id"],
         }
+
+    session = sessions.get_session(session["session_id"])
 
     intent = IntentClassifierService().classify(request.input)
     parsed = CommandParserService().parse(request.input)
@@ -125,8 +129,8 @@ def command(
             "intent": intent,
             "parsed": parsed,
             "brain": {
-                "state": brain_response.state.model_dump(mode="json"),
-                "trace": brain_response.trace,
+                "state": public_brain_state(brain_response.state),
+                "trace": public_brain_trace(brain_response.trace),
             },
             "context": session,
             "session_id": session["session_id"],
@@ -194,9 +198,28 @@ def command(
     else:
         result = CapabilityRouterService().execute(
             capability,
-            parsed["payload"],
+            {
+                **parsed["payload"],
+                "session_id": session["session_id"],
+                "project_id": session.get("active_project"),
+                "goal_id": session.get("goal_id"),
+            },
             mode_state=mode_state,
         )
+
+    if isinstance(result, dict) and result.get("success") and result.get("goal_id"):
+        session = sessions.update_context(
+            session["session_id"],
+            goal_id=result["goal_id"],
+            current_goal=(result.get("goal") or {}).get("title") or session.get("current_goal"),
+        )
+    if isinstance(result, dict) and result.get("success"):
+        workflow = result.get("workflow")
+        artifact = result.get("artifact")
+        if isinstance(workflow, dict) and workflow.get("workflow_id"):
+            sessions.link_record(session["session_id"], "workflow", workflow["workflow_id"])
+        if isinstance(artifact, dict) and artifact.get("artifact_id"):
+            sessions.link_record(session["session_id"], "artifact", artifact["artifact_id"])
 
     if isinstance(result, dict) and result.get("success") and result.get("project_name"):
         session = sessions.update_context(
@@ -246,17 +269,24 @@ def command(
     sessions.append_message(
         session["session_id"],
         "assistant",
-        f"{capability} {'completed' if isinstance(result, dict) and result.get('success') else 'did not complete'}.",
+        (
+            f"{capability} plan created."
+            if isinstance(result, dict) and result.get("success") and result.get("status") == "planned"
+            else f"{capability} {'completed' if isinstance(result, dict) and result.get('success') else 'did not complete'}."
+        ),
         metadata={"capability": capability, "success": bool(isinstance(result, dict) and result.get("success"))},
     )
 
     context = {
         "current_goal": session.get("current_goal"),
+        "goal_id": session.get("goal_id"),
         "active_project": session.get("active_project"),
         "active_version": session.get("active_version"),
         "current_stage": capability,
         "last_command": session.get("last_command"),
         "active_mode": session.get("active_mode"),
+        "recent_artifact_ids": session.get("recent_artifact_ids", []),
+        "recent_workflow_ids": session.get("recent_workflow_ids", []),
     }
 
     return {
@@ -272,8 +302,8 @@ def command(
         parsed,
 
         "brain": {
-            "state": brain_response.state.model_dump(mode="json"),
-            "trace": brain_response.trace,
+            "state": public_brain_state(brain_response.state),
+            "trace": public_brain_trace(brain_response.trace),
         },
 
         "result":

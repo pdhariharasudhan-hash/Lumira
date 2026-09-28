@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Dict, List, Optional
 import json
+from app.services.projects.project_paths import resolve_project_path
 
 
 class ProjectDiscoveryService:
@@ -23,27 +24,31 @@ class ProjectDiscoveryService:
 
         for project_folder in self.generated_path.iterdir():
 
-            if not project_folder.is_dir():
+            safe_project = resolve_project_path(project_folder.name)
+            if safe_project is None or safe_project != project_folder.resolve() or not project_folder.is_dir():
 
                 continue
 
             versions = []
 
-            for version_folder in sorted(
-                project_folder.iterdir()
-            ):
+            version_folders = []
+            for version_folder in project_folder.iterdir():
+                safe_version = resolve_project_path(project_folder.name, version_folder.name)
+                if safe_version is not None and safe_version == version_folder.resolve() and version_folder.is_dir():
+                    version_folders.append(version_folder)
+            version_folders.sort(key=lambda folder: int(folder.name[1:]))
 
-                if not version_folder.is_dir():
-
-                    continue
+            for version_folder in version_folders:
 
                 metadata_file = (
                     version_folder
                     / "metadata.json"
                 )
 
-                if not metadata_file.exists():
+                if not metadata_file.is_file() or metadata_file.stat().st_size > 100_000:
 
+                    continue
+                if resolve_project_path(project_folder.name, version_folder.name, "metadata.json") != metadata_file.resolve():
                     continue
 
                 try:
@@ -58,9 +63,8 @@ class ProjectDiscoveryService:
                             f
                         )
 
-                    versions.append(
-                        metadata
-                    )
+                    if isinstance(metadata, dict):
+                        versions.append(metadata)
 
                 except Exception:
 
@@ -106,32 +110,32 @@ class ProjectDiscoveryService:
         project_name: str
     ) -> List[Dict]:
 
-        project_folder = (
-            self.generated_path
-            / project_name
-        )
+        project_folder = resolve_project_path(project_name)
 
-        if not project_folder.exists():
+        if project_folder is None or not project_folder.is_dir():
 
             return []
 
         versions = []
 
-        for version_folder in sorted(
-            project_folder.iterdir()
-        ):
+        version_folders = []
+        for version_folder in project_folder.iterdir():
+            safe_version = resolve_project_path(project_name, version_folder.name)
+            if safe_version is not None and safe_version == version_folder.resolve() and version_folder.is_dir():
+                version_folders.append(version_folder)
+        version_folders.sort(key=lambda folder: int(folder.name[1:]))
 
-            if not version_folder.is_dir():
-
-                continue
+        for version_folder in version_folders:
 
             metadata_file = (
                 version_folder
                 / "metadata.json"
             )
 
-            if not metadata_file.exists():
+            if not metadata_file.is_file() or metadata_file.stat().st_size > 100_000:
 
+                continue
+            if resolve_project_path(project_name, version_folder.name, "metadata.json") != metadata_file.resolve():
                 continue
 
             try:
@@ -146,9 +150,8 @@ class ProjectDiscoveryService:
                         f
                     )
 
-                versions.append(
-                    metadata
-                )
+                if isinstance(metadata, dict):
+                    versions.append(metadata)
 
             except Exception:
 

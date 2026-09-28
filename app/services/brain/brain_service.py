@@ -344,7 +344,7 @@ class BrainService:
 
         if not validation["valid"]:
 
-            error = str(validation)
+            error = redact_sensitive_text(str(validation))
 
             self._record_pipeline(
                 state=state,
@@ -381,9 +381,8 @@ class BrainService:
 
         except Exception as exc:
 
-            error = (
-                f"{type(exc).__name__}: {exc}"
-            )
+            error = redact_sensitive_text(f"{type(exc).__name__}: {exc}")
+            trace = redact_sensitive_value(trace)
 
             self._record_pipeline(
                 state=state,
@@ -413,9 +412,7 @@ class BrainService:
 
         if not final_validation["valid"]:
 
-            error = str(
-                final_validation
-            )
+            error = redact_sensitive_text(str(final_validation))
 
             self._record_pipeline(
                 state=final_state,

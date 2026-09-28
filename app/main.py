@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -86,6 +87,14 @@ from app.routes.goals import (
     router as goals_router
 )
 
+from app.routes.agents import router as agents_router
+from app.routes.workflows import router as workflows_router
+from app.routes.auth import router as auth_router
+from app.routes.devices import router as devices_router
+import ipaddress
+
+from app.services.auth.local_auth_service import LocalAuthService
+
 
 app = FastAPI(
     title="Personal AI Core",
@@ -93,6 +102,30 @@ app = FastAPI(
     description=
     "Simple FastAPI backend MVP for Personal AI Core"
 )
+
+
+@app.middleware("http")
+async def local_auth_boundary(request: Request, call_next):
+    if request.url.path == "/health":
+        return await call_next(request)
+    client_host = request.client.host if request.client else ""
+    try:
+        loopback = ipaddress.ip_address(client_host).is_loopback
+    except ValueError:
+        loopback = client_host in {"testclient", "localhost"}
+    authorization = request.headers.get("authorization", "")
+    principal = None
+    if authorization:
+        scheme, _, token = authorization.partition(" ")
+        if scheme.lower() != "bearer" or not token:
+            return JSONResponse(status_code=401, content={"detail": "Valid Bearer authentication is required"}, headers={"WWW-Authenticate": "Bearer"})
+        principal = LocalAuthService().verify(token)
+        if principal is None:
+            return JSONResponse(status_code=401, content={"detail": "Valid Bearer authentication is required"}, headers={"WWW-Authenticate": "Bearer"})
+    elif not loopback:
+        return JSONResponse(status_code=401, content={"detail": "Valid Bearer authentication is required"}, headers={"WWW-Authenticate": "Bearer"})
+    request.state.principal = principal or {"subject": "local", "owner_id": "local", "authentication": "loopback"}
+    return await call_next(request)
 
 
 app.mount(
@@ -206,6 +239,26 @@ app.include_router(
 app.include_router(
     goals_router,
     tags=["Goals"]
+)
+
+app.include_router(
+    agents_router,
+    tags=["Agents"]
+)
+
+app.include_router(
+    workflows_router,
+    tags=["Workflows"]
+)
+
+app.include_router(
+    auth_router,
+    tags=["Authentication"]
+)
+
+app.include_router(
+    devices_router,
+    tags=["Device Gateway"]
 )
 
 

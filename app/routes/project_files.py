@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from pathlib import Path
+from app.services.projects.project_paths import resolve_project_path
 
 router = APIRouter()
 
@@ -12,19 +13,9 @@ def get_project_files(
     version: str
 ):
 
-    folder = (
+    folder = resolve_project_path(project, version)
 
-        Path(
-            "generated"
-        )
-
-        / project
-
-        / version
-    )
-
-
-    if not folder.exists():
+    if folder is None or not folder.is_dir():
 
         return {
 
@@ -41,7 +32,7 @@ def get_project_files(
 
     for file in folder.iterdir():
 
-        if file.is_file():
+        if file.is_file() and folder.resolve() in file.resolve().parents:
 
             files.append(
 

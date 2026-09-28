@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from pathlib import Path
 import difflib
+from app.services.projects.project_paths import resolve_project_path
 
 router = APIRouter()
 
@@ -14,78 +14,17 @@ def compare_versions(
     new: str
 ):
 
-    generated = Path(
-        "generated"
-    )
+    old_file = resolve_project_path(project, old, "main.py")
+    new_file = resolve_project_path(project, new, "main.py")
 
+    if old_file and new_file and old_file.is_file() and new_file.is_file():
+        if old_file.stat().st_size > 2_000_000 or new_file.stat().st_size > 2_000_000:
+            return {"success": False, "message": "Project version file exceeds the comparison limit"}
 
-    for date_folder in generated.iterdir():
-
-        old_file = (
-            date_folder
-            / project
-            / old
-            / "main.py"
-        )
-
-        new_file = (
-            date_folder
-            / project
-            / new
-            / "main.py"
-        )
-
-
-        if (
-            old_file.exists()
-            and
-            new_file.exists()
-        ):
-
-            with open(
-                old_file,
-                "r",
-                encoding="utf-8"
-            ) as f:
-
-                old_lines = (
-                    f.readlines()
-                )
-
-
-            with open(
-                new_file,
-                "r",
-                encoding="utf-8"
-            ) as f:
-
-                new_lines = (
-                    f.readlines()
-                )
-
-
-            diff = list(
-
-                difflib.unified_diff(
-                    old_lines,
-                    new_lines,
-                    fromfile=old,
-                    tofile=new
-                )
-            )
-
-
-            return {
-
-                "success":
-                True,
-
-                "project":
-                project,
-
-                "comparison":
-                diff
-            }
+        old_lines = old_file.read_text(encoding="utf-8").splitlines(keepends=True)
+        new_lines = new_file.read_text(encoding="utf-8").splitlines(keepends=True)
+        diff = list(difflib.unified_diff(old_lines, new_lines, fromfile=old, tofile=new))
+        return {"success": True, "project": project, "comparison": diff}
 
 
     return {

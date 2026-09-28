@@ -136,6 +136,20 @@ class ModeRegistryService:
             ),
 
             ModeDefinition(
+                id="business",
+                name="Business Mode",
+                description="Planning and tracking business objectives, workflows, and evidence-led launch work.",
+                priority_capabilities=[
+                    "business_plan", "growth_strategy", "market_analysis",
+                    "business_operations", "workflow_automation", "planning",
+                    "goals", "search",
+                ],
+                restricted_capabilities=[],
+                context_rules={"primary_context": "business_objective"},
+                activation_rules=["business plan", "launch a business", "business idea"],
+            ),
+
+            ModeDefinition(
                 id="creator",
                 name="Creator Mode",
                 description=(

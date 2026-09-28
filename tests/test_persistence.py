@@ -8,6 +8,8 @@ from app.services.sessions.session_manager_service import (
     MAX_RECENT_MESSAGES,
     SessionManagerService,
 )
+from app.services.history.command_history_service import CommandHistoryService
+from app.services.history.pipeline_history_service import PipelineHistoryService
 
 
 def test_session_create_reload_resume_and_bounded_messages(tmp_path):
@@ -35,11 +37,17 @@ def test_session_redacts_credentials_and_rejects_unknown_schema(tmp_path):
         session["session_id"],
         "user",
         "Use api_key=top secret phrase with Bearer abc.def.ghi",
+        metadata={"access_token": "do-not-store", "nested": {"note": "password=also-secret"}},
     )
-    content = manager.get_session(session["session_id"])["recent_messages"][0]["content"]
+    message = manager.get_session(session["session_id"])["recent_messages"][0]
+    content = message["content"]
     assert "topsecret" not in content
     assert "secret phrase" not in content
     assert "abc.def.ghi" not in content
+    assert message["metadata"] == {
+        "access_token": "[REDACTED]",
+        "nested": {"note": "password=[REDACTED]"},
+    }
 
     path.write_text(json.dumps({"schema_version": 88, "sessions": []}), encoding="utf-8")
     with pytest.raises(PersistenceIntegrityError, match="Unsupported session schema"):
@@ -122,6 +130,30 @@ def test_corrupt_memory_is_preserved_and_reported(tmp_path):
     assert path.read_text(encoding="utf-8") == "{not json"
 
 
+def test_durable_histories_redact_credentials_and_use_atomic_updates(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    commands = CommandHistoryService()
+    commands.record(
+        "request-1", "execution-1", "session-1", "project-1",
+        "Set password=command-secret", "local", "workspace", {"api_key": "metadata-secret"},
+    )
+    pipeline = PipelineHistoryService()
+    pipeline.record(
+        "execution-1", "request-1", "session-1", "project-1",
+        "Use Bearer token-secret", False,
+        [{"module": "reasoning", "error": "secret=trace-secret"}],
+        error="RuntimeError: password=error-secret",
+    )
+
+    command_text = (tmp_path / "memory" / "command_history.json").read_text(encoding="utf-8")
+    pipeline_text = (tmp_path / "memory" / "pipeline_history.json").read_text(encoding="utf-8")
+    for secret in ("command-secret", "metadata-secret", "token-secret", "trace-secret", "error-secret"):
+        assert secret not in command_text
+        assert secret not in pipeline_text
+    assert len(commands.get_history()) == 1
+    assert len(pipeline.get_history()) == 1
+
+
 def test_memory_rejects_unknown_schema_without_reinterpretation(tmp_path):
     path = tmp_path / "project_memory.json"
     path.write_text(json.dumps({"schema_version": 45, "goals": []}), encoding="utf-8")
@@ -161,6 +193,8 @@ def test_generic_memory_writes_redact_or_reject_credentials(tmp_path):
     }
     with pytest.raises(MemoryValidationError, match="credential-like"):
         memory.update("access_token", "do-not-store")
+    with pytest.raises(MemoryValidationError, match="250000-character limit"):
+        memory.update("oversized", "x" * 250001)
 
 
 def test_cognitive_memory_rejects_corrupt_and_unknown_schema(tmp_path):

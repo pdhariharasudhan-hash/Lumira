@@ -88,6 +88,11 @@ class MemoryService:
                 "memory_focus": "strategy",
             },
 
+            "business": {
+                "mode": "business",
+                "memory_focus": "business_objectives_and_operations",
+            },
+
             "operations": {
                 "mode": "operations",
                 "memory_focus": "operations",
@@ -401,6 +406,7 @@ class MemoryService:
         now = datetime.now(UTC).isoformat()
         return {
             f"{kind}_id": str(uuid4()),
+            "owner_id": "local",
             **fields,
             "created_at": now,
             "updated_at": now,
@@ -553,8 +559,16 @@ class MemoryService:
         value: Any,
         mode: ModeState | None = None,
     ) -> Dict[str, Any]:
+        if not isinstance(key, str) or not key.strip() or len(key) > 200:
+            raise MemoryValidationError("memory key must contain 1 to 200 characters")
         if self._sensitive_key_pattern.search(key):
             raise MemoryValidationError("credential-like memory keys are not allowed")
+        try:
+            value_size = len(json.dumps(value, ensure_ascii=False))
+        except (TypeError, ValueError, RecursionError) as exc:
+            raise MemoryValidationError("memory values must be JSON-compatible") from exc
+        if value_size > 250_000:
+            raise MemoryValidationError("memory value exceeds the 250000-character limit")
         validated_value = self._redact_nested(
             self._validate_memory_update(key, value)
         )

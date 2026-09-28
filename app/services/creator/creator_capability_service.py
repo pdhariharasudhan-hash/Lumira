@@ -50,11 +50,40 @@ class CreatorCapabilityService:
 
     @staticmethod
     def _result(capability, request, objective, steps):
-        return {
+        normalized = request.strip() if isinstance(request, str) else ""
+        if not normalized or len(normalized) > 10_000:
+            return {"success": False, "status": "rejected", "code": "invalid_request", "capability": capability}
+        output = {
             "success": True,
             "capability": capability,
-            "request": request.strip() if isinstance(request, str) else "",
+            "request": normalized,
             "objective": objective,
             "steps": list(steps),
             "status": "accept",
         }
+        try:
+            import json
+            from app.services.artifacts.artifact_manager_service import ArtifactManagerService
+
+            output["artifact"] = ArtifactManagerService().create_artifact(
+                "exports",
+                json.dumps({
+                    "type": "creator_plan",
+                    "capability": capability,
+                    "request": normalized,
+                    "objective": objective,
+                    "steps": list(steps),
+                    "status": "plan_only_external_content_generation_unavailable",
+                }, ensure_ascii=False),
+                capability,
+                "json",
+            )
+        except Exception:
+            return {
+                "success": False,
+                "status": "failed",
+                "code": "artifact_storage_failed",
+                "capability": capability,
+                "message": "Creator plan could not be stored as an artifact.",
+            }
+        return output

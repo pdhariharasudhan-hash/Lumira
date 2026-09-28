@@ -1,5 +1,7 @@
 from fastapi import APIRouter
 from pathlib import Path
+from fastapi import HTTPException
+from app.services.projects.project_paths import resolve_project_path
 
 
 router = APIRouter()
@@ -14,21 +16,9 @@ def get_file_content(
     file_name: str
 ):
 
-    file_path = (
+    file_path = resolve_project_path(project, version, file_name)
 
-        Path(
-            "generated"
-        )
-
-        / project
-
-        / version
-
-        / file_name
-    )
-
-
-    if not file_path.exists():
+    if file_path is None or not file_path.is_file():
 
         return {
 
@@ -39,6 +29,9 @@ def get_file_content(
             "File not found"
         }
 
+
+    if file_path.stat().st_size > 2_000_000:
+        raise HTTPException(status_code=413, detail="Project file exceeds the read limit")
 
     try:
 

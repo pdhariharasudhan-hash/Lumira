@@ -1,152 +1,122 @@
-﻿"""
-Deterministic Research capability service.
-"""
+from typing import Any, Protocol
 
-from typing import Any, Dict
+from app.services.search.unified_search_service import UnifiedSearchService
+
+
+class ResearchProvider(Protocol):
+    def research(self, request: str, research_type: str) -> dict[str, Any]:
+        """Return findings with supporting source references."""
 
 
 class ResearchCapabilityService:
+    """Provider-backed research plus retrieval from Lumira's local index."""
 
-    def web_research(self, request: str) -> Dict[str, Any]:
-        return self._result(
-            "web_research",
-            request,
-            "web research",
-            [
-                "define research question",
-                "identify required sources",
-                "collect relevant evidence",
-                "compare source information",
-                "record source context",
-                "identify uncertainty",
-                "produce research summary",
-            ],
+    def __init__(self, provider: ResearchProvider | None = None):
+        if provider is None:
+            from app.services.providers.provider_registry import ProviderRegistry
+
+            provider = ProviderRegistry.get("research")
+        self.provider = provider
+        self.search = UnifiedSearchService()
+
+    def _provider_research(self, request: str, research_type: str) -> dict[str, Any]:
+        if self.provider is None:
+            return {
+                "success": False,
+                "status": "unavailable",
+                "code": "provider_unavailable",
+                "research_type": research_type,
+                "message": "No external research provider is configured; no findings were generated.",
+            }
+        try:
+            response = self.provider.research(request, research_type)
+        except Exception:
+            return {
+                "success": False,
+                "status": "failed",
+                "code": "provider_error",
+                "research_type": research_type,
+                "message": "The research provider failed; no findings were accepted.",
+            }
+        sources = response.get("sources") if isinstance(response, dict) else None
+        findings = response.get("findings") if isinstance(response, dict) else None
+        if isinstance(findings, str):
+            valid_findings = bool(findings.strip()) and len(findings) <= 100_000
+        elif isinstance(findings, list):
+            valid_findings = (
+                1 <= len(findings) <= 100
+                and all(isinstance(item, str) and item.strip() and len(item) <= 10_000 for item in findings)
+                and sum(len(item) for item in findings) <= 100_000
+            )
+        else:
+            valid_findings = False
+        valid_sources = (
+            isinstance(sources, list)
+            and 1 <= len(sources) <= 100
+            and all(
+                isinstance(source, dict)
+                and isinstance(source.get("url") or source.get("source"), str)
+                and bool((source.get("url") or source.get("source")).strip())
+                and len(source.get("url") or source.get("source")) <= 2_048
+                for source in sources
+            )
         )
-
-    def document_research(self, request: str) -> Dict[str, Any]:
-        return self._result(
-            "document_research",
-            request,
-            "document research",
-            [
-                "identify relevant documents",
-                "extract relevant information",
-                "organize evidence",
-                "compare document findings",
-                "identify gaps",
-                "produce structured summary",
-            ],
-        )
-
-    def knowledge_retrieval(self, request: str) -> Dict[str, Any]:
-        return self._result(
-            "knowledge_retrieval",
-            request,
-            "knowledge retrieval",
-            [
-                "define information requirement",
-                "search available knowledge",
-                "retrieve relevant information",
-                "validate relevance",
-                "organize findings",
-            ],
-        )
-
-    def technical_research(self, request: str) -> Dict[str, Any]:
-        return self._result(
-            "technical_research",
-            request,
-            "technical research",
-            [
-                "define technical question",
-                "identify technical requirements",
-                "collect technical evidence",
-                "compare implementation options",
-                "identify constraints",
-                "document findings",
-            ],
-        )
-
-    def market_research(self, request: str) -> Dict[str, Any]:
-        return self._result(
-            "market_research",
-            request,
-            "market research",
-            [
-                "define market question",
-                "identify target market",
-                "identify required evidence",
-                "collect market information",
-                "compare findings",
-                "record uncertainty",
-            ],
-        )
-
-    def comparison(self, request: str) -> Dict[str, Any]:
-        return self._result(
-            "comparison",
-            request,
-            "comparison",
-            [
-                "define comparison criteria",
-                "identify alternatives",
-                "collect comparable attributes",
-                "compare alternatives",
-                "identify tradeoffs",
-                "summarize differences",
-            ],
-        )
-
-    def evidence_gathering(self, request: str) -> Dict[str, Any]:
-        return self._result(
-            "evidence_gathering",
-            request,
-            "evidence gathering",
-            [
-                "define claim or question",
-                "identify evidence requirements",
-                "collect evidence",
-                "record source context",
-                "check consistency",
-                "identify unsupported assumptions",
-            ],
-        )
-
-    def research_summaries(self, request: str) -> Dict[str, Any]:
-        return self._result(
-            "research_summaries",
-            request,
-            "research summary",
-            [
-                "identify research scope",
-                "extract major findings",
-                "separate facts from assumptions",
-                "identify uncertainty",
-                "produce concise summary",
-            ],
-        )
-
-    def knowledge_extraction(self, request: str) -> Dict[str, Any]:
-        return self._result(
-            "knowledge_extraction",
-            request,
-            "knowledge extraction",
-            [
-                "identify source",
-                "extract relevant information",
-                "structure extracted knowledge",
-                "identify missing information",
-                "store reusable findings",
-            ],
-        )
-
-    @staticmethod
-    def _result(capability, request, objective, steps):
+        if (
+            not isinstance(response, dict)
+            or response.get("success") is not True
+            or not valid_findings
+            or not valid_sources
+        ):
+            return {
+                "success": False,
+                "status": "failed",
+                "code": "invalid_provider_response",
+                "research_type": research_type,
+                "message": "The research provider must return bounded findings with source references.",
+            }
         return {
             "success": True,
-            "capability": capability,
-            "request": request.strip() if isinstance(request, str) else "",
-            "objective": objective,
-            "steps": list(steps),
-            "status": "accept",
+            "status": "completed",
+            "research_type": research_type,
+            "findings": findings,
+            "sources": sources,
         }
+
+    def _local_retrieval(self, request: str, research_type: str) -> dict[str, Any]:
+        results = self.search.search_all(request)
+        return {
+            "success": True,
+            "status": "completed",
+            "research_type": research_type,
+            "request": request,
+            "source": "lumira_local_search",
+            "results": results,
+            "result_count": sum(len(items) for items in results.values() if isinstance(items, list)),
+        }
+
+    def web_research(self, request: str) -> dict[str, Any]:
+        return self._provider_research(request, "web_research")
+
+    def document_research(self, request: str) -> dict[str, Any]:
+        return self._local_retrieval(request, "document_research")
+
+    def knowledge_retrieval(self, request: str) -> dict[str, Any]:
+        return self._local_retrieval(request, "knowledge_retrieval")
+
+    def technical_research(self, request: str) -> dict[str, Any]:
+        return self._provider_research(request, "technical_research")
+
+    def market_research(self, request: str) -> dict[str, Any]:
+        return self._provider_research(request, "market_research")
+
+    def comparison(self, request: str) -> dict[str, Any]:
+        return self._provider_research(request, "comparison")
+
+    def evidence_gathering(self, request: str) -> dict[str, Any]:
+        return self._provider_research(request, "evidence_gathering")
+
+    def research_summaries(self, request: str) -> dict[str, Any]:
+        return self._provider_research(request, "research_summaries")
+
+    def knowledge_extraction(self, request: str) -> dict[str, Any]:
+        return self._provider_research(request, "knowledge_extraction")

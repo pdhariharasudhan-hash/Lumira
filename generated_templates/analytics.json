@@ -1,4 +1,4 @@
 {
   "feature": "analytics",
-  "route": "\n@app.get(\n    \"/analytics\"\n)\ndef analytics():\n\n    return {\n        \"total_expenses\":len(expenses),\n        \"categories\":len(set(item[\"category\"] for item in expenses))\n    }\n"
+  "route": "\n@app.get(\n    \"/__COLLECTION__/analytics\"\n)\ndef analytics(__AUTH_PARAMS__):\n\n    records = __VISIBLE_RECORDS__\n    return {\n        \"total_records\": len(records),\n        \"categories\": len({item.get(\"category\") for item in records if item.get(\"category\") is not None})\n    }\n"
 }
