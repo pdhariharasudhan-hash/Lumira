@@ -963,7 +963,11 @@ def smart_cleanup_memory() -> None:
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print("Usage: python ai.py <run|continue|reset|abort|cleanup|learn|memory>")
+
+        print(
+            "Usage: python ai.py <run|develop|continue|reset|abort|cleanup|learn|memory>"
+        )
+
         return
 
     cmd = sys.argv[1].strip().lower()
@@ -973,7 +977,42 @@ def main() -> None:
         if not text:
             print('Usage: python ai.py run "<text>"')
             return
-        run_pipeline(text)
+
+        run_pipeline(
+            text
+        )
+
+    elif cmd == "develop":
+
+        text = " ".join(
+            sys.argv[2:]
+        ).strip()
+
+        if not text:
+
+            print(
+                'Usage: python ai.py develop "<goal>"'
+            )
+
+            return
+
+        from app.services.autonomous_development.autonomous_development_service import (
+            AutonomousDevelopmentService,
+        )
+
+        service = AutonomousDevelopmentService()
+
+        result = service.execute(
+            text
+        )
+
+        print(
+            json.dumps(
+                result,
+                indent=2,
+                default=str
+            )
+        )
 
     elif cmd == "continue":
         continue_pipeline()
