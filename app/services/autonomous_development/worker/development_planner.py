@@ -1,5 +1,6 @@
 ﻿from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from app.agents.planner_agent import PlannerAgent
@@ -15,6 +16,7 @@ class DevelopmentPlanner:
     """
 
     MAX_STEPS = 8
+    MAX_WORK_ITEMS = 5
 
     DEVELOPMENT_STEPS = {
         "inspect",
@@ -84,8 +86,111 @@ class DevelopmentPlanner:
             "success": True,
             "goal": goal.strip(),
             "steps": normalized,
+            "objective": goal.strip(),
+            "relevant_files": self._relevant_files(goal, workspace),
+            "acceptance_criteria": self._acceptance_criteria(goal),
+            "dependencies": [],
+            "validation_command": ["python", "-m", "pytest", "-q"],
+            "bounded_scope": {
+                "max_files": 20,
+                "max_iterations": 5,
+            },
+            "work_items": self._decompose_goal(goal, workspace),
             "planner_result": result,
         }
+
+    def _decompose_goal(
+        self,
+        goal: str,
+        workspace: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        normalized = " ".join(goal.casefold().split())
+        if not any(
+            phrase in normalized
+            for phrase in (
+                "complete all remaining",
+                "complete lumira",
+                "finish lumira",
+                "all remaining lumira",
+            )
+        ):
+            return [
+                {
+                    "id": "goal-1",
+                    "objective": goal.strip(),
+                    "relevant_files": self._relevant_files(goal, workspace),
+                    "dependencies": [],
+                    "acceptance_criteria": self._acceptance_criteria(goal),
+                    "validation_command": ["python", "-m", "pytest", "-q"],
+                    "bounded_scope": {"max_files": 20, "max_iterations": 5},
+                    "status": "planned",
+                }
+            ]
+
+        findings = workspace.get("audit_findings", [])
+        work_items: list[dict[str, Any]] = []
+        for finding in findings:
+            if not isinstance(finding, dict):
+                continue
+            path = finding.get("path")
+            if not isinstance(path, str) or not path:
+                continue
+            work_items.append(
+                {
+                    "id": f"audit-{len(work_items) + 1}",
+                    "objective": str(finding.get("objective") or f"Address verified audit finding in {path}"),
+                    "relevant_files": [path],
+                    "dependencies": [],
+                    "acceptance_criteria": [
+                        str(finding.get("acceptance") or f"The finding in {path} is addressed and regression-tested.")
+                    ],
+                    "validation_command": ["python", "-m", "pytest", "-q"],
+                    "bounded_scope": {"max_files": 5, "max_iterations": 3},
+                    "status": "planned",
+                }
+            )
+            if len(work_items) >= self.MAX_WORK_ITEMS:
+                break
+
+        return work_items
+
+    @staticmethod
+    def _acceptance_criteria(goal: str) -> list[str]:
+        return [
+            f"The requested behavior is implemented: {goal.strip()}",
+            "Relevant automated validation passes.",
+            "Only authorized workspace files are changed.",
+        ]
+
+    @staticmethod
+    def _relevant_files(
+        goal: str,
+        workspace: dict[str, Any],
+    ) -> list[str]:
+        files = workspace.get("files", [])
+        if not isinstance(files, list):
+            return []
+        tokens = {
+            token.strip(".,:;()[]{}<>/\\").casefold()
+            for token in goal.split()
+            if len(token.strip(".,:;()[]{}<>/\\")) >= 3
+        }
+        scored = []
+        for value in files:
+            if not isinstance(value, str):
+                continue
+            path_tokens = {
+                token.casefold()
+                for part in Path(value).parts
+                for token in part.replace("_", " ").replace("-", " ").split()
+            }
+            score = len(tokens & path_tokens)
+            if "test" in tokens or "pytest" in tokens:
+                score += 5 if value.replace("\\", "/").startswith("tests/") else 0
+            if value.endswith(".py"):
+                score += 1
+            scored.append((score, value))
+        return [path for _, path in sorted(scored, key=lambda item: (-item[0], item[1].casefold()))[:12]]
 
     def _normalize_steps(self, steps: list[Any]) -> list[str]:
         normalized: list[str] = []
@@ -154,6 +259,13 @@ class DevelopmentPlanner:
                 "fix",
                 "verify",
             ],
+            "objective": goal.strip(),
+            "relevant_files": self._relevant_files(goal, {}),
+            "acceptance_criteria": self._acceptance_criteria(goal),
+            "dependencies": [],
+            "validation_command": ["python", "-m", "pytest", "-q"],
+            "bounded_scope": {"max_files": 20, "max_iterations": 5},
+            "work_items": [],
             "planner_result": {
                 "success": True,
                 "fallback": True,
@@ -174,7 +286,7 @@ class DevelopmentPlanner:
             if path.startswith(
                 ("app/", "tests/", "lumira_desktop/")
             )
-        ][:150]
+        ][:40]
 
         return (
             "You are planning a bounded repository-development task for Lumira.\n\n"

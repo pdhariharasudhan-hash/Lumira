@@ -43,6 +43,10 @@ class DevelopmentWorker:
     MAX_FILE_SIZE = 500_000
     MAX_OUTPUT_CHARS = 50_000
     DEFAULT_TIMEOUT = 120
+    MAX_PROVIDER_ATTEMPTS = 2
+    MAX_AUDIT_FILES = 400
+    MAX_AUDIT_SOURCE_CHARS = 1_000_000
+    MAX_AUDIT_FINDINGS = 5
 
     ALLOWED_COMMANDS = {
         ("python", "-m", "pytest"),
@@ -98,7 +102,116 @@ class DevelopmentWorker:
             ),
             "file_count": len(files),
             "files": files,
+            "audit_findings": self._audit_workspace(files),
         }
+
+    def _audit_workspace(
+        self,
+        files: list[str],
+    ) -> list[dict[str, Any]]:
+        source_files = [
+            relative
+            for relative in files
+            if relative.endswith((".py", ".ts", ".tsx", ".js", ".jsx"))
+            and relative.startswith(
+                (
+                    "app/",
+                    "app\\",
+                    "core/",
+                    "core\\",
+                    "lumira_desktop/src/",
+                    "lumira_desktop\\src\\",
+                )
+            )
+            and not relative.lower().endswith((".backup", ".bak"))
+        ]
+        source_files.sort(
+            key=lambda path: (
+                0 if path.replace("\\", "/").startswith("app/agents/") else 1,
+                path.casefold(),
+            )
+        )
+        findings: list[dict[str, Any]] = []
+        chars_read = 0
+
+        research_agent = "app/agents/research_agent.py"
+        research_service = "app/services/research/research_capability_service.py"
+        if research_agent in files and research_service in files:
+            try:
+                agent_source = self.read_file(research_agent)
+            except (OSError, UnicodeDecodeError):
+                agent_source = ""
+            chars_read += len(agent_source)
+            if (
+                '"provider_unavailable"' in agent_source
+                and "ResearchCapabilityService" not in agent_source
+            ):
+                findings.append(
+                    {
+                        "path": research_agent,
+                        "objective": "Connect research dispatch to the existing ResearchCapabilityService",
+                        "acceptance": "ResearchAgent uses the existing capability service and reports configured-provider or local-retrieval results accurately.",
+                        "evidence": "ResearchAgent returns provider_unavailable directly while ResearchCapabilityService exists.",
+                    }
+                )
+
+        for relative_path in source_files[: self.MAX_AUDIT_FILES]:
+            if len(findings) >= self.MAX_AUDIT_FINDINGS or chars_read >= self.MAX_AUDIT_SOURCE_CHARS:
+                break
+            if relative_path == research_agent:
+                continue
+            try:
+                content = self.read_file(relative_path)
+            except (OSError, UnicodeDecodeError):
+                continue
+            remaining = self.MAX_AUDIT_SOURCE_CHARS - chars_read
+            content = content[: min(20_000, remaining)]
+            chars_read += len(content)
+            for line_number, line in enumerate(content.splitlines(), start=1):
+                stripped = line.lstrip()
+                comment_start = min(
+                    (
+                        position
+                        for position in (
+                            stripped.find("#"),
+                            stripped.find("//"),
+                            stripped.find("/*"),
+                            stripped.find("*"),
+                        )
+                        if position >= 0
+                    ),
+                    default=-1,
+                )
+                comment = stripped[comment_start:] if comment_start >= 0 else ""
+                marker = next(
+                    (
+                        token
+                        for token in ("TODO", "FIXME")
+                        if token in comment.upper()
+                    ),
+                    None,
+                )
+                if marker is None:
+                    continue
+                findings.append(
+                    {
+                        "path": relative_path,
+                        "objective": (
+                            f"Audit and resolve the {marker} marker at "
+                            f"{relative_path}:{line_number}"
+                        ),
+                        "acceptance": (
+                            "Determine from surrounding code whether the marker is unfinished, "
+                            "intentionally deferred, obsolete, or already implemented; fix only "
+                            "a verified unfinished behavior and add a focused test."
+                        ),
+                        "evidence": line.strip()[:500],
+                    }
+                )
+                if len(findings) >= self.MAX_AUDIT_FINDINGS:
+                    break
+
+        return findings
 
     def read_file(
         self,
@@ -222,6 +335,8 @@ class DevelopmentWorker:
             [
                 goal,
                 str(request_context.get("plan", "")),
+                str(request_context.get("task", "")),
+                str(request_context.get("acceptance_criteria", "")),
                 str(request_context.get("diagnosis", "")),
                 str(request_context.get("previous_validation", "")),
             ]
@@ -242,18 +357,26 @@ class DevelopmentWorker:
             path_text = relative_path.lower()
             path_tokens = set(
                 token.strip(".,:;()[]{}<>/\\")
-                for token in Path(relative_path).parts
-                for token in token.lower().replace("_", " ").replace("-", " ").split()
+                for part in Path(relative_path).parts
+                for token in Path(part).stem.lower().replace("_", " ").replace("-", " ").split()
                 if len(token) >= 3
             )
 
             score = len(keywords.intersection(path_tokens))
+            requested_paths = request_context.get("relevant_files", [])
+            if isinstance(requested_paths, list) and any(
+                isinstance(requested, str)
+                and requested.replace("\\", "/").casefold()
+                == relative_path.replace("\\", "/").casefold()
+                for requested in requested_paths
+            ):
+                score += 20
 
             if (
                 keywords.intersection({"test", "tests", "pytest"})
                 and (path_text.startswith("tests\\") or path_text.startswith("tests/"))
             ):
-                score += 12
+                score += 4
 
             # Prefer the application and test source tree over miscellaneous
             # repository metadata.
@@ -268,11 +391,34 @@ class DevelopmentWorker:
             if path_text.endswith((".ts", ".tsx")):
                 score += 1
 
+            if (
+                keywords.intersection({"test", "tests", "pytest"})
+                and (path_text.startswith("tests\\") or path_text.startswith("tests/"))
+            ):
+                try:
+                    source_size = self.boundary.resolve(relative_path).stat().st_size
+                except OSError:
+                    source_size = 0
+                if source_size > 35_000:
+                    score -= 8
+                elif source_size > 20_000:
+                    score -= 4
+
             candidates.append((score, relative_path))
 
         candidates.sort(
             key=lambda item: (-item[0], item[1].lower())
         )
+
+        if candidates and candidates[0][0] > 0:
+            relevance_floor = candidates[0][0] - 1
+            candidates = [
+                item
+                for item in candidates
+                if item[0] >= relevance_floor
+            ]
+        else:
+            candidates = candidates[:3]
 
         files = []
         total_chars = 0
@@ -322,22 +468,120 @@ class DevelopmentWorker:
             if total_chars >= MAX_PROVIDER_CONTEXT_CHARS:
                 break
 
-        return self.code_generator.generate_changes(
-            goal=goal,
-            files=files,
-            context={
-                **request_context,
-                "iteration": iteration,
-                "workspace": inspection["workspace"],
-                "provider_context": {
-                    "max_files": MAX_PROVIDER_FILES,
-                    "max_total_chars": MAX_PROVIDER_CONTEXT_CHARS,
-                    "max_file_chars": MAX_PROVIDER_FILE_CHARS,
-                    "files_selected": len(files),
-                    "total_chars": total_chars,
-                },
+        base_context = {
+            **request_context,
+            "task": request_context.get("task", goal),
+            "acceptance_criteria": request_context.get(
+                "acceptance_criteria",
+                [goal],
+            ),
+            "relevant_files": [item["path"] for item in files],
+            "iteration": iteration,
+            "provider_attempt": 1,
+            "workspace": inspection["workspace"],
+            "provider_context": {
+                "max_files": MAX_PROVIDER_FILES,
+                "max_total_chars": MAX_PROVIDER_CONTEXT_CHARS,
+                "max_file_chars": MAX_PROVIDER_FILE_CHARS,
+                "files_selected": len(files),
+                "total_chars": total_chars,
             },
-        )
+        }
+
+        last_result: dict[str, Any] = {
+            "success": False,
+            "code": "provider_no_change",
+            "message": "Provider did not return changes.",
+        }
+
+        for attempt in range(1, self.MAX_PROVIDER_ATTEMPTS + 1):
+            generation_context = {
+                **base_context,
+                "provider_attempt": attempt,
+            }
+            if attempt > 1:
+                generation_context["previous_provider_result"] = {
+                    "code": last_result.get("code"),
+                    "message": last_result.get("message"),
+                }
+                generation_context["retry_instruction"] = (
+                    "The requested acceptance criteria are not yet met. "
+                    "Use the relevant supplied files and return a minimal "
+                    "structured change, or explicitly explain why the goal "
+                    "is already satisfied."
+                )
+
+            last_result = self.code_generator.generate_changes(
+                goal=goal,
+                files=files,
+                context=generation_context,
+            )
+
+            if not isinstance(last_result, dict):
+                last_result = {
+                    "success": False,
+                    "code": "provider_invalid_response",
+                    "message": "Provider returned an invalid result object.",
+                }
+                continue
+
+            if last_result.get("success") and isinstance(
+                last_result.get("changes"), list
+            ):
+                try:
+                    from .change_applier import ChangeApplier
+
+                    changes = [
+                        ChangeApplier.from_dict(value)
+                        for value in last_result["changes"]
+                    ]
+                    ChangeApplier(self.boundary).validate(changes)
+                except Exception as exc:
+                    last_result = {
+                        "success": False,
+                        "code": "provider_invalid_changes",
+                        "message": str(exc)[:1000],
+                    }
+                    continue
+                return last_result
+
+            if last_result.get("code") not in {
+                "provider_no_change",
+                "provider_invalid_changes",
+                "invalid_provider_changes",
+                "no_changes_generated",
+            }:
+                return last_result
+
+        if (
+            last_result.get("code") == "provider_no_change"
+            and last_result.get("already_satisfied") is True
+            and isinstance(last_result.get("evidence"), str)
+            and last_result["evidence"].strip()
+        ):
+            return {
+                "success": True,
+                "status": "no_change",
+                "already_satisfied": True,
+                "evidence": last_result["evidence"][:1000],
+                "changes": [],
+            }
+
+        return {
+            **last_result,
+            "success": False,
+            "code": "provider_retry_exhausted",
+            "attempts": self.MAX_PROVIDER_ATTEMPTS,
+            "last_error": {
+                "code": last_result.get("code"),
+                "message": str(last_result.get("message", ""))[:1000],
+                "status": last_result.get("status"),
+            },
+            "message": (
+                "Provider did not produce applicable changes after "
+                f"{self.MAX_PROVIDER_ATTEMPTS} bounded attempts."
+            ),
+        }
 
     def apply_changes(
         self,

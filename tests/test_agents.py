@@ -2,6 +2,7 @@ from app.agents.agent_manager import AgentManager
 from app.main import app
 from fastapi.testclient import TestClient
 from app.agents.workflow_engine import WorkflowEngine
+from app.agents.research_agent import ResearchAgent
 from app.services.workflow_recovery.run_recovery_service import RunRecoveryService
 from pathlib import Path
 import time
@@ -37,6 +38,34 @@ def test_agent_manager_routes_known_work_and_reports_provider_unavailable():
     assert research["success"] is False
     assert research["state"] == "unavailable"
     assert research["result"]["code"] == "provider_unavailable"
+
+
+def test_research_agent_uses_existing_configured_research_service():
+    class Research:
+        def web_research(self, task):
+            return {
+                "success": True,
+                "status": "completed",
+                "findings": ["A verified finding"],
+                "sources": [{"url": "https://example.test/source"}],
+            }
+
+        def knowledge_retrieval(self, task):
+            return {
+                "success": True,
+                "status": "completed",
+                "source": "lumira_local_search",
+                "results": {"memory": [{"id": "record-1"}]},
+            }
+
+    agent = ResearchAgent(research=Research())
+    external = agent.execute("Research a current database")
+    local = agent.execute("Research local workspace documents")
+
+    assert external["success"] is True
+    assert external["sources"][0]["url"] == "https://example.test/source"
+    assert local["success"] is True
+    assert local["source"] == "lumira_local_search"
 
 
 def test_agent_manager_rejects_unbounded_or_unroutable_tasks():

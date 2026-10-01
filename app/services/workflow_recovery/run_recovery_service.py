@@ -10,7 +10,15 @@ from app.services.sessions.session_manager_service import redact_sensitive_text,
 
 RUN_STORE_SCHEMA_VERSION = 1
 RUN_STATUSES = {"running", "failed", "completed", "blocked"}
-SIDE_EFFECT_STAGES = {"save_project", "save_artifact", "generate_image", "capture_audio", "transcribe", "summarize"}
+SIDE_EFFECT_STAGES = {
+    "save_project",
+    "save_artifact",
+    "generate_image",
+    "capture_audio",
+    "transcribe",
+    "summarize",
+    "apply_changes",
+}
 
 
 class RunRecoveryService:

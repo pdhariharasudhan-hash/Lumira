@@ -1,6 +1,9 @@
 from app.agents.base_agent import (
     BaseAgent
 )
+from app.services.research.research_capability_service import (
+    ResearchCapabilityService,
+)
 
 
 class ResearchAgent(
@@ -8,7 +11,8 @@ class ResearchAgent(
 ):
 
     def __init__(
-        self
+        self,
+        research: ResearchCapabilityService | None = None,
     ):
 
         super().__init__(
@@ -24,14 +28,19 @@ class ResearchAgent(
             ]
         )
 
+        self.research = research or ResearchCapabilityService()
+
     def execute(
         self,
         task: str
     ):
+        task_lower = task.casefold()
+        if any(term in task_lower for term in ("local", "document", "workspace", "memory")):
+            result = self.research.knowledge_retrieval(task)
+        else:
+            result = self.research.web_research(task)
+
         return {
-            "success": False,
-            "status": "unavailable",
-            "code": "provider_unavailable",
-            "message": "Research requires a configured search or research provider.",
+            **result,
             "task": task,
         }
