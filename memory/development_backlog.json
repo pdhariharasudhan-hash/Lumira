@@ -1,0 +1,224 @@
+{
+  "schema_version": 1,
+  "programs": [
+    {
+      "program_id": "2a532da4-882c-431a-a332-f8304e86cf5b",
+      "goal": "Continue Lumira development",
+      "status": "blocked",
+      "audit": {
+        "workspace": ".",
+        "file_count": 645,
+        "findings": [
+          {
+            "path": "recovery:6b6b4ddb-1f88-4151-ba0a-c476737049e8",
+            "objective": "Add a small regression test for the Lumira development workflow recovery behavior",
+            "acceptance": "Resume from the persisted safe checkpoint, validate the applied state, and complete or persist a specific blocker.",
+            "evidence": {
+              "workflow_id": "1fd5cd1d-d393-4c88-8c03-da9505fb893c",
+              "recovery_run_id": "6b6b4ddb-1f88-4151-ba0a-c476737049e8",
+              "workflow_status": "failed",
+              "failed_task": "Implement the highest-priority development changes.",
+              "failed_stage": "generate_changes",
+              "safe_resume_point": "generate_changes",
+              "last_error": "Unable to connect to the development provider."
+            },
+            "recovery_run_id": "6b6b4ddb-1f88-4151-ba0a-c476737049e8",
+            "workflow_id": "1fd5cd1d-d393-4c88-8c03-da9505fb893c",
+            "category": "recovery",
+            "priority": 90
+          },
+          {
+            "path": "recovery:fd7ea3d9-0082-4153-85a4-0dcabd5e092e",
+            "objective": "Add a harmless pytest test confirming Lumira autonomous development is operational",
+            "acceptance": "Resume from the persisted safe checkpoint, validate the applied state, and complete or persist a specific blocker.",
+            "evidence": {
+              "workflow_id": "3880fd3d-eae9-4979-8aa3-ceba20fe72e2",
+              "recovery_run_id": "fd7ea3d9-0082-4153-85a4-0dcabd5e092e",
+              "workflow_status": "failed",
+              "failed_task": "Implement the highest-priority development changes.",
+              "failed_stage": "generate_changes",
+              "safe_resume_point": "generate_changes",
+              "last_error": "Provider did not produce applicable changes after 2 bounded attempts."
+            },
+            "recovery_run_id": "fd7ea3d9-0082-4153-85a4-0dcabd5e092e",
+            "workflow_id": "3880fd3d-eae9-4979-8aa3-ceba20fe72e2",
+            "category": "recovery",
+            "priority": 90
+          }
+        ],
+        "audited_at": "2026-10-01T12:39:17.109923+00:00",
+        "completion_ready": false,
+        "completion_blockers": [
+          "This bounded self-development audit currently checks source TODO/FIXME evidence and recoverable autonomous runs; it is not yet a verified whole-Lumira subsystem/integration audit.",
+          "A final program-completion audit must cover backend routes, services, desktop contracts, persistence, voice, artifacts, search, modes, sessions, and security."
+        ],
+        "limits": {
+          "max_source_files": 400,
+          "max_source_chars": 1000000,
+          "max_findings": 10
+        }
+      },
+      "tasks": [
+        {
+          "task_id": "948aebad-4894-4ad2-b3c1-4095c14f7f97",
+          "goal": "Continue Lumira development",
+          "objective": "Add a small regression test for the Lumira development workflow recovery behavior",
+          "category": "recovery",
+          "priority": 90,
+          "dependencies": [],
+          "relevant_files": [],
+          "acceptance_criteria": [
+            "Resume from the persisted safe checkpoint, validate the applied state, and complete or persist a specific blocker.",
+            "Run the recorded validation command successfully.",
+            "Verify every modified file remains inside WorkspaceBoundary."
+          ],
+          "validation_commands": [
+            [
+              "python",
+              "-m",
+              "pytest",
+              "-q"
+            ]
+          ],
+          "status": "blocked",
+          "attempts": 3,
+          "iteration": 1,
+          "last_error": {
+            "code": "resume_limit_reached",
+            "message": "Recovery run reached the configured maximum resume count.",
+            "recovery_run_id": "6b6b4ddb-1f88-4151-ba0a-c476737049e8",
+            "recommended_next_action": "Preserve the checkpoint and reconcile or explicitly authorize a new bounded recovery window.",
+            "category": "recovery_limit"
+          },
+          "last_validation": null,
+          "recovery_run_id": null,
+          "source_workflow_id": "1fd5cd1d-d393-4c88-8c03-da9505fb893c",
+          "audit_evidence": {
+            "workflow_id": "1fd5cd1d-d393-4c88-8c03-da9505fb893c",
+            "recovery_run_id": "6b6b4ddb-1f88-4151-ba0a-c476737049e8",
+            "workflow_status": "failed",
+            "failed_task": "Implement the highest-priority development changes.",
+            "failed_stage": "generate_changes",
+            "safe_resume_point": "generate_changes",
+            "last_error": "Provider did not produce applicable changes after 2 bounded attempts."
+          },
+          "resume_run_id": "6b6b4ddb-1f88-4151-ba0a-c476737049e8",
+          "created_at": "2026-10-01T12:20:00.616095+00:00",
+          "updated_at": "2026-10-01T12:39:17.193384+00:00",
+          "order": 0
+        },
+        {
+          "task_id": "2c5ccbde-2680-4aa9-89a6-7df6cdcda6dd",
+          "goal": "Continue Lumira development",
+          "objective": "Add a harmless pytest test confirming Lumira autonomous development is operational",
+          "category": "recovery",
+          "priority": 90,
+          "dependencies": [],
+          "relevant_files": [],
+          "acceptance_criteria": [
+            "Resume from the persisted safe checkpoint, validate the applied state, and complete or persist a specific blocker.",
+            "Run the recorded validation command successfully.",
+            "Verify every modified file remains inside WorkspaceBoundary."
+          ],
+          "validation_commands": [
+            [
+              "python",
+              "-m",
+              "pytest",
+              "-q"
+            ]
+          ],
+          "status": "completed",
+          "attempts": 1,
+          "iteration": 1,
+          "last_error": null,
+          "last_validation": {
+            "iteration": 1,
+            "status": "completed",
+            "command": [
+              "python",
+              "-m",
+              "pytest",
+              "-q"
+            ],
+            "return_code": 0,
+            "output_tail": "ion_service.py:97: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    datetime.utcnow().isoformat()\n\ntests/test_generation.py: 1 warning\ntests/test_generator_artifacts.py: 3 warnings\ntests/test_modes_workflows.py: 2 warnings\ntests/test_pipeline.py: 2 warnings\ntests/test_validation.py: 11 warnings\n  E:\\Hari\\personal_ai_core\\app\\services\\verification\\verification_service.py:170: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    datetime.utcnow().isoformat()\n\ntests/test_generation.py: 1 warning\ntests/test_generator_artifacts.py: 3 warnings\ntests/test_modes_workflows.py: 2 warnings\ntests/test_pipeline.py: 2 warnings\ntests/test_validation.py: 11 warnings\n  E:\\Hari\\personal_ai_core\\app\\services\\reflection\\reflection_service.py:170: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    datetime.utcnow().isoformat()\n\ntests/test_generation.py: 1 warning\ntests/test_generator_artifacts.py: 3 warnings\ntests/test_modes_workflows.py: 2 warnings\ntests/test_pipeline.py: 2 warnings\ntests/test_validation.py: 11 warnings\n  E:\\Hari\\personal_ai_core\\app\\services\\learning\\learning_service.py:216: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    datetime.utcnow().isoformat()\n\ntests/test_generation.py: 1 warning\ntests/test_generator_artifacts.py: 3 warnings\ntests/test_modes_workflows.py: 2 warnings\ntests/test_persistence.py: 1 warning\ntests/test_pipeline.py: 2 warnings\ntests/test_validation.py: 12 warnings\n  E:\\Hari\\personal_ai_core\\app\\services\\history\\pipeline_history_service.py:57: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    \"timestamp\": datetime.utcnow().isoformat(),\n\ntests/test_validation.py::test_builder_mode_project_and_followups_keep_context\ntests/test_validation.py::test_builder_mode_project_and_followups_keep_context\ntests/test_validation.py::test_session_restart_recovers_project_decision_and_scoped_memory\ntests/test_validation.py::test_session_restart_recovers_project_decision_and_scoped_memory\ntests/test_validation.py::test_session_restart_recovers_project_decision_and_scoped_memory\n  E:\\Hari\\personal_ai_core\\app\\services\\goals\\goal_service.py:44: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    state.last_updated = datetime.utcnow().isoformat()\n\ntests/test_validation.py::test_builder_mode_project_and_followups_keep_context\ntests/test_validation.py::test_builder_mode_project_and_followups_keep_context\ntests/test_validation.py::test_session_restart_recovers_project_decision_and_scoped_memory\ntests/test_validation.py::test_session_restart_recovers_project_decision_and_scoped_memory\ntests/test_validation.py::test_session_restart_recovers_project_decision_and_scoped_memory\n  E:\\Hari\\personal_ai_core\\app\\services\\objective\\objective_service.py:46: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    state.last_updated = datetime.utcnow().isoformat()\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n130 passed, 933 warnings in 70.94s (0:01:10)\n",
+            "output_truncated": true
+          },
+          "recovery_run_id": null,
+          "source_workflow_id": "a6f9852c-cd21-49fc-96b9-d5575d71869b",
+          "audit_evidence": {
+            "workflow_id": "a6f9852c-cd21-49fc-96b9-d5575d71869b",
+            "recovery_run_id": "fdf8704d-4001-4f71-a1d2-ca75af50fff4",
+            "workflow_status": "failed",
+            "failed_task": "Implement the highest-priority development changes.",
+            "failed_stage": "generate_changes",
+            "safe_resume_point": "generate_changes",
+            "last_error": "Provider did not produce applicable changes after 2 bounded attempts."
+          },
+          "resume_run_id": "fdf8704d-4001-4f71-a1d2-ca75af50fff4",
+          "created_at": "2026-10-01T12:20:00.616095+00:00",
+          "updated_at": "2026-10-01T12:43:38.927309+00:00",
+          "order": 1
+        }
+      ],
+      "current_task_id": null,
+      "created_at": "2026-10-01T12:20:00.616095+00:00",
+      "updated_at": "2026-10-01T12:43:38.927309+00:00",
+      "completion_blockers": [
+        "Add a small regression test for the Lumira development workflow recovery behavior: Recovery run reached the configured maximum resume count."
+      ]
+    }
+  ],
+  "lessons": [
+    {
+      "lesson_id": "3e56e33a-1e33-4af4-8386-99dd8dcacc08",
+      "created_at": "2026-10-01T12:22:19.437764+00:00",
+      "program_id": "2a532da4-882c-431a-a332-f8304e86cf5b",
+      "task_id": "948aebad-4894-4ad2-b3c1-4095c14f7f97",
+      "objective": "Add a small regression test for the Lumira development workflow recovery behavior",
+      "failure_code": "provider_unreachable",
+      "validation_status": null,
+      "recommended_next_action": "Retry with corrected context or select an independent dependency-ready task."
+    },
+    {
+      "lesson_id": "98659ef8-6983-40b6-9aab-889e95ac2652",
+      "created_at": "2026-10-01T12:23:43.605989+00:00",
+      "program_id": "2a532da4-882c-431a-a332-f8304e86cf5b",
+      "task_id": "2c5ccbde-2680-4aa9-89a6-7df6cdcda6dd",
+      "objective": "Add a harmless pytest test confirming Lumira autonomous development is operational",
+      "changes": [],
+      "tests": [
+        "python",
+        "-m",
+        "pytest",
+        "-q"
+      ],
+      "validation_status": "completed",
+      "provider": null,
+      "lessons": []
+    },
+    {
+      "lesson_id": "cc004b9c-bb00-4c98-8d9c-10e8e393547f",
+      "created_at": "2026-10-01T12:33:54.968577+00:00",
+      "program_id": "2a532da4-882c-431a-a332-f8304e86cf5b",
+      "task_id": "948aebad-4894-4ad2-b3c1-4095c14f7f97",
+      "objective": "Add a small regression test for the Lumira development workflow recovery behavior",
+      "failure_code": "provider_unreachable",
+      "failure_category": "provider_failure",
+      "validation_status": null,
+      "recommended_next_action": "Check configured provider availability and resume the same generation checkpoint."
+    },
+    {
+      "lesson_id": "05b27bee-bfa9-4ce6-a681-4c120f6b06e3",
+      "created_at": "2026-10-01T12:35:58.006594+00:00",
+      "program_id": "2a532da4-882c-431a-a332-f8304e86cf5b",
+      "task_id": "948aebad-4894-4ad2-b3c1-4095c14f7f97",
+      "objective": "Add a small regression test for the Lumira development workflow recovery behavior",
+      "failure_code": "resume_limit_reached",
+      "failure_category": "implementation_failure",
+      "validation_status": null,
+      "recommended_next_action": "Inspect the persisted error and relevant files before a bounded retry."
+    }
+  ]
+}

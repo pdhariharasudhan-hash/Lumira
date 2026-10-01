@@ -24,6 +24,7 @@ class DevelopmentCodeGenerator:
     """
 
     DEFAULT_PROVIDER = "openai_compatible"
+    MAX_PROVIDER_FALLBACKS = 2
 
     def __init__(
         self,
@@ -64,11 +65,34 @@ class DevelopmentCodeGenerator:
             provider_name
             or self.DEFAULT_PROVIDER
         )
+        candidates = [selected_provider]
+        if provider_name is None:
+            candidates.extend(
+                name
+                for name in self.registry.list()
+                if name != selected_provider
+            )
+            candidates = candidates[: self.MAX_PROVIDER_FALLBACKS + 1]
 
-        return self.registry.generate_changes(
-            provider_name=selected_provider,
-            goal=goal,
-            workspace=str(self.workspace),
-            files=files,
-            context=context,
-        )
+        errors = []
+        for name in candidates:
+            result = self.registry.generate_changes(
+                provider_name=name,
+                goal=goal,
+                workspace=str(self.workspace),
+                files=files,
+                context=context,
+            )
+            if result.get("success") or result.get("code") == "provider_no_change":
+                return result
+            errors.append({"provider": name, "code": result.get("code")})
+
+        if len(candidates) == 1:
+            return result
+        return {
+            "success": False,
+            "code": "provider_failover_exhausted",
+            "providers_attempted": [item["provider"] for item in errors],
+            "provider_errors": errors,
+            "message": "No configured development provider produced a usable response.",
+        }

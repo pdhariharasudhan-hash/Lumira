@@ -12,6 +12,10 @@ from app.services.work_items.work_item_service import WorkItemService
 from app.services.autonomous_development.autonomous_development_loop import (
     AutonomousDevelopmentLoop,
 )
+from app.services.autonomous_development.development_audit_service import DevelopmentAuditService
+from app.services.autonomous_development.development_backlog_service import DevelopmentBacklogService
+from app.services.autonomous_development.development_progress_service import DevelopmentProgressService
+from app.services.autonomous_development.development_task_planner import DevelopmentTaskPlanner
 
 
 class AutonomousDevelopmentService:
@@ -35,6 +39,7 @@ class AutonomousDevelopmentService:
     MAX_GOAL_LENGTH = 10_000
     MAX_STORED_RESULT_LENGTH = 3_900
     STALE_WORKFLOW_AFTER_SECONDS = 3_600
+    MAX_TASKS_PER_CONTINUATION = 3
 
     def __init__(
         self,
@@ -42,6 +47,7 @@ class AutonomousDevelopmentService:
         workflow_engine: WorkflowEngine | None = None,
         work_items: WorkItemService | None = None,
         recovery: RunRecoveryService | None = None,
+        backlog: DevelopmentBacklogService | None = None,
     ) -> None:
         self.workspace = Path(workspace).resolve()
 
@@ -63,6 +69,17 @@ class AutonomousDevelopmentService:
         self.development_loop = AutonomousDevelopmentLoop(
             self.workspace
         )
+
+        self.backlog = backlog or DevelopmentBacklogService(
+            self.workspace / "memory" / "development_backlog.json"
+        )
+        self.audit_service = DevelopmentAuditService(
+            self.development_loop.worker,
+            work_items=self.work_items,
+            recovery=self.recovery,
+        )
+        self.task_planner = DevelopmentTaskPlanner(self.backlog)
+        self.progress = DevelopmentProgressService(self.backlog)
 
     def create_development_workflow(
         self,
@@ -111,6 +128,8 @@ class AutonomousDevelopmentService:
         session_id: str | None = None,
         _workflow_id: str | None = None,
         _recovery_run_id: str | None = None,
+        _backlog_program_id: str | None = None,
+        _backlog_task: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Execute a bounded autonomous development workflow.
@@ -121,6 +140,12 @@ class AutonomousDevelopmentService:
         """
         goal = self._validate_goal(goal)
         self._recover_stale_workflows()
+
+        if self._is_continuation_request(goal):
+            return self._continue_development_program(
+                goal,
+                session_id=session_id,
+            )
 
         if self._is_broad_completion_goal(goal):
             return self._execute_broad_goal(
@@ -154,28 +179,44 @@ class AutonomousDevelopmentService:
                 goal,
                 session_id=session_id,
             )
+            recovery_plan = {
+                "success": True,
+                "autonomous_development": True,
+                "workflow_id": workflow["workflow_id"],
+                "steps": [
+                    "inspect",
+                    "plan",
+                    "generate_changes",
+                    "apply_changes",
+                    "validate",
+                    "diagnose",
+                    "fix",
+                    "verify",
+                    "record",
+                ],
+            }
+            if _backlog_program_id is not None and _backlog_task is not None:
+                recovery_plan["development_program_id"] = _backlog_program_id
+                recovery_plan["development_task_id"] = _backlog_task["task_id"]
             recovery_run = self.recovery.create_run(
                 goal,
-                {
-                    "success": True,
-                    "autonomous_development": True,
-                    "workflow_id": workflow["workflow_id"],
-                    "steps": [
-                        "inspect",
-                        "plan",
-                        "generate_changes",
-                        "apply_changes",
-                        "validate",
-                        "diagnose",
-                        "fix",
-                        "verify",
-                        "record",
-                    ],
-                },
+                recovery_plan,
                 session_id,
             )
             recovery_run_id = recovery_run["run_id"]
             completed_stages = set()
+            if _backlog_program_id is not None and _backlog_task is not None:
+                self.backlog.link_recovery_run(
+                    _backlog_program_id,
+                    _backlog_task["task_id"],
+                    recovery_run_id,
+                )
+                self.progress.checkpoint(
+                    _backlog_program_id,
+                    _backlog_task["task_id"],
+                    iteration=max(1, _backlog_task.get("iteration", 0)),
+                    recovery_run_id=recovery_run_id,
+                )
 
         workflow_id = workflow["workflow_id"]
         tasks = workflow["tasks"]
@@ -280,6 +321,18 @@ class AutonomousDevelopmentService:
                 completed_results["plan"] = planning_result
 
             context["plan"] = plan
+            if _backlog_task is not None:
+                plan = {
+                    **plan,
+                    "acceptance_criteria": _backlog_task.get("acceptance_criteria", []),
+                    "relevant_files": _backlog_task.get("relevant_files", []),
+                }
+                context["plan"] = plan
+                context["task"] = _backlog_task.get("objective", goal)
+                context["acceptance_criteria"] = _backlog_task.get("acceptance_criteria", [])
+                context["relevant_files"] = _backlog_task.get("relevant_files", [])
+                context["previous_validation"] = _backlog_task.get("last_validation")
+                context["previous_error"] = _backlog_task.get("last_error")
 
             # ---------------------------------------------------------
             # 3..7. BOUNDED DEVELOPMENT ITERATIONS
@@ -938,6 +991,255 @@ class AutonomousDevelopmentService:
                 "message": str(exc),
             }
 
+    def _continue_development_program(
+        self,
+        request: str,
+        *,
+        session_id: str | None,
+    ) -> dict[str, Any]:
+        audit = self.audit_service.run()
+        program = self.task_planner.create_or_resume_program(
+            request,
+            audit,
+        )
+        for task in program["tasks"]:
+            error = task.get("last_error")
+            if task.get("status") not in {"blocked", "failed"} or not isinstance(error, dict):
+                continue
+            diagnosis = self.progress.diagnose_failure(error, task.get("last_validation"))
+            message = error.get("message")
+            if error.get("code") == "resume_limit_reached":
+                message = "Recovery run reached the configured maximum resume count."
+            corrected = {
+                **error,
+                "message": message or "Development task remains blocked.",
+                **diagnosis,
+            }
+            if corrected != error:
+                self.backlog.update_task(
+                    program["program_id"],
+                    task["task_id"],
+                    last_error=corrected,
+                )
+        program = self.backlog.get_program(program["program_id"])
+
+        if not program["tasks"]:
+            self.backlog.set_program_status(
+                program["program_id"],
+                "blocked",
+                completion_blockers=audit.get("completion_blockers", [
+                    "No evidence-backed task is available in this bounded audit."
+                ]),
+            )
+            return {
+                "success": False,
+                "state": "blocked",
+                "code": "no_verified_work_items",
+                "program_id": program["program_id"],
+                "audit": audit or program.get("audit"),
+                "message": (
+                    "The bounded audit has no evidence-backed tasks. The program remains "
+                    "durable and blocked rather than claiming Lumira is complete."
+                ),
+            }
+
+        self.backlog.set_program_status(program["program_id"], "in_progress")
+        results: list[dict[str, Any]] = []
+        attempted: set[str] = set()
+        completed_count = 0
+
+        while len(results) < self.MAX_TASKS_PER_CONTINUATION:
+            current = self.backlog.get_program(program["program_id"])
+            interrupted = next(
+                (
+                    task for task in current["tasks"]
+                    if task["status"] == "in_progress"
+                    and task["task_id"] not in attempted
+                ),
+                None,
+            )
+            task = interrupted or self.backlog.next_ready_task(
+                program["program_id"],
+                exclude_task_ids=attempted,
+            )
+            if task is None:
+                break
+
+            attempted.add(task["task_id"])
+            if task["status"] != "in_progress":
+                task = self.progress.start(
+                    program["program_id"],
+                    task["task_id"],
+                    iteration=max(1, task.get("iteration", 0)),
+                )
+                if task["status"] != "in_progress":
+                    attempted.add(task["task_id"])
+                    results.append({
+                        "task_id": task["task_id"],
+                        "objective": task["objective"],
+                        "result": {
+                            "success": False,
+                            "state": "blocked",
+                            "code": "attempt_limit_reached",
+                            "message": "Bounded task attempts are exhausted.",
+                        },
+                    })
+                    continue
+
+            recovery_id = task.get("recovery_run_id") or task.get("resume_run_id")
+            if recovery_id:
+                recovery_state = self.recovery.get_run(recovery_id)
+                if recovery_state and recovery_state.get("status") != "completed":
+                    task_result = self.resume(recovery_id)
+                elif recovery_state and recovery_state.get("status") == "completed":
+                    task_result = {
+                        "success": False,
+                        "state": "rejected",
+                        "code": "run_already_completed_without_backlog_checkpoint",
+                        "recovery_run_id": recovery_id,
+                    }
+                else:
+                    task_result = {
+                        "success": False,
+                        "state": "blocked",
+                        "code": "recovery_run_missing",
+                        "recovery_run_id": recovery_id,
+                    }
+            else:
+                task_result = self.execute(
+                    task["objective"],
+                    session_id=session_id,
+                    _backlog_program_id=program["program_id"],
+                    _backlog_task=task,
+                )
+
+            results.append({
+                "task_id": task["task_id"],
+                "objective": task["objective"],
+                "result": task_result,
+            })
+
+            validation = task_result.get("validation") or task_result.get("result", {}).get("validation") or {}
+            if task_result.get("success") is True:
+                if not validation:
+                    recovery_id = task_result.get("recovery_run_id") or task.get("recovery_run_id")
+                    recovery_state = self.recovery.get_run(recovery_id) if recovery_id else None
+                    validation_record = next(
+                        (stage for stage in (recovery_state or {}).get("stage_records", []) if stage.get("stage") == "validate" and stage.get("status") == "completed"),
+                        {},
+                    )
+                    validation = validation_record.get("result", {})
+                if validation.get("status") == "completed" and validation.get("return_code") == 0:
+                    self.progress.complete(
+                        program["program_id"],
+                        task["task_id"],
+                        result=task_result,
+                        validation=validation,
+                    )
+                    completed_count += 1
+                    continue
+
+            error = task_result.get("result") if isinstance(task_result.get("result"), dict) else task_result
+            code = error.get("code", "development_task_failed") if isinstance(error, dict) else "development_task_failed"
+            message = error.get("message", "Development task did not satisfy its acceptance criteria.") if isinstance(error, dict) else str(error)
+            retryable = code.startswith("provider_") or code in {
+                "provider_retry_exhausted",
+                "resumed_validation_failed",
+                "max_iterations_reached",
+            }
+            self.progress.fail_or_block(
+                program["program_id"],
+                task["task_id"],
+                error={
+                    "code": code,
+                    "message": message,
+                    "recovery_run_id": task_result.get("recovery_run_id") or recovery_id,
+                    "recommended_next_action": "Retry with corrected context or select an independent dependency-ready task.",
+                },
+                validation=validation or None,
+                retryable=retryable,
+            )
+
+        final = self.backlog.get_program(program["program_id"])
+        complete = bool(final["tasks"]) and all(task["status"] == "completed" for task in final["tasks"])
+        if complete:
+            final_audit = self.audit_service.run()
+            if final_audit.get("findings"):
+                previous_task_count = len(final["tasks"])
+                refreshed = self.task_planner.create_or_resume_program(request, final_audit)
+                added_task_count = max(0, len(refreshed["tasks"]) - previous_task_count)
+                if added_task_count:
+                    self.backlog.set_program_status(refreshed["program_id"], "in_progress")
+                    return {
+                        "success": False,
+                        "state": "in_progress",
+                        "code": "final_audit_found_more_work",
+                        "program_id": refreshed["program_id"],
+                        "completed_tasks": completed_count,
+                        "added_task_count": added_task_count,
+                        "audit": final_audit,
+                        "message": "Final audit found additional evidence-backed work; rerun continuation to append the next bounded batch.",
+                    }
+            if final_audit.get("completion_ready") is not True:
+                self.backlog.set_program_status(
+                    program["program_id"],
+                    "blocked",
+                    completion_blockers=final_audit.get("completion_blockers", [
+                        "Final whole-program audit is not available.",
+                    ]),
+                )
+                return {
+                    "success": False,
+                    "state": "blocked",
+                    "code": "final_audit_incomplete",
+                    "program_id": program["program_id"],
+                    "completed_tasks": completed_count,
+                    "audit": final_audit,
+                    "completion_blockers": final_audit.get("completion_blockers", []),
+                    "message": "All current tasks passed, but the available bounded audit cannot verify whole-Lumira completion.",
+                }
+            self.backlog.set_program_status(program["program_id"], "completed", completion_blockers=[])
+
+        final = self.backlog.get_program(program["program_id"])
+        pending = [task for task in final["tasks"] if task["status"] in {"planned", "in_progress"}]
+        blocked = [task for task in final["tasks"] if task["status"] in {"blocked", "failed"}]
+        if pending:
+            self.backlog.set_program_status(program["program_id"], "in_progress")
+        elif blocked:
+            self.backlog.set_program_status(
+                program["program_id"],
+                "blocked",
+                completion_blockers=[
+                    f"{task['objective']}: {(task.get('last_error') or {}).get('message', 'Task is blocked.')}"
+                    for task in blocked[:20]
+                ],
+            )
+        final = self.backlog.get_program(program["program_id"])
+        return {
+            "success": complete,
+            "state": "completed" if complete else "blocked" if blocked and not pending else "in_progress",
+            "program_id": final["program_id"],
+            "completed_tasks_this_run": completed_count,
+            "remaining_task_count": len(pending),
+            "blocked_task_count": len(blocked),
+            "results": results,
+            "program": final,
+        }
+
+    @staticmethod
+    def _is_continuation_request(goal: str) -> bool:
+        normalized = " ".join(goal.casefold().strip().split())
+        return normalized in {
+            "continue",
+            "continue lumira development",
+            "continue development",
+            "continue remaining development",
+            "complete remaining lumira development",
+            "complete all remaining lumira development",
+            "complete all remaining development",
+            "finish lumira development",
+        }
+
     def _execute_broad_goal(
         self,
         goal: str,
@@ -1484,8 +1786,28 @@ class AutonomousDevelopmentService:
 
         plan = run.get("plan", {})
         workflow_id = plan.get("workflow_id") if plan.get("autonomous_development") else None
+        program_id = plan.get("development_program_id") if isinstance(plan, dict) else None
+        task_id = plan.get("development_task_id") if isinstance(plan, dict) else None
+        program = self.backlog.get_program(program_id) if program_id else None
+        task = next(
+            (item for item in (program or {}).get("tasks", []) if item.get("task_id") == task_id),
+            None,
+        )
+        current_stage_record = next(
+            (item for item in run.get("stage_records", []) if item.get("stage") == run.get("current_stage")),
+            {},
+        )
         return {
             **run,
+            "development_program_id": program_id,
+            "development_task_id": task_id,
+            "development_task": task,
+            "current_iteration": (
+                current_stage_record.get("result", {}).get("iteration")
+                if isinstance(current_stage_record.get("result"), dict)
+                else (task or {}).get("iteration")
+            ),
+            "last_validation": (task or {}).get("last_validation"),
             "work_item_workflow": (
                 self.work_items.get_workflow(workflow_id)
                 if workflow_id

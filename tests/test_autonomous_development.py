@@ -20,6 +20,12 @@ from app.services.autonomous_development.worker.change_applier import (
 from app.services.autonomous_development.worker.development_provider import (
     DevelopmentProvider,
 )
+from app.services.autonomous_development.worker.development_code_generator import (
+    DevelopmentCodeGenerator,
+)
+from app.services.autonomous_development.worker.development_provider_registry import (
+    DevelopmentProviderRegistry,
+)
 from app.services.autonomous_development.worker.development_worker import (
     DevelopmentWorker,
 )
@@ -304,28 +310,21 @@ def test_broad_goal_persists_bounded_child_workflows_and_stops_on_failure(
 ) -> None:
     service, _ = _service(tmp_path, monkeypatch, [0])
     objectives = ["Resolve verified finding one", "Resolve verified finding two"]
-    service.development_loop.worker.inspect = lambda: {
+    service.audit_service.run = lambda: {
         "file_count": 25,
-        "files": [],
-        "audit_findings": [],
-    }
-    service.development_loop.planner.create_plan = lambda goal, workspace: {
-        "work_items": [
+        "findings": [
             {
+                "path": f"app/{index}.py",
                 "objective": objective,
-                "relevant_files": [f"app/{index}.py"],
-                "dependencies": [],
-                "acceptance_criteria": ["Verify the change."],
-                "validation_command": ["python", "-m", "pytest", "-q"],
-                "bounded_scope": {"max_files": 2, "max_iterations": 2},
+                "acceptance": "Verify the change.",
             }
             for index, objective in enumerate(objectives)
-        ]
+        ],
     }
     real_execute = service.execute
     child_calls = []
 
-    def fake_child(goal, *, session_id=None):
+    def fake_child(goal, *, session_id=None, **kwargs):
         child_calls.append(goal)
         if goal == objectives[1]:
             return {"success": False, "state": "failed", "code": "child_blocked"}
@@ -333,7 +332,7 @@ def test_broad_goal_persists_bounded_child_workflows_and_stops_on_failure(
             "success": True,
             "state": "completed",
             "workflow_id": "child-1",
-            "validation": {"return_code": 0},
+            "validation": {"status": "completed", "return_code": 0},
             "workflow": {"status": "completed"},
         }
 
@@ -341,12 +340,13 @@ def test_broad_goal_persists_bounded_child_workflows_and_stops_on_failure(
     result = real_execute("Complete all remaining Lumira development")
 
     assert result["success"] is False
-    assert result["state"] == "failed"
-    assert result["decomposed_work_item_count"] == 2
+    assert result["state"] == "blocked"
+    assert result["remaining_task_count"] == 0
+    assert result["blocked_task_count"] == 1
     assert child_calls == objectives
-    parent = service.work_items.get_workflow(result["workflow_id"])
-    assert parent["tasks"][0]["status"] == "completed"
-    assert parent["tasks"][1]["status"] == "failed"
+    program = service.backlog.get_program(result["program_id"])
+    assert program["tasks"][0]["status"] == "completed"
+    assert program["tasks"][1]["status"] == "blocked"
 
 
 def test_actionable_goal_with_no_changes_fails_durably(
@@ -859,6 +859,65 @@ def test_provider_defaults_to_local_ollama_without_api_key(
     )._requires_api_key() is True
 
 
+def test_code_generator_fails_over_to_registered_provider_with_a_hard_cap(
+    tmp_path: Path,
+) -> None:
+    class Provider(DevelopmentProvider):
+        def __init__(self, name: str, result: dict):
+            self.name = name
+            self.result = result
+            self.calls = 0
+
+        def generate_changes(self, **kwargs):
+            self.calls += 1
+            return self.result
+
+    registry = DevelopmentProviderRegistry()
+    unavailable = Provider("openai_compatible", {"success": False, "code": "provider_unreachable"})
+    available = Provider("backup", {"success": True, "changes": [{"path": "x.py"}]})
+    ignored = Provider("third", {"success": True, "changes": [{"path": "y.py"}]})
+    registry.register(unavailable)
+    registry.register(available)
+    registry.register(ignored)
+    generator = DevelopmentCodeGenerator(tmp_path, registry)
+
+    result = generator.generate_changes(goal="Add a test", files=[])
+
+    assert result["success"] is True
+    assert unavailable.calls == 1
+    assert available.calls == 1
+    assert ignored.calls == 0
+    assert generator.MAX_PROVIDER_FALLBACKS == 2
+
+
+def test_explicit_provider_selection_does_not_fail_over(tmp_path: Path) -> None:
+    class Provider(DevelopmentProvider):
+        def __init__(self, name: str):
+            self.name = name
+            self.calls = 0
+
+        def generate_changes(self, **kwargs):
+            self.calls += 1
+            return {"success": False, "code": "provider_unreachable"}
+
+    registry = DevelopmentProviderRegistry()
+    selected = Provider("selected")
+    backup = Provider("backup")
+    registry.register(selected)
+    registry.register(backup)
+    generator = DevelopmentCodeGenerator(tmp_path, registry)
+
+    result = generator.generate_changes(
+        goal="Add a test",
+        files=[],
+        provider_name="selected",
+    )
+
+    assert result["code"] == "provider_unreachable"
+    assert selected.calls == 1
+    assert backup.calls == 0
+
+
 def test_local_provider_requests_json_mode_without_dummy_auth(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -921,6 +980,7 @@ def test_local_provider_requests_json_mode_without_dummy_auth(
             "relevant_files": ["tests/test_autonomous_development.py"],
             "iteration": 2,
             "previous_validation": {"return_code": 1},
+            "previous_error": {"code": "stale_change", "message": "Source changed after planning."},
         },
     )
 
@@ -934,6 +994,7 @@ def test_local_provider_requests_json_mode_without_dummy_auth(
     assert "tests/test_autonomous_development.py" in prompt
     assert '"iteration": 2' in prompt
     assert '"return_code": 1' in prompt
+    assert '"code": "stale_change"' in prompt
 
 
 def test_provider_falls_back_to_ipv4_only_for_refused_localhost(

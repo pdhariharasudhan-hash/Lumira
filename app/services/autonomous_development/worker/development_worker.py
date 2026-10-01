@@ -338,6 +338,7 @@ class DevelopmentWorker:
                 str(request_context.get("task", "")),
                 str(request_context.get("acceptance_criteria", "")),
                 str(request_context.get("diagnosis", "")),
+                str(request_context.get("previous_error", "")),
                 str(request_context.get("previous_validation", "")),
             ]
         ).lower()
@@ -547,6 +548,7 @@ class DevelopmentWorker:
 
             if last_result.get("code") not in {
                 "provider_no_change",
+                "provider_failover_exhausted",
                 "provider_invalid_changes",
                 "invalid_provider_changes",
                 "no_changes_generated",

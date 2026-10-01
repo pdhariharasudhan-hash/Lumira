@@ -291,6 +291,7 @@ class OpenAICompatibleDevelopmentProvider(DevelopmentProvider):
                 "relevant_files": context.get("relevant_files", []),
                 "iteration": context.get("iteration"),
                 "previous_validation": context.get("previous_validation"),
+                "previous_error": context.get("previous_error"),
                 "diagnosis": context.get("diagnosis"),
                 "retry_instruction": context.get("retry_instruction"),
                 "previous_provider_result": context.get("previous_provider_result"),
