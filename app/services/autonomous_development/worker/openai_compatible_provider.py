@@ -10,6 +10,7 @@ from urllib.parse import urlsplit, urlunsplit
 from app.services.autonomous_development.worker.development_provider import (
     DevelopmentProvider,
 )
+from app.services.resources.resource_budget_service import ResourceBudgetService
 
 
 class OpenAICompatibleDevelopmentProvider(DevelopmentProvider):
@@ -26,6 +27,7 @@ class OpenAICompatibleDevelopmentProvider(DevelopmentProvider):
     """
 
     name = "openai_compatible"
+    MAX_RESPONSE_BYTES = 2_000_000
 
     def __init__(
         self,
@@ -79,12 +81,109 @@ class OpenAICompatibleDevelopmentProvider(DevelopmentProvider):
                 ),
             }
 
+        # Bound source context before serializing a request to a local or remote
+        # model. Resource telemetry is optional; conservative defaults still apply.
+        try:
+            guidance = ResourceBudgetService().execution_guidance()
+        except Exception:
+            guidance = {}
+        if guidance.get("resource_pressure") == "critical":
+            return {
+                "success": False,
+                "state": "deferred",
+                "code": "resource_pressure_critical",
+                "provider": self.name,
+                "message": "Development generation was deferred because available system memory is critically low.",
+            }
+
+        max_files = guidance.get("max_provider_files", 6)
+        max_file_characters = guidance.get("max_file_characters", 12000)
+        max_context_characters = guidance.get("max_context_characters", 30000)
+        if not isinstance(max_files, int) or max_files < 1:
+            max_files = 6
+        if not isinstance(max_file_characters, int) or max_file_characters < 1:
+            max_file_characters = 12000
+        if not isinstance(max_context_characters, int) or max_context_characters < 1000:
+            max_context_characters = 30000
+        if len(files) > max_files:
+            return {
+                "success": False,
+                "code": "provider_file_count_exceeded",
+                "provider": self.name,
+                "message": (
+                    "Development generation was stopped because the supplied source "
+                    "file count exceeds the resource budget. Narrow the relevant-file "
+                    "list before retrying; no files were silently omitted."
+                ),
+                "file_count": len(files),
+                "file_count_limit": max_files,
+            }
+
+        bounded_files: list[dict[str, Any]] = []
+        for file_index, source_file in enumerate(files):
+            if not isinstance(source_file, dict):
+                return {
+                    "success": False,
+                    "code": "provider_invalid_source_file",
+                    "provider": self.name,
+                    "message": (
+                        f"Source file entry {file_index} must be an object; "
+                        "invalid entries are not silently skipped."
+                    ),
+                    "file_index": file_index,
+                }
+            bounded_file = dict(source_file)
+            # Never truncate the authoritative contents of an existing file:
+            # that would make the provider's old_content stale and unapplicable.
+            authoritative_oversize = any(
+                isinstance(value, str) and len(value) > max_file_characters
+                for field, value in bounded_file.items()
+                if isinstance(field, str)
+                and field.lower() in {"content", "old_content"}
+            )
+            if authoritative_oversize:
+                file_path = bounded_file.get("path") or bounded_file.get("name")
+                return {
+                    "success": False,
+                    "code": "provider_file_too_large",
+                    "provider": self.name,
+                    "message": (
+                        "Development generation was stopped because an authoritative "
+                        "source file exceeds the current resource budget. No source "
+                        "content was truncated or silently omitted."
+                    ),
+                    "file": str(file_path)[:300] if file_path is not None else None,
+                    "file_character_limit": max_file_characters,
+                }
+            for field, value in bounded_file.items():
+                if (
+                    isinstance(field, str)
+                    and field.lower() in {"text", "source"}
+                    and isinstance(value, str)
+                ):
+                    if len(value) > max_file_characters:
+                        bounded_file[field] = value[:max_file_characters]
+                        bounded_file[f"{field}_truncated"] = True
+            bounded_files.append(bounded_file)
+
         prompt = self._build_prompt(
             goal=goal,
             workspace=workspace,
-            files=files,
+            files=bounded_files,
             context=context or {},
         )
+        if len(prompt) > max_context_characters:
+            return {
+                "success": False,
+                "code": "provider_context_too_large",
+                "provider": self.name,
+                "message": (
+                    "Development context exceeds the current resource budget. "
+                    "Reduce the task context or split the work into smaller steps."
+                ),
+                "context_characters": len(prompt),
+                "context_limit": max_context_characters,
+            }
 
         payload = {
             "model": self.model,
@@ -163,7 +262,15 @@ class OpenAICompatibleDevelopmentProvider(DevelopmentProvider):
                 )
 
             with response_context as response:
-                raw = response.read().decode("utf-8")
+                raw_bytes = response.read(self.MAX_RESPONSE_BYTES + 1)
+                if len(raw_bytes) > self.MAX_RESPONSE_BYTES:
+                    return {
+                        "success": False,
+                        "code": "provider_response_too_large",
+                        "provider": self.name,
+                        "message": "Provider response exceeded the configured size limit.",
+                    }
+                raw = raw_bytes.decode("utf-8")
 
         except urllib.error.HTTPError as exc:
             return {
@@ -410,6 +517,78 @@ class OpenAICompatibleDevelopmentProvider(DevelopmentProvider):
                 "already_satisfied": False,
                 "message": "Provider returned no changes without evidence that the goal is already satisfied.",
             }
+
+        required_fields = {
+            "path",
+            "old_content",
+            "new_content",
+            "reason",
+        }
+
+        for index, change in enumerate(changes):
+            if not isinstance(change, dict):
+                return {
+                    "success": False,
+                    "code": "provider_invalid_changes",
+                    "message": (
+                        f"Change {index} must be a JSON object."
+                    ),
+                }
+
+            missing_fields = sorted(
+                field
+                for field in required_fields
+                if field not in change
+            )
+
+            if missing_fields:
+                return {
+                    "success": False,
+                    "code": "provider_invalid_changes",
+                    "message": (
+                        f"Change {index} is missing required fields: "
+                        f"{missing_fields}"
+                    ),
+                }
+
+            if not isinstance(change["path"], str) or not change["path"].strip():
+                return {
+                    "success": False,
+                    "code": "provider_invalid_changes",
+                    "message": (
+                        f"Change {index} has an invalid path."
+                    ),
+                }
+
+            if change["old_content"] is not None and not isinstance(
+                change["old_content"],
+                str,
+            ):
+                return {
+                    "success": False,
+                    "code": "provider_invalid_changes",
+                    "message": (
+                        f"Change {index} has invalid old_content."
+                    ),
+                }
+
+            if not isinstance(change["new_content"], str):
+                return {
+                    "success": False,
+                    "code": "provider_invalid_changes",
+                    "message": (
+                        f"Change {index} has invalid new_content."
+                    ),
+                }
+
+            if not isinstance(change["reason"], str) or not change["reason"].strip():
+                return {
+                    "success": False,
+                    "code": "provider_invalid_changes",
+                    "message": (
+                        f"Change {index} has an invalid reason."
+                    ),
+                }
 
         return {
             "success": True,

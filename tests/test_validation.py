@@ -4,6 +4,8 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.services.brain.brain_request import BrainRequest
+from app.services.brain.brain_service import BrainService as RealBrainService
 from app.services.artifacts.artifact_manager_service import ArtifactManagerService
 from app.services.history.pipeline_history_service import PipelineHistoryService
 from app.services.memory.memory_service import MemoryService
@@ -99,7 +101,7 @@ def test_command_route_parses_request(tmp_path, monkeypatch):
         headers=owner_headers,
     )
     assert created_item.status_code == 200
-    assert created_item.json()["expenses"] == [{"amount": "10", "category": "food"}]
+    assert created_item.json()["expenses"] == [{"amount": "10", "category": "food", "id": 1}]
 
     second_credentials = {"username": "another-user", "password": "another secure password"}
     assert generated_client.post("/register", json=second_credentials).status_code == 200
@@ -113,7 +115,7 @@ def test_command_route_parses_request(tmp_path, monkeypatch):
     ).json() == {"success": False}
     assert generated_client.delete("/expenses/0", headers=second_headers).json() == {"success": False}
     assert generated_client.get("/expenses", headers=owner_headers).json() == [
-        {"amount": "10", "category": "food"}
+        {"amount": "10", "category": "food", "id": 1}
     ]
 
     # Re-importing the generated app models a process restart. Both the
@@ -123,12 +125,45 @@ def test_command_route_parses_request(tmp_path, monkeypatch):
     restarted_client = TestClient(restarted_namespace["app"])
     assert restarted_client.get("/me", headers=owner_headers).json() == {"username": "owner"}
     assert restarted_client.get("/expenses", headers=owner_headers).json() == [
-        {"amount": "10", "category": "food"}
+        {"amount": "10", "category": "food", "id": 1}
     ]
     restarted_login = restarted_client.post("/login", json=credentials)
     assert restarted_login.status_code == 200
     assert restarted_login.json()["access_token"]
     assert (auth_dir / "jwt_signing_key").read_text(encoding="ascii") == signing_key
+
+
+def test_failed_brain_does_not_commit_requested_mode(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    session = SessionManagerService().create_session()
+    original_mode = session.get("active_mode")
+    real_response = RealBrainService().execute(BrainRequest(message="Prepare a harmless mode-gate test."))
+    observed = {}
+
+    class FailedBrainService:
+        def execute(self, request):
+            observed["requested_mode"] = request.metadata.get("active_mode")
+            return type(
+                "FailedBrainResponse",
+                (),
+                {
+                    "success": False,
+                    "state": real_response.state,
+                    "trace": real_response.trace,
+                    "error": "forced test failure",
+                },
+            )()
+
+    monkeypatch.setattr("app.routes.command.BrainService", FailedBrainService)
+    response = TestClient(app).post(
+        "/command",
+        json={"input": "Lumira, enter Builder Mode.", "session_id": session["session_id"]},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["success"] is False
+    assert observed["requested_mode"] == "builder"
+    assert SessionManagerService().get_session(session["session_id"])["active_mode"] == original_mode
 
 
 def test_builder_mode_project_and_followups_keep_context(tmp_path, monkeypatch):
@@ -416,11 +451,15 @@ def test_artifact_api_supports_crud_and_content(tmp_path, monkeypatch):
     assert created.status_code == 201
     artifact = created.json()["artifact"]
     artifact_id = artifact["artifact_id"]
+    assert "file" not in artifact
 
     listed = client.get("/artifacts", params={"artifact_type": "exports"})
     assert listed.status_code == 200
     assert listed.json()["artifacts"][0]["artifact_id"] == artifact_id
-    assert client.get(f"/artifacts/{artifact_id}").json()["artifact"]["source"] == "test"
+    assert "file" not in listed.json()["artifacts"][0]
+    fetched = client.get(f"/artifacts/{artifact_id}").json()["artifact"]
+    assert fetched["source"] == "test"
+    assert "file" not in fetched
     assert client.get(f"/artifacts/{artifact_id}/content").text == "exported report"
     assert client.get("/artifacts/stats").json()["stats"]["total"] == 1
 

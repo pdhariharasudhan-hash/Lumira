@@ -12,7 +12,7 @@ Ownership:
 Handoff 11 - Conversation Intelligence
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.services.conversation.conversation_models import (
     ConversationState,
@@ -46,7 +46,9 @@ class ConversationService:
         ConversationState.
         """
 
-        text = user_input.strip()
+        if not isinstance(user_input, str):
+            return state
+        text = user_input.strip()[:10_000]
 
         if not text:
             return state
@@ -110,7 +112,7 @@ class ConversationService:
         # ---------------------------------
 
         state.last_updated = (
-            datetime.utcnow().isoformat()
+            datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         )
 
         return state

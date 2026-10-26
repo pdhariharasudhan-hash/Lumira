@@ -15,6 +15,7 @@ from app.services.brain.brain_request import (
 from app.services.brain.brain_service import (
     BrainService
 )
+from app.services.brain.brain_agent_orchestrator import BrainAgentOrchestrator
 
 
 from app.services.capabilities.capability_router_service import (
@@ -36,6 +37,27 @@ from app.services.sessions.session_manager_service import redact_sensitive_text
 router = APIRouter()
 
 
+def _command_result_success(result) -> bool:
+    """Reject explicit failure states while preserving legacy success defaults."""
+    if not isinstance(result, dict):
+        return False
+    # Explicit failure and non-terminal states win over a contradictory success flag.
+    non_success_states = {
+        "failed", "failure", "rejected", "blocked", "cancelled", "canceled", "error",
+        "pending", "running", "in_progress", "in-progress", "queued", "started", "working",
+    }
+    for key in ("status", "state"):
+        value = result.get(key)
+        if key in result and (not isinstance(value, str) or not value.strip()):
+            return False
+        if isinstance(value, str) and value.strip().lower() in non_success_states:
+            return False
+    if "success" in result:
+        return result["success"] is True
+    # Older capabilities that omit success retain their legacy default otherwise.
+    return True
+
+
 @router.post(
     "/command"
 )
@@ -53,16 +75,6 @@ def command(
         raise HTTPException(status_code=404, detail="session not found") from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-
-    mode_request = None
-    normalized_input = request.input.lower()
-    if "enter " in normalized_input and " mode" in normalized_input:
-        mode_request = CommandParserService().parse(request.input)
-        if mode_request.get("capability") == "activate_mode":
-            session = sessions.update_context(
-                session["session_id"],
-                active_mode=mode_request["payload"]["mode"],
-            )
 
     reference = ReferenceResolutionService().resolve(request.input, session)
     if reference["status"] in {"unresolved", "ambiguous"}:
@@ -92,6 +104,25 @@ def command(
             active_project=reference["project_id"],
         )
 
+    parsed = CommandParserService().parse(request.input)
+    agent_orchestrator = None
+    if parsed.get("success") and parsed.get("capability") == "agent_task":
+        payload = parsed.get("payload", {})
+        agent_orchestrator = BrainAgentOrchestrator()
+        preflight = agent_orchestrator.validate_request(
+            payload.get("task"),
+            agent_name=payload.get("agent_name"),
+        )
+        if preflight:
+            return {
+                "success": False,
+                "intent": IntentClassifierService().classify(request.input),
+                "parsed": parsed,
+                "result": preflight,
+                "context": session,
+                "session_id": session["session_id"],
+            }
+
     brain = BrainService()
 
     brain_request = BrainRequest(
@@ -99,14 +130,21 @@ def command(
         project=session.get("active_project"),
         session_id=session["session_id"],
         workspace=request.workspace_id,
-        metadata={"active_mode": session.get("active_mode")},
+        metadata={
+            "active_mode": (
+                parsed["payload"]["mode"]
+                if parsed.get("success") and parsed.get("capability") == "activate_mode"
+                else session.get("active_mode")
+            )
+        },
     )
 
     brain_response = brain.execute(
         brain_request
     )
 
-    if not brain_response.success:
+    # Only a literal boolean success may authorize capability execution.
+    if brain_response.success is not True:
         return {
             "success": False,
             "brain": {
@@ -121,7 +159,6 @@ def command(
     session = sessions.get_session(session["session_id"])
 
     intent = IntentClassifierService().classify(request.input)
-    parsed = CommandParserService().parse(request.input)
     if not parsed["success"]:
         sessions.append_message(session["session_id"], "assistant", "I could not map that request to a supported capability.")
         return {
@@ -139,8 +176,21 @@ def command(
     mode_state = brain_response.state.mode
 
     capability = parsed["capability"]
-
     if capability == "activate_mode":
+        # Commit the mode change only after the brain has passed its success gate.
+        session = sessions.update_context(
+            session["session_id"],
+            active_mode=parsed["payload"]["mode"],
+        )
+
+    if capability == "agent_task":
+        orchestrator = agent_orchestrator or BrainAgentOrchestrator()
+        result = orchestrator.execute_after_brain(
+            parsed["payload"]["task"],
+            brain_response,
+            agent_name=parsed["payload"].get("agent_name"),
+        )
+    elif capability == "activate_mode":
         result = {
             "success": True,
             "capability": capability,
@@ -207,13 +257,13 @@ def command(
             mode_state=mode_state,
         )
 
-    if isinstance(result, dict) and result.get("success") and result.get("goal_id"):
+    if _command_result_success(result) and result.get("goal_id"):
         session = sessions.update_context(
             session["session_id"],
             goal_id=result["goal_id"],
             current_goal=(result.get("goal") or {}).get("title") or session.get("current_goal"),
         )
-    if isinstance(result, dict) and result.get("success"):
+    if _command_result_success(result):
         workflow = result.get("workflow")
         artifact = result.get("artifact")
         if isinstance(workflow, dict) and workflow.get("workflow_id"):
@@ -221,7 +271,7 @@ def command(
         if isinstance(artifact, dict) and artifact.get("artifact_id"):
             sessions.link_record(session["session_id"], "artifact", artifact["artifact_id"])
 
-    if isinstance(result, dict) and result.get("success") and result.get("project_name"):
+    if _command_result_success(result) and result.get("project_name"):
         session = sessions.update_context(
             session["session_id"],
             active_project=result["project_name"],
@@ -238,7 +288,8 @@ def command(
         validation = result.get("validation", {}) if isinstance(result, dict) else {}
         verified_project = bool(
             isinstance(result, dict)
-            and result.get("success")
+            and _command_result_success(result)
+            and result.get("success") is True
             and (capability != "project_generation" or validation.get("valid") is True)
         )
         experience = memory.record_experience(
@@ -261,7 +312,7 @@ def command(
                 source="command",
                 data={"session_id": session["session_id"], "learning_id": learning["learning_id"]},
             )
-    elif isinstance(result, dict) and result.get("success") and capability == "remember_decision":
+    elif _command_result_success(result) and capability == "remember_decision":
         sessions.link_record(session["session_id"], "memory", result["decision"]["decision_id"])
 
     session = sessions.get_session(session["session_id"])
@@ -271,10 +322,10 @@ def command(
         "assistant",
         (
             f"{capability} plan created."
-            if isinstance(result, dict) and result.get("success") and result.get("status") == "planned"
-            else f"{capability} {'completed' if isinstance(result, dict) and result.get('success') else 'did not complete'}."
+            if _command_result_success(result) and result.get("status") == "planned"
+            else f"{capability} {'completed' if _command_result_success(result) else 'did not complete'}."
         ),
-        metadata={"capability": capability, "success": bool(isinstance(result, dict) and result.get("success"))},
+        metadata={"capability": capability, "success": _command_result_success(result)},
     )
 
     context = {
@@ -291,7 +342,7 @@ def command(
 
     return {
 
-        "success": result.get("success", True) if isinstance(result, dict) else True,
+        "success": _command_result_success(result),
 
         "session_id": session["session_id"],
 

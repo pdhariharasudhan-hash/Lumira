@@ -1,5 +1,5 @@
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import uuid
 
@@ -38,8 +38,8 @@ class VoiceCaptureService:
 
         filename = getattr(uploaded_file, "filename", "") or ""
         extension = Path(filename).suffix.removeprefix(".").lower()
-        if extension not in {"wav", "mp3", "m4a"}:
-            raise ValueError("Supported formats: wav, mp3, m4a")
+        if extension not in {"wav", "mp3", "m4a", "ogg", "webm"}:
+            raise ValueError("Supported formats: wav, mp3, m4a, ogg, webm")
 
         filename = (
             f"{artifact_id}.{extension}"
@@ -91,9 +91,7 @@ class VoiceCaptureService:
             ),
 
             "timestamp":
-            datetime.now().strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
+            datetime.now(timezone.utc).isoformat()
         }
 
         try:

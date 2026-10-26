@@ -1,5 +1,5 @@
 ﻿from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from app.services.persistence.atomic_json_store import AtomicJsonStore, PersistenceIntegrityError
 from app.services.sessions.session_manager_service import redact_sensitive_text, redact_sensitive_value
 
@@ -26,7 +26,21 @@ class PipelineHistoryService:
         records = self.store.read([])
         if not isinstance(records, list):
             raise PersistenceIntegrityError("Pipeline history must be a list")
-        return records
+        if any(not isinstance(record, dict) for record in records):
+            raise PersistenceIntegrityError("Pipeline history contains an invalid record")
+        for record in records[-MAX_HISTORY_RECORDS:]:
+            for field_name, limit in (("execution_id", 128), ("request_id", 128), ("session_id", 128), ("project_id", 128), ("user_input", 10000), ("error", 4000), ("timestamp", 40)):
+                value = record.get(field_name)
+                if value is not None and (not isinstance(value, str) or len(value) > limit):
+                    raise PersistenceIntegrityError(f"Pipeline history field {field_name} is invalid")
+            if "success" in record and not isinstance(record["success"], bool):
+                raise PersistenceIntegrityError("Pipeline history success state is invalid")
+            if "stage_count" in record and (not isinstance(record["stage_count"], int) or isinstance(record["stage_count"], bool) or not 0 <= record["stage_count"] <= 500):
+                raise PersistenceIntegrityError("Pipeline history stage count is invalid")
+            if "trace" in record and (not isinstance(record["trace"], list) or len(record["trace"]) > 500):
+                raise PersistenceIntegrityError("Pipeline history trace is invalid")
+        # Bound every reader, including older stores that predate write-time retention.
+        return records[-MAX_HISTORY_RECORDS:]
 
     def _write(self, data):
         if not isinstance(data, list):
@@ -44,6 +58,19 @@ class PipelineHistoryService:
         trace: list,
         error=None,
     ):
+        # A pipeline can run without an active project. Keep that state explicit
+        # as an empty project_id instead of failing the entire user request.
+        for field_name, field_value in (("execution_id", execution_id), ("request_id", request_id), ("session_id", session_id)):
+            if not isinstance(field_value, str) or not field_value.strip() or len(field_value) > 128:
+                raise ValueError(f"{field_name} must contain 1 to 128 characters")
+        if not isinstance(project_id, str) or len(project_id) > 128:
+            raise ValueError("project_id must be a string of at most 128 characters")
+        if not isinstance(user_input, str) or len(user_input) > 100_000:
+            raise ValueError("user_input must be a string of at most 100000 characters")
+        if not isinstance(success, bool):
+            raise ValueError("success must be a boolean")
+        if not isinstance(trace, list) or len(trace) > 500:
+            raise ValueError("trace must be a list of at most 500 stages")
         record = {
             "execution_id": execution_id,
             "request_id": request_id,
@@ -54,7 +81,7 @@ class PipelineHistoryService:
             "error": redact_sensitive_text(str(error))[:4000] if error is not None else None,
             "trace": redact_sensitive_value(trace),
             "stage_count": len(trace),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         def append(history):
@@ -127,7 +154,7 @@ class PipelineHistoryService:
         if not isinstance(query, str):
             return []
 
-        query = query.strip().lower()
+        query = query.strip().lower()[:4000]
 
         if not query:
             return []

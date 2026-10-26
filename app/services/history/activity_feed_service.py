@@ -1,8 +1,12 @@
 from pathlib import Path
 import json
 
+from app.services.persistence.atomic_json_store import AtomicJsonStore, PersistenceIntegrityError
+
 
 class ActivityFeedService:
+
+    MAX_EVENTS = 1000
 
     def __init__(self):
 
@@ -14,6 +18,7 @@ class ActivityFeedService:
             parents=True,
             exist_ok=True
         )
+        self.store = AtomicJsonStore(self.feed_file)
 
         if not self.feed_file.exists():
 
@@ -22,58 +27,35 @@ class ActivityFeedService:
             )
 
     def _read(self):
+        data = self.store.read([])
+        if not isinstance(data, list):
+            raise PersistenceIntegrityError("Activity feed must be a JSON list")
+        return data[-self.MAX_EVENTS:]
 
-        content = (
-            self.feed_file
-            .read_text(
-                encoding="utf-8"
-            )
-            .strip()
-        )
+    def _write(self, data):
+        if not isinstance(data, list):
+            raise PersistenceIntegrityError("Activity feed must be a JSON list")
+        self.store.write(data[-self.MAX_EVENTS:])
 
-        if not content:
+    def add_event(self, event: dict):
+        if not isinstance(event, dict):
+            raise ValueError("Activity event must be an object")
+        try:
+            event_size = len(json.dumps(event, ensure_ascii=False, allow_nan=False).encode("utf-8"))
+        except (TypeError, ValueError, RecursionError) as exc:
+            raise ValueError("Activity event must contain JSON-compatible values") from exc
+        if event_size > 25_000:
+            raise ValueError("Activity event exceeds the 25000-byte limit")
 
-            return []
+        def append(data):
+            if not isinstance(data, list):
+                raise PersistenceIntegrityError("Activity feed must be a JSON list")
+            data.append(event)
+            del data[:-self.MAX_EVENTS]
+            return True
 
-        return json.loads(
-            content
-        )
-
-    def _write(
-        self,
-        data
-    ):
-
-        self.feed_file.write_text(
-            json.dumps(
-                data,
-                indent=2
-            ),
-            encoding="utf-8"
-        )
-
-    def add_event(
-        self,
-        event: dict
-    ):
-
-        data = (
-            self._read()
-        )
-
-        data.append(
-            event
-        )
-
-        self._write(
-            data
-        )
-
-        return {
-
-            "success":
-            True
-        }
+        self.store.update(append, [])
+        return {"success": True}
 
     def get_feed(
         self

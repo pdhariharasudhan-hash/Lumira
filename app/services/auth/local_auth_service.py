@@ -1,4 +1,5 @@
 import base64
+import binascii
 import hashlib
 import hmac
 import json
@@ -26,7 +27,8 @@ class LocalAuthService:
 
     @staticmethod
     def _decode(value: str) -> bytes:
-        return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+        encoded = (value + "=" * (-len(value) % 4)).encode("ascii")
+        return base64.b64decode(encoded, altchars=b"-_", validate=True)
 
     def _signing_key(self) -> bytes:
         if not self.key_path.exists():
@@ -75,12 +77,26 @@ class LocalAuthService:
             payload = json.loads(self._decode(payload_part))
             if header != {"alg": "HS256", "typ": "JWT"}:
                 return None
+            if not isinstance(payload, dict):
+                return None
             if payload.get("iss") != self.ISSUER or payload.get("sub") != "local" or payload.get("owner_id") != "local":
                 return None
-            if not isinstance(payload.get("exp"), int) or payload["exp"] <= int(time.time()):
+            expiration = payload.get("exp")
+            issued_at = payload.get("iat")
+            if isinstance(expiration, bool) or not isinstance(expiration, int) or expiration <= int(time.time()):
                 return None
-            if not isinstance(payload.get("iat"), int) or payload["iat"] > int(time.time()) + 60:
+            if isinstance(issued_at, bool) or not isinstance(issued_at, int) or issued_at <= 0 or issued_at > int(time.time()) + 60:
                 return None
-            return {"subject": "local", "owner_id": "local", "expires_at": payload["exp"]}
-        except (ValueError, TypeError, KeyError, json.JSONDecodeError, UnicodeDecodeError, PersistenceIntegrityError):
+            if expiration <= issued_at or expiration - issued_at > self.TOKEN_LIFETIME_SECONDS:
+                return None
+            return {"subject": "local", "owner_id": "local", "expires_at": expiration}
+        except (
+            ValueError,
+            TypeError,
+            KeyError,
+            UnicodeError,
+            binascii.Error,
+            json.JSONDecodeError,
+            PersistenceIntegrityError,
+        ):
             return None

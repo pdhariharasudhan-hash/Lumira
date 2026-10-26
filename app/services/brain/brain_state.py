@@ -155,10 +155,25 @@ class BrainState(BaseModel):
     )
 
     # ----------------------------------
+    # Explicit Execution State
+    # ----------------------------------
+
+    current_stage: str = ""
+    last_completed_stage: str = ""
+    status: str = "running"
+    selected_capability: str = ""
+    execution_result: Dict[str, Any] = Field(default_factory=dict)
+    verification_result: Dict[str, Any] = Field(default_factory=dict)
+    reflection_result: Dict[str, Any] = Field(default_factory=dict)
+    learning_result: Dict[str, Any] = Field(default_factory=dict)
+    memory_reference: Dict[str, Any] = Field(default_factory=dict)
+
+    # ----------------------------------
     # Original User Input
     # ----------------------------------
 
     user_input: str = ""
+    intent: str = ""
 
     # ----------------------------------
     # Operating Mode State
@@ -247,7 +262,18 @@ class BrainState(BaseModel):
 
         self.execution_context = BrainContext()
 
+        self.current_stage = ""
+        self.last_completed_stage = ""
+        self.status = "running"
+        self.selected_capability = ""
+        self.execution_result = {}
+        self.verification_result = {}
+        self.reflection_result = {}
+        self.learning_result = {}
+        self.memory_reference = {}
+
         self.user_input = ""
+        self.intent = ""
 
         self.mode = ModeState()
 

@@ -21,6 +21,7 @@ from app.services.projects.project_writer import (
 from app.services.validation.code_validation_service import (
     CodeValidationService
 )
+from app.services.sessions.session_manager_service import redact_sensitive_value
 
 
 class WorkflowStepRouter:
@@ -96,6 +97,36 @@ class WorkflowStepRouter:
             from app.services.image.image_generation_service import ImageGenerationService
 
             return ImageGenerationService().generate(goal)
+
+        if step == "save_artifact":
+            import json
+            from app.services.artifacts.artifact_manager_service import ArtifactManagerService
+
+            safe_payload = redact_sensitive_value({
+                "goal": goal,
+                "completed_stages": context,
+            })
+            content = json.dumps(safe_payload, ensure_ascii=False, indent=2, default=str)
+            if len(content) > ArtifactManagerService.MAX_CONTENT_LENGTH:
+                return {
+                    "success": False,
+                    "code": "artifact_content_too_large",
+                    "message": "Workflow results exceed the artifact storage limit.",
+                }
+            try:
+                artifact = ArtifactManagerService().create_artifact(
+                    artifact_type="reports",
+                    content=content,
+                    source="workflow_engine",
+                    extension="json",
+                )
+            except Exception:
+                return {
+                    "success": False,
+                    "code": "artifact_storage_failed",
+                    "message": "Workflow results could not be saved as an artifact.",
+                }
+            return {"success": True, "state": "completed", "step": step, "artifact": artifact}
 
         if step == "save_project":
 

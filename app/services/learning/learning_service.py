@@ -4,7 +4,7 @@ learning_service.py
 Implements Lumira's Learning Engine.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.services.learning.learning_models import (
     LearningState,
@@ -213,7 +213,7 @@ class LearningService:
         )
 
         state.last_updated = (
-            datetime.utcnow().isoformat()
+            datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         )
 
         return state

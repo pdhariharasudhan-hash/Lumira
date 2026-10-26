@@ -16,6 +16,15 @@ type Props = {
 	fileContent: string | null;
 	fileLoading: boolean;
 	previewUrl?: string | null;
+	previewStatus?: string | null;
+	previewInput: string;
+	onPreviewInput: (value: string) => void;
+	onPreviewRegister: () => void;
+	onPreviewStop: () => void;
+	terminalCommands: Record<string, unknown>;
+	terminalRuns: Record<string, unknown>[];
+	terminalBusy: boolean;
+	onTerminalRun: (commandId: string) => void;
 	apiPaths: string[];
 	runs: Record<string, unknown>[];
 	onToggle: () => void;
@@ -73,15 +82,16 @@ export function RightPanel(props: Props) {
 					{props.fileLoading ? <p className="empty-note">Loading file…</p> : props.fileContent !== null ? <pre className="source-code">{sourceLines.slice(0, lineCount).map((line, index) => `${String(index + 1).padStart(4, " ")}  ${line}`).join("\n")}</pre> : <p className="empty-note">Select a project file to view its source.</p>}
 				</section>}
 				{props.activeTab === "preview" && <section className="dev-content preview-view" aria-label="Project preview">
-					{props.previewUrl ? <><div className="preview-toolbar"><span>{props.previewUrl}</span><button className="icon-button" type="button" aria-label="Open preview externally" onClick={() => window.open(props.previewUrl!, "_blank", "noopener,noreferrer")}><FiExternalLink /></button></div><iframe title="Project preview" src={props.previewUrl} /></> : <div className="unavailable-state"><FiMonitor /><strong>Preview unavailable</strong><p>No running project preview is registered.</p><small>Run the project to start a preview when a safe runner is configured.</small></div>}
+					{props.previewUrl ? <><div className="preview-toolbar"><span>{props.previewUrl}</span><button className="icon-button" type="button" aria-label="Open preview externally" onClick={() => window.open(props.previewUrl!, "_blank", "noopener,noreferrer")}><FiExternalLink /></button></div><iframe title="Project preview" src={props.previewUrl} /></> : <div className="preview-register"><FiMonitor /><strong>Register local preview</strong><p>Only localhost or loopback preview URLs are accepted.</p><input aria-label="Preview URL" placeholder="http://127.0.0.1:3000" value={props.previewInput} onChange={(event) => props.onPreviewInput(event.target.value)} /><div><button type="button" onClick={props.onPreviewRegister} disabled={!props.previewInput.trim()}>Register</button>{props.previewStatus === "stopped" && <small> Preview stopped.</small>}</div></div>}
+					{props.previewUrl && <button type="button" onClick={props.onPreviewStop}>Stop preview registration</button>}
 				</section>}
-				{props.activeTab === "terminal" && <section className="dev-content unavailable-state" aria-label="Terminal"><FiTerminal /><strong>Terminal unavailable</strong><p>No sandboxed project terminal is configured.</p><small>Arbitrary shell execution is not enabled.</small></section>}
+				{props.activeTab === "terminal" && <section className="dev-content terminal-view" aria-label="Terminal"><div className="terminal-toolbar"><FiTerminal /><strong>Allowlisted Project Runner</strong></div><p>Project command execution is currently disabled because no OS-level sandbox is configured. Test/build scripts can execute project code; environment flags and UI confirmation are not isolation. Commands will remain disabled until a real sandbox is implemented and verified.</p><div className="terminal-actions">{Object.entries(props.terminalCommands).map(([id, command]) => <button key={id} type="button" disabled={true} onClick={() => props.onTerminalRun(id)}>{props.terminalBusy ? "Running…" : id} <code>{Array.isArray(command) ? command.join(" ") : String(command)}</code></button>)}</div>{props.terminalRuns.length ? <ul className="terminal-runs">{props.terminalRuns.map((run, index) => <li key={String(run.completed_at ?? index)}><strong>{String(run.status ?? "unknown")}</strong> · {String(run.command_id ?? "command")} · exit {String(run.return_code ?? "—")}<pre>{String(run.output ?? "")}</pre></li>)}</ul> : <p className="empty-note">No terminal runs recorded for this project version.</p>}</section>}
 				<div className="dev-secondary" aria-label="Developer details">
 					{[
 						{ id: "api", label: "API Docs", body: props.apiPaths.length ? <ul>{props.apiPaths.slice(0, 80).map((path) => <li key={path}><code>{path}</code></li>)}</ul> : <p>API schema is unavailable.</p> },
 						{ id: "database", label: "Database", body: <p>Lumira currently stores local project, session, memory, and artifact data in files. No database service is configured.</p> },
 						{ id: "logs", label: "Runs & Logs", body: props.runs.length ? <ul>{props.runs.map((run, index) => <li key={String(run.run_id ?? index)}>{String(run.status ?? "unknown")} · {String(run.current_stage ?? run.last_completed_stage ?? "no stage")}</li>)}</ul> : <p>No workflow runs are recorded.</p> },
-						{ id: "terminal", label: "Terminal", body: <p>Unavailable: no sandboxed terminal provider is configured.</p> },
+						{ id: "terminal", label: "Terminal", body: <p>Project command execution is disabled until a real OS-level sandbox is implemented and verified.</p> },
 					].map((section) => <section className="dev-accordion" key={section.id}>
 						<button type="button" aria-expanded={openSections.includes(section.id)} onClick={() => toggleSection(section.id)}>{section.label}<span>{openSections.includes(section.id) ? "−" : "+"}</span></button>
 						{openSections.includes(section.id) && <div className="accordion-body">{section.body}</div>}

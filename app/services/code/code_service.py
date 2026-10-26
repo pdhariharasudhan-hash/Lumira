@@ -207,8 +207,8 @@ def _get_records(owner=None):
     owner_key = owner or ""
     connection = _connect()
     try:
-        rows = connection.execute("SELECT payload FROM records WHERE owner = ? ORDER BY id", (owner_key,)).fetchall()
-        return [json.loads(row[0]) for row in rows]
+        rows = connection.execute("SELECT id, payload FROM records WHERE owner = ? ORDER BY id", (owner_key,)).fetchall()
+        return [{{**json.loads(row[1]), "id": row[0]}} for row in rows]
     finally:
         connection.close()
 
@@ -227,35 +227,35 @@ def _add_record(payload, owner=None):
 
 
 def _update_record(item_id, payload, owner=None):
-    if item_id < 0:
+    if item_id < 1:
         return False
     owner_key = owner or ""
     connection = _connect()
     try:
         connection.execute("BEGIN IMMEDIATE")
-        rows = connection.execute("SELECT id FROM records WHERE owner = ? ORDER BY id", (owner_key,)).fetchall()
-        if item_id >= len(rows):
-            return False
-        connection.execute("UPDATE records SET payload = ? WHERE id = ? AND owner = ?", (json.dumps(payload), rows[item_id][0], owner_key))
+        cursor = connection.execute(
+            "UPDATE records SET payload = ? WHERE id = ? AND owner = ?",
+            (json.dumps(payload), item_id, owner_key),
+        )
         connection.commit()
-        return True
+        return cursor.rowcount == 1
     finally:
         connection.close()
 
 
 def _delete_record(item_id, owner=None):
-    if item_id < 0:
+    if item_id < 1:
         return False
     owner_key = owner or ""
     connection = _connect()
     try:
         connection.execute("BEGIN IMMEDIATE")
-        rows = connection.execute("SELECT id FROM records WHERE owner = ? ORDER BY id", (owner_key,)).fetchall()
-        if item_id >= len(rows):
-            return False
-        connection.execute("DELETE FROM records WHERE id = ? AND owner = ?", (rows[item_id][0], owner_key))
+        cursor = connection.execute(
+            "DELETE FROM records WHERE id = ? AND owner = ?",
+            (item_id, owner_key),
+        )
         connection.commit()
-        return True
+        return cursor.rowcount == 1
     finally:
         connection.close()
 
@@ -353,6 +353,8 @@ def delete_item(
                 "The server stores salted PBKDF2 password hashes and a persistent signing key under `.lumira_auth/` by default. "
                 "Set `LUMIRA_AUTH_DATA_DIR` to move that directory, or set `JWT_SECRET_KEY` to a stable secret of at least 32 bytes before starting the app. "
                 "Do not commit either the data directory or the signing secret. Bearer tokens expire after one hour.\n\n"
+                "Registration and login are limited to 10 attempts per client IP in a 15-minute window in this process; multi-worker deployments need shared rate-limit storage.\n\n"
+                "Authentication users are loaded into process memory at startup; run a single worker unless you replace this with a shared transactional user store and shared rate limiting.\n\n"
                 "API records are stored in SQLite under `.lumira_data/` by default and survive application restarts. "
                 "Set `LUMIRA_DATA_DIR` to move the database directory or `LUMIRA_DATA_FILE` to select an explicit database file. "
                 "Keep the database private; each authenticated record is scoped to its owner.\n"

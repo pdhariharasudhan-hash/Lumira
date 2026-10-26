@@ -61,3 +61,83 @@ def test_research_provider_success_is_normalized_to_bounded_findings_and_sources
     assert result["findings"] == ["Verified finding."]
     assert result["sources"] == [{"url": "https://example.test/source"}]
     assert "provider_secret" not in result
+
+
+def test_local_retrieval_bounds_results_and_nested_content():
+    service = ResearchCapabilityService()
+    service.search.search_all = lambda query: {
+        "projects": [{"content": "x" * 9000, "nested": {"items": list(range(30))}} for _ in range(25)],
+        "artifacts": [{"artifact_id": str(index)} for index in range(150)],
+        "invalid_category": "ignored",
+    }
+
+    result = service.knowledge_retrieval("  bounded query  ")
+
+    assert result["success"] is True
+    assert result["request"] == "bounded query"
+    assert result["result_count"] == 40
+    assert len(result["results"]["projects"]) == 20
+    assert len(result["results"]["projects"][0]["content"]) == 4000
+    assert len(result["results"]["projects"][0]["nested"]["items"]) == 20
+    assert len(result["results"]["artifacts"]) == 20
+
+
+def test_local_retrieval_handles_search_exceptions_without_leaking_details():
+    service = ResearchCapabilityService()
+    service.search.search_all = lambda query: (_ for _ in ()).throw(RuntimeError("private path / secret"))
+    result = service.knowledge_retrieval("find my note")
+    assert result["success"] is False
+    assert result["code"] == "local_search_failed"
+    assert "private path" not in str(result)
+
+
+def test_local_retrieval_rejects_invalid_search_result_shape():
+    service = ResearchCapabilityService()
+    service.search.search_all = lambda query: ["not", "an", "object"]
+    result = service.document_research("find document")
+    assert result["success"] is False
+    assert result["code"] == "invalid_local_search_result"
+
+
+def test_research_agent_selects_specialized_existing_capabilities():
+    from app.agents.research_agent import ResearchAgent
+
+    expected = {
+        "compare two local projects": "comparison",
+        "market research on local schools": "market_research",
+        "technical research on a battery": "technical_research",
+        "document research in my workspace": "document_research",
+        "gather evidence for the proposal": "evidence_gathering",
+        "summarize research findings": "research_summaries",
+        "extract knowledge from these notes": "knowledge_extraction",
+        "search my memory for this decision": "knowledge_retrieval",
+        "research current solar technology": "web_research",
+    }
+    for task, route in expected.items():
+        assert ResearchAgent._select_route(task) == route
+
+
+def test_research_agent_rejects_empty_task_and_invalid_capability_result():
+    from app.agents.research_agent import ResearchAgent
+
+    agent = ResearchAgent(research=object())
+    empty = agent.execute("   ")
+    assert empty["code"] == "invalid_research_request"
+
+    class InvalidResearch:
+        def web_research(self, request):
+            return ["invalid"]
+
+    invalid = ResearchAgent(research=InvalidResearch()).execute("research current topic")
+    assert invalid["code"] == "invalid_research_result"
+
+
+
+def test_external_research_rejects_empty_and_oversized_requests_before_provider_call():
+    class MustNotRunProvider:
+        def research(self, request, research_type):
+            raise AssertionError("provider should not receive invalid requests")
+
+    service = ResearchCapabilityService(MustNotRunProvider())
+    assert service.web_research(" ")["code"] == "invalid_research_request"
+    assert service.technical_research("x" * 10_001)["code"] == "invalid_research_request"

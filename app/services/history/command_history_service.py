@@ -1,5 +1,5 @@
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from app.services.persistence.atomic_json_store import AtomicJsonStore, PersistenceIntegrityError
 from app.services.sessions.session_manager_service import redact_sensitive_text, redact_sensitive_value
 
@@ -53,7 +53,7 @@ class CommandHistoryService:
             "environment": environment,
             "workspace": workspace,
             "metadata": redact_sensitive_value(metadata or {}),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         }
 
         def append(history):

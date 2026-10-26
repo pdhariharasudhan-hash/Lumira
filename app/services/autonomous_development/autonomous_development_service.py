@@ -8,6 +8,7 @@ from typing import Any
 from app.agents.workflow_engine import WorkflowEngine
 from app.services.workflow_recovery.run_recovery_service import RunRecoveryService
 from app.services.work_items.work_item_service import WorkItemService
+from app.services.sessions.session_manager_service import redact_sensitive_text
 
 from app.services.autonomous_development.autonomous_development_loop import (
     AutonomousDevelopmentLoop,
@@ -40,6 +41,7 @@ class AutonomousDevelopmentService:
     MAX_STORED_RESULT_LENGTH = 3_900
     STALE_WORKFLOW_AFTER_SECONDS = 3_600
     MAX_TASKS_PER_CONTINUATION = 3
+    MAX_RECOVERY_WINDOWS_PER_TASK = 3
 
     def __init__(
         self,
@@ -77,6 +79,7 @@ class AutonomousDevelopmentService:
             self.development_loop.worker,
             work_items=self.work_items,
             recovery=self.recovery,
+            backlog=self.backlog,
         )
         self.task_planner = DevelopmentTaskPlanner(self.backlog)
         self.progress = DevelopmentProgressService(self.backlog)
@@ -604,6 +607,59 @@ class AutonomousDevelopmentService:
                     iteration
                 )
 
+                if validation_result.get("status") == "blocked":
+                    blocked_message = (
+                        "Autonomous development stopped because project-controlled "
+                        "validation requires verified OS-level isolation. No further "
+                        "automatic diagnosis, fixes, or validation attempts were started."
+                    )
+                    blocked_result = {
+                        "success": False,
+                        "state": "blocked",
+                        "stage": "validation",
+                        "code": "os_sandbox_unverified",
+                        "message": blocked_message,
+                        "validation": validation_result,
+                    }
+                    blocked_task = validation_task if iteration == 1 else tasks[6]
+                    self.work_items.update_task(
+                        workflow_id,
+                        blocked_task["task_id"],
+                        "blocked",
+                        blocker=blocked_message,
+                        result=self._serialize_for_work_item(blocked_result),
+                    )
+                    for remaining_task in self.work_items.get_workflow(workflow_id)["tasks"]:
+                        if remaining_task["status"] == "pending":
+                            self.work_items.update_task(
+                                workflow_id,
+                                remaining_task["task_id"],
+                                "blocked",
+                                blocker="Blocked because validation could not safely run.",
+                            )
+                    if iteration == 1:
+                        self.recovery.update(
+                            recovery_run_id,
+                            "fail_stage",
+                            stage="validate",
+                            error="os_sandbox_unverified",
+                        )
+                    self.recovery.update(
+                        recovery_run_id,
+                        "block",
+                        error="os_sandbox_unverified",
+                    )
+                    return {
+                        "success": False,
+                        "state": "blocked",
+                        "code": "os_sandbox_unverified",
+                        "message": blocked_message,
+                        "workflow_id": workflow_id,
+                        "recovery_run_id": recovery_run_id,
+                        "stage": "validation",
+                        "result": blocked_result,
+                    }
+
                 context["previous_validation"] = validation_result
 
                 validation_success = (
@@ -960,11 +1016,14 @@ class AutonomousDevelopmentService:
             }
 
         except Exception as exc:
+            safe_message = redact_sensitive_text(str(exc))[:1000].strip()
+            if not safe_message:
+                safe_message = type(exc).__name__
             failure = {
                 "success": False,
                 "stage": "execute",
                 "code": "autonomous_development_error",
-                "message": str(exc),
+                "message": safe_message,
             }
             self._persist_workflow_failure(
                 workflow_id,
@@ -978,7 +1037,7 @@ class AutonomousDevelopmentService:
                         recovery_run_id,
                         "fail_stage",
                         stage=current_stage,
-                        error=str(exc),
+                        error=safe_message,
                     )
                 except Exception:
                     pass
@@ -988,8 +1047,74 @@ class AutonomousDevelopmentService:
                 "workflow_id": workflow_id,
                 "recovery_run_id": recovery_run_id,
                 "code": "autonomous_development_error",
-                "message": str(exc),
+                "message": safe_message,
             }
+
+    @staticmethod
+    def _recovery_window_error_code(task: dict[str, Any]) -> str | None:
+        error = task.get("last_error")
+        if not isinstance(error, dict):
+            return None
+        code = error.get("code")
+        return str(code) if code else None
+
+    def _open_recovery_window_for_task(
+        self,
+        program_id: str,
+        task: dict[str, Any],
+    ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+        code = self._recovery_window_error_code(task)
+        if code not in {"resume_limit_reached", "provider_retry_exhausted"}:
+            return None, {
+                "code": "recovery_window_not_eligible",
+                "message": "Task is not blocked by a recoverable resume/provider retry limit.",
+            }
+
+        window_count = int(task.get("recovery_window_count", 0) or 0)
+        if window_count >= self.MAX_RECOVERY_WINDOWS_PER_TASK:
+            return None, {
+                "code": "recovery_window_limit_reached",
+                "message": "Task reached the configured maximum number of recovery windows.",
+            }
+
+        parent_run_id = task.get("recovery_run_id") or task.get("resume_run_id")
+        if not parent_run_id:
+            return None, {
+                "code": "recovery_run_missing",
+                "message": "No recovery run is available for the bounded recovery window.",
+            }
+
+        parent_run = self.recovery.get_run(parent_run_id)
+        if not parent_run:
+            return None, {
+                "code": "recovery_run_missing",
+                "message": "The persisted parent recovery run could not be found.",
+                "recovery_run_id": parent_run_id,
+            }
+        if parent_run.get("status") == "completed":
+            return None, {
+                "code": "recovery_run_completed",
+                "message": "The parent recovery run is already completed.",
+                "recovery_run_id": parent_run_id,
+            }
+
+        new_run = self.recovery.create_recovery_window(parent_run_id)
+        new_run_id = new_run.get("run_id") if isinstance(new_run, dict) else None
+        if not new_run_id:
+            return None, {
+                "code": "recovery_window_creation_failed",
+                "message": "A new bounded recovery window could not be created.",
+                "parent_run_id": parent_run_id,
+            }
+
+        reopened = self.backlog.open_recovery_window(
+            program_id,
+            task["task_id"],
+            new_run_id,
+            parent_run_id=parent_run_id,
+            reason=f"bounded recovery window after {code}",
+        )
+        return reopened, None
 
     def _continue_development_program(
         self,
@@ -1058,7 +1183,17 @@ class AutonomousDevelopmentService:
                 ),
                 None,
             )
-            task = interrupted or self.backlog.next_ready_task(
+            recovery_candidate = next(
+                (
+                    task for task in current["tasks"]
+                    if task["status"] in {"blocked", "failed"}
+                    and task["task_id"] not in attempted
+                    and self._recovery_window_error_code(task)
+                    in {"resume_limit_reached", "provider_retry_exhausted"}
+                ),
+                None,
+            )
+            task = interrupted or recovery_candidate or self.backlog.next_ready_task(
                 program["program_id"],
                 exclude_task_ids=attempted,
             )
@@ -1066,6 +1201,27 @@ class AutonomousDevelopmentService:
                 break
 
             attempted.add(task["task_id"])
+            if task["status"] in {"blocked", "failed"}:
+                reopened, recovery_error = self._open_recovery_window_for_task(
+                    program["program_id"],
+                    task,
+                )
+                if reopened is None:
+                    results.append({
+                        "task_id": task["task_id"],
+                        "objective": task["objective"],
+                        "result": {
+                            "success": False,
+                            "state": "blocked",
+                            **(recovery_error or {
+                                "code": "recovery_window_creation_failed",
+                                "message": "A bounded recovery window could not be created.",
+                            }),
+                        },
+                    })
+                    continue
+                task = reopened
+
             if task["status"] != "in_progress":
                 task = self.progress.start(
                     program["program_id"],
@@ -1435,14 +1591,25 @@ class AutonomousDevelopmentService:
                 if item["status"] == "in_progress"
             ),
             None,
-        ) or next(
-            (
-                item
-                for item in workflow["tasks"]
-                if item["status"] == "pending"
-            ),
-            None,
         )
+        if task is None:
+            # The durable task contract forbids pending -> failed because a
+            # task must enter execution before it can record a failure. Select
+            # the next pending stage and persist that transition explicitly.
+            task = next(
+                (
+                    item
+                    for item in workflow["tasks"]
+                    if item["status"] == "pending"
+                ),
+                None,
+            )
+            if task is not None:
+                self.work_items.update_task(
+                    workflow_id,
+                    task["task_id"],
+                    "in_progress",
+                )
 
         if task is not None:
             message = str(
@@ -2040,6 +2207,18 @@ class AutonomousDevelopmentService:
                     rerun_task["task_id"],
                     "completed",
                     result=self._serialize_for_work_item(validation),
+                )
+
+            for skipped_stage in ("diagnose", "fix"):
+                self.recovery.update(run_id, "start_stage", stage=skipped_stage)
+                self.recovery.update(
+                    run_id,
+                    "complete_stage",
+                    stage=skipped_stage,
+                    result={
+                        "skipped": True,
+                        "reason": "Recovery validation passed; no fix was needed.",
+                    },
                 )
 
             self.recovery.update(run_id, "start_stage", stage="verify")

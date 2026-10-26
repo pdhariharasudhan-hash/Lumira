@@ -31,3 +31,54 @@ def test_unified_search_finds_text_artifact_content(tmp_path, monkeypatch):
     artifact = service.artifacts.create_artifact("transcripts", "Expense API meeting notes", "voice", "txt")
     results = service.search_all("Find my expense API")
     assert any(item["artifact_id"] == artifact["artifact_id"] for item in results["voice_ideas"])
+
+
+def test_search_api_never_returns_internal_artifact_paths(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    monkeypatch.chdir(tmp_path)
+    service = UnifiedSearchService()
+    artifact = service.artifacts.create_artifact(
+        "transcripts", "Public meeting notes", "voice", "txt"
+    )
+    response = TestClient(app).get("/search", params={"q": "Public meeting"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    serialized = json.dumps(body)
+    assert artifact["file"] not in serialized
+    assert '"file":' not in serialized
+
+
+def test_search_api_treats_whitespace_only_query_as_empty(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    monkeypatch.chdir(tmp_path)
+    response = TestClient(app).get("/search", params={"q": "   "})
+    assert response.status_code == 200
+    assert response.json() == {"success": True, "query": "", "results": []}
+
+
+def test_unified_artifact_search_does_not_match_or_return_internal_paths(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    service = UnifiedSearchService()
+    service.artifacts.get_all_artifacts = lambda: [{
+        "artifact_id": "public-artifact",
+        "type": "transcripts",
+        "source": "voice capture",
+        "timestamp": "2026-10-25T00:00:00+00:00",
+        "file": "private-secret-folder/hidden.txt",
+    }]
+    service.artifacts.get_artifact_path = lambda artifact_id: None
+
+    private_path_match = service.search_artifacts("private-secret-folder")
+    public_metadata_match = service.search_artifacts("voice capture")
+
+    assert private_path_match == []
+    assert len(public_metadata_match) == 1
+    assert public_metadata_match[0]["artifact_id"] == "public-artifact"
+    assert "file" not in public_metadata_match[0]

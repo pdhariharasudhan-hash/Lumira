@@ -2,6 +2,18 @@ from threading import RLock
 from typing import Any
 
 
+PROVIDER_STATUS_NAMES = (
+    "summarization",
+    "transcription",
+    "speech_synthesis",
+    "image_generation",
+    "image_understanding",
+    "research",
+    "wake_word",
+    "device_transport",
+)
+
+
 class ProviderRegistry:
     """Thread-safe in-process registry for explicitly configured providers."""
 

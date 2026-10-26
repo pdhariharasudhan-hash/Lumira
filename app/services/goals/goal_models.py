@@ -12,7 +12,7 @@ Ownership:
 Handoff 11 - Goal Manager
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field
 
@@ -40,10 +40,10 @@ class GoalState(BaseModel):
 
     identified_at: str = Field(
         default_factory=lambda:
-        datetime.utcnow().isoformat()
+        datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     )
 
     last_updated: str = Field(
         default_factory=lambda:
-        datetime.utcnow().isoformat()
+        datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     )

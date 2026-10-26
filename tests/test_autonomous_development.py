@@ -64,6 +64,8 @@ def _service(
     }
 
     worker = service.development_loop.worker
+    # Unit tests inject a fake command runner; production remains blocked without OS isolation.
+    monkeypatch.setattr(worker, "_os_sandbox_is_verified", lambda: True)
     apply_worker_changes = worker.apply_changes
     generation_contexts: list[dict] = []
 
@@ -109,6 +111,87 @@ def _service(
     return service, generation_contexts
 
 
+def test_validation_is_blocked_without_verified_os_sandbox(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    worker = DevelopmentWorker(tmp_path)
+    worker.begin_iteration(1)
+
+    def forbidden_run(*args, **kwargs):
+        pytest.fail("project-controlled validation command must not run without OS isolation")
+
+    monkeypatch.setattr(subprocess, "run", forbidden_run)
+
+    result = worker.run_validation(1)
+
+    assert result.status == "blocked"
+    assert result.return_code is None
+    assert "OS-level sandboxing is not implemented" in result.output
+
+
+def test_blocked_validation_stops_autonomous_loop_without_diagnosis_or_retry(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service, generation_contexts = _service(tmp_path, monkeypatch, [0, 0])
+    worker = service.development_loop.worker
+    monkeypatch.setattr(worker, "_os_sandbox_is_verified", lambda: False)
+
+    def forbidden_run(*args, **kwargs):
+        pytest.fail("project-controlled validation must not run without verified isolation")
+
+    monkeypatch.setattr(subprocess, "run", forbidden_run)
+
+    result = service.execute("Add a harmless operational test")
+
+    workflow = service.work_items.get_workflow(result["workflow_id"])
+    recovery = service.recovery.get_run(result["recovery_run_id"])
+    assert result["success"] is False
+    assert result["state"] == "blocked"
+    assert result["code"] == "os_sandbox_unverified"
+    assert len(generation_contexts) == 1
+    assert workflow["status"] == "blocked"
+    assert workflow["tasks"][3]["status"] == "blocked"
+    assert all(task["status"] != "pending" for task in workflow["tasks"])
+    assert recovery["status"] == "blocked"
+    assert recovery["resume_allowed"] is False
+
+
+def test_write_file_limit_rejects_before_creating_extra_file(tmp_path: Path) -> None:
+    worker = DevelopmentWorker(tmp_path)
+    worker.begin_iteration(1)
+    record = worker._get_iteration(1)
+    record.files_changed = [
+        f"existing_{index}.txt"
+        for index in range(worker.MAX_FILES_PER_ITERATION)
+    ]
+    target = tmp_path / "limit_exceeded.txt"
+
+    with pytest.raises(ValueError, match="Maximum changed files"):
+        worker.write_file(
+            "limit_exceeded.txt",
+            "must not be written",
+            iteration=1,
+        )
+
+    assert not target.exists()
+    assert len(record.files_changed) == worker.MAX_FILES_PER_ITERATION
+
+
+def test_write_file_limit_counts_utf8_bytes_not_characters(tmp_path: Path) -> None:
+    worker = DevelopmentWorker(tmp_path)
+    worker.begin_iteration(1)
+    target = tmp_path / "oversized_unicode.txt"
+    content = "界" * (worker.MAX_FILE_SIZE // 2)
+
+    with pytest.raises(ValueError, match="maximum size"):
+        worker.write_file(
+            "oversized_unicode.txt",
+            content,
+            iteration=1,
+        )
+
+    assert not target.exists()
+
+
 def test_first_pass_completes_optional_stages_as_skipped(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -151,15 +234,18 @@ def test_generation_exception_persists_failure_and_blocks_remaining_tasks(
 
     def fail_generation(*, goal: str, iteration: int, context: dict) -> dict:
         service.development_loop.worker.begin_iteration(iteration)
-        raise RuntimeError("provider unavailable")
+        raise RuntimeError("provider unavailable api_key=provider-secret-value")
 
     service.development_loop.worker.generate_changes = fail_generation
     result = service.execute("Add a harmless operational test")
 
     workflow = service.work_items.get_workflow(result["workflow_id"])
     assert result["state"] == "failed"
+    assert "provider-secret-value" not in str(result)
+    assert "[REDACTED]" in result["message"]
     assert workflow["status"] == "failed"
     assert workflow["tasks"][2]["status"] == "failed"
+    assert "provider-secret-value" not in str(workflow)
     assert all(
         task["status"] in {"completed", "failed", "blocked"}
         for task in workflow["tasks"]
@@ -544,7 +630,7 @@ def test_safe_resume_revalidates_without_repeating_completed_apply(
 
     result = service.resume(run_id)
 
-    assert result["success"] is True
+    assert result["success"] is True, result
     assert result["workflow_id"] == workflow_id
     assert calls == [["python", "-m", "pytest", "-q"]]
     run = service.recovery.get_run(run_id)
@@ -1333,3 +1419,27 @@ def test_provider_context_remains_bounded_and_excludes_generated_output(
     assert all(not item["path"].startswith("generated/") for item in generator.files)
     assert all(not item["path"].endswith(".backup") for item in generator.files)
     assert all(".pytest-work" not in Path(item["path"]).parts for item in generator.files)
+
+
+def test_failure_persistence_transitions_pending_stage_before_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service, _ = _service(tmp_path, monkeypatch, [0])
+    workflow = service.work_items.create_workflow(
+        category="operations",
+        title="Failure lifecycle regression",
+        request="Record an early provider failure",
+        tasks=["Generate changes", "Apply changes", "Validate"],
+    )
+
+    service._persist_workflow_failure(
+        workflow["workflow_id"],
+        {"success": False, "code": "provider_unreachable"},
+    )
+
+    persisted = service.work_items.get_workflow(workflow["workflow_id"])
+    assert persisted["status"] == "failed"
+    assert persisted["tasks"][0]["status"] == "failed"
+    assert persisted["tasks"][1]["status"] == "blocked"
+    assert persisted["tasks"][2]["status"] == "blocked"

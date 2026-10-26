@@ -10,7 +10,7 @@ Ownership:
 Handoff 11 - Decision Engine
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.services.decision.decision_models import (
     DecisionState,
@@ -79,7 +79,7 @@ class DecisionService:
         )
 
         state.last_updated = (
-            datetime.utcnow().isoformat()
+            datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         )
 
         return state

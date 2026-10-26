@@ -1,4 +1,4 @@
-from app.agents.agent_manager import AgentManager
+from app.agents.agent_manager import AgentManager, _execute_agent_process
 from app.main import app
 from fastapi.testclient import TestClient
 from app.agents.workflow_engine import WorkflowEngine
@@ -23,6 +23,45 @@ class LargeResultAgent:
 
     def execute(self, task):
         return {"payload": "x" * 300000}
+
+
+class NonObjectResultAgent:
+    name = "non_object_result_agent"
+    capabilities = ["test"]
+
+    def execute(self, task):
+        return "unexpected plain-text result"
+
+
+class NonBooleanSuccessAgent:
+    name = "non_boolean_success_agent"
+    capabilities = ["test"]
+
+    def execute(self, task):
+        return {"success": "false", "status": "completed"}
+
+
+class ExceptionWithSensitiveTextAgent:
+    name = "exception_with_sensitive_text_agent"
+    capabilities = ["test"]
+
+    def execute(self, task):
+        raise RuntimeError("API_KEY=secret-value at C:\\Users\\private\\project.py")
+
+
+def test_agent_child_exception_does_not_return_raw_sensitive_text():
+    class Output:
+        value = None
+
+        def put(self, value):
+            self.value = value
+
+    output = Output()
+    _execute_agent_process(ExceptionWithSensitiveTextAgent(), "test", output)
+
+    assert output.value == {"ok": False, "error_type": "RuntimeError"}
+    assert "secret-value" not in str(output.value)
+    assert "C:\\Users\\private" not in str(output.value)
 
 
 def test_agent_manager_routes_known_work_and_reports_provider_unavailable():
@@ -85,11 +124,36 @@ def test_agent_manager_terminates_work_after_timeout():
 
 
 def test_agent_manager_drains_large_result_without_deadlock():
-    manager = AgentManager(timeout_seconds=5)
+    # Spawn startup and queue serialization are slower in the disposable Windows Sandbox.
+    # Keep this integration test bounded without confusing host scheduling delay with a deadlock.
+    manager = AgentManager(timeout_seconds=60)
     manager.register(LargeResultAgent())
     result = manager.run("large_result_agent", "return a large value")
     assert result["success"] is True
     assert len(result["result"]["payload"]) == 300000
+
+
+def test_agent_manager_rejects_non_object_agent_results(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    manager = AgentManager(timeout_seconds=60)
+    manager.register(NonObjectResultAgent())
+
+    result = manager.run("non_object_result_agent", "return a plain string")
+
+    assert result["success"] is False
+    assert result["state"] == "failed"
+    assert result["code"] == "invalid_agent_result"
+
+
+def test_agent_manager_rejects_non_boolean_success_flags(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    manager = AgentManager(timeout_seconds=60)
+    manager.register(NonBooleanSuccessAgent())
+    result = manager.run("non_boolean_success_agent", "return a malformed success flag")
+
+    assert result["success"] is False
+    assert result["state"] == "failed"
 
 
 def test_code_agent_runs_inside_orchestrator_and_returns_valid_project():
@@ -146,3 +210,25 @@ def test_workflow_stops_immediately_when_builder_refines(tmp_path, monkeypatch):
     assert result["success"] is False
     assert result["failed_step"] == "builder"
     assert calls == ["builder"]
+
+
+
+def test_agent_dispatch_routes_specialized_intents_before_broad_verbs():
+    manager = AgentManager()
+    calls = []
+    manager.run = lambda agent_name, task: calls.append((agent_name, task)) or {"success": True, "agent": agent_name}
+
+    manager.dispatch("Create a comparison of two research providers")
+    manager.dispatch("Build a roadmap for Lumira")
+    manager.dispatch("Fix the syntax error in my API")
+
+    assert [agent for agent, _ in calls] == ["research_agent", "planner_agent", "code_agent"]
+
+
+def test_agent_dispatch_rejects_unmatched_requests_with_available_agents():
+    manager = AgentManager()
+    manager.run = lambda agent_name, task: {"success": False, "agent": agent_name}
+    result = manager.dispatch("hello there")
+    assert result["success"] is False
+    assert result["code"] == "no_matching_agent"
+    assert result["available_agents"]

@@ -1,9 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Protocol
 
 from app.services.artifacts.artifact_manager_service import (
     ArtifactManagerService
 )
+
+from app.services.resources.resource_budget_service import ResourceBudgetService
 
 
 class ImageGenerationProvider(Protocol):
@@ -12,6 +14,9 @@ class ImageGenerationProvider(Protocol):
 
 
 class ImageGenerationService:
+
+    MAX_PROMPT_CHARS = 4_000
+    MAX_IMAGE_BYTES = 25_000_000
 
     def __init__(self, provider: ImageGenerationProvider | None = None):
 
@@ -29,6 +34,27 @@ class ImageGenerationService:
         prompt: str,
         image_type: str = "image"
     ):
+        if not isinstance(prompt, str) or not prompt.strip() or len(prompt) > self.MAX_PROMPT_CHARS:
+            return {
+                "success": False,
+                "code": "invalid_prompt",
+                "message": "Image prompt must contain 1 to 4,000 characters.",
+            }
+
+        # Rendering is optional heavy work. Defer it when the host is under
+        # memory pressure so core conversation and memory features can remain responsive.
+        try:
+            guidance = ResourceBudgetService().execution_guidance()
+        except Exception:
+            guidance = {}
+        if guidance.get("defer_optional_heavy_media_work") is True:
+            return {
+                "success": False,
+                "state": "deferred",
+                "code": "resource_pressure_deferred",
+                "resource_pressure": guidance.get("resource_pressure", "unknown"),
+                "message": "Image generation was deferred because available system memory is constrained.",
+            }
 
         supported_types = {
 
@@ -78,6 +104,13 @@ class ImageGenerationService:
                 "success": False,
                 "code": "invalid_provider_response",
                 "message": "The image provider must return image bytes and a supported image extension.",
+            }
+        if not image_bytes or len(image_bytes) > self.MAX_IMAGE_BYTES:
+            return {
+                "success": False,
+                "code": "image_size_limit_exceeded",
+                "message": "The rendered image is empty or exceeds the 25 MB artifact limit.",
+                "max_image_bytes": self.MAX_IMAGE_BYTES,
             }
         signatures = {
             "png": image_bytes.startswith(b"\x89PNG\r\n\x1a\n"),

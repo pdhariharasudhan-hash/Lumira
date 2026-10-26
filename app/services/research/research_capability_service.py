@@ -20,6 +20,15 @@ class ResearchCapabilityService:
         self.search = UnifiedSearchService()
 
     def _provider_research(self, request: str, research_type: str) -> dict[str, Any]:
+        if not isinstance(request, str) or not request.strip() or len(request) > 10_000:
+            return {
+                "success": False,
+                "status": "rejected",
+                "code": "invalid_research_request",
+                "research_type": research_type,
+                "message": "Research requests must contain 1 to 10000 characters.",
+            }
+        request = request.strip()
         if self.provider is None:
             return {
                 "success": False,
@@ -82,16 +91,71 @@ class ResearchCapabilityService:
             "sources": sources,
         }
 
+    @classmethod
+    def _bound_local_value(cls, value: Any, *, depth: int = 0) -> Any:
+        """Bound indexed content before returning it through an agent response."""
+        if depth >= 5:
+            return "[nested content omitted]"
+        if isinstance(value, str):
+            return value[:4_000]
+        if isinstance(value, (int, float, bool)) or value is None:
+            return value
+        if isinstance(value, list):
+            return [cls._bound_local_value(item, depth=depth + 1) for item in value[:20]]
+        if isinstance(value, dict):
+            return {
+                str(key)[:100]: cls._bound_local_value(item, depth=depth + 1)
+                for key, item in list(value.items())[:30]
+                if isinstance(key, (str, int, float))
+            }
+        return str(type(value).__name__)
+
     def _local_retrieval(self, request: str, research_type: str) -> dict[str, Any]:
-        results = self.search.search_all(request)
+        if not isinstance(request, str) or not request.strip():
+            return {
+                "success": False,
+                "status": "rejected",
+                "code": "invalid_research_request",
+                "research_type": research_type,
+                "message": "Research request must be non-empty text.",
+            }
+        try:
+            raw_results = self.search.search_all(request.strip()[:10_000])
+        except Exception:
+            return {
+                "success": False,
+                "status": "failed",
+                "code": "local_search_failed",
+                "research_type": research_type,
+                "message": "Local search failed; no results were accepted.",
+            }
+        if not isinstance(raw_results, dict):
+            return {
+                "success": False,
+                "status": "failed",
+                "code": "invalid_local_search_result",
+                "research_type": research_type,
+                "message": "Local search returned an invalid result.",
+            }
+        results = {}
+        remaining = 100
+        for key, items in raw_results.items():
+            if remaining <= 0:
+                break
+            if not isinstance(key, str) or not isinstance(items, list):
+                continue
+            selected = items[:min(20, remaining)]
+            results[key[:100]] = self._bound_local_value(selected)
+            remaining -= len(selected)
         return {
             "success": True,
             "status": "completed",
             "research_type": research_type,
-            "request": request,
+            "request": request.strip()[:10_000],
             "source": "lumira_local_search",
             "results": results,
             "result_count": sum(len(items) for items in results.values() if isinstance(items, list)),
+            "limits": {"max_total_results": 100, "max_results_per_category": 20, "max_result_string_length": 4000},
         }
 
     def web_research(self, request: str) -> dict[str, Any]:

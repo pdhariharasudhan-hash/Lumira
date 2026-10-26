@@ -13,7 +13,7 @@ Ownership:
 Handoff 11 - Conversation Intelligence
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 
 from pydantic import BaseModel, Field
@@ -75,5 +75,5 @@ class ConversationState(BaseModel):
 
     last_updated: str = Field(
         default_factory=lambda:
-        datetime.utcnow().isoformat()
+        datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     )

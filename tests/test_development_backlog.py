@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+
 from app.services.autonomous_development.autonomous_development_service import AutonomousDevelopmentService
 from app.services.autonomous_development.development_backlog_service import DevelopmentBacklogService
 from app.services.autonomous_development.development_audit_service import DevelopmentAuditService
@@ -239,6 +241,229 @@ def test_audit_finds_real_failed_recovery_run_from_existing_durable_stores(tmp_p
     assert finding["evidence"]["safe_resume_point"] == "generate_changes"
 
 
+def test_audit_does_not_resurrect_recovery_already_completed_in_backlog(tmp_path):
+    work_items = WorkItemService(tmp_path / "work_items.json")
+    recovery = RunRecoveryService(tmp_path / "workflow_runs.json")
+    backlog = DevelopmentBacklogService(tmp_path / "development_backlog.json")
+    goal = "Add a harmless pytest test confirming Lumira autonomous development is operational"
+    workflow = work_items.create_workflow(
+        category="operations",
+        title="Autonomous Lumira Development",
+        request=goal,
+        tasks=["Inspect", "Implement"],
+    )
+    run = recovery.create_run(
+        goal,
+        {
+            "success": True,
+            "autonomous_development": True,
+            "workflow_id": workflow["workflow_id"],
+            "steps": ["generate_changes"],
+        },
+    )
+    recovery.update(run["run_id"], "start_stage", stage="generate_changes")
+    recovery.update(run["run_id"], "fail_stage", stage="generate_changes", error="old_provider_failure")
+    program = backlog.create_program(goal, [_task(goal)], audit={})
+    task = program["tasks"][0]
+    backlog.update_task(program["program_id"], task["task_id"], status="in_progress")
+    backlog.update_task(program["program_id"], task["task_id"], status="completed")
+    worker = DevelopmentWorker(tmp_path)
+
+    audit = DevelopmentAuditService(
+        worker,
+        work_items=work_items,
+        recovery=recovery,
+        backlog=backlog,
+    ).run()
+
+    assert all(item.get("objective") != goal for item in audit["findings"])
+
+
+def test_audit_detects_unregistered_router_and_desktop_api_route_mismatch(tmp_path):
+    boundary = DevelopmentWorker(tmp_path)
+    (tmp_path / "app/routes").mkdir(parents=True)
+    (tmp_path / "app/routes/orphan.py").write_text(
+        "from fastapi import APIRouter\nrouter = APIRouter()\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "app/main.py").write_text(
+        "from fastapi import FastAPI\napp = FastAPI()\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "lumira_desktop/src/api").mkdir(parents=True)
+    (tmp_path / "lumira_desktop/src/api/client.ts").write_text(
+        'request<JsonObject>("/api/not-registered");\n',
+        encoding="utf-8",
+    )
+    audit = DevelopmentAuditService(boundary, work_items=WorkItemService(tmp_path / "work_items.json"), recovery=RunRecoveryService(tmp_path / "workflow_runs.json"))
+    router_findings = audit._router_registration_findings(
+        ["app/main.py", "app/routes/orphan.py"],
+        {},
+    )
+    api_findings = audit._desktop_api_contract_findings(
+        ["lumira_desktop/src/api/client.ts"],
+        {},
+    )
+
+    assert router_findings[0]["category"] == "disconnected_route"
+    assert router_findings[0]["evidence"]["registered"] is False
+    assert any(item["category"] == "frontend_backend_contract" for item in api_findings)
+
+
+def test_audit_behavioral_gate_does_not_launch_project_commands_without_sandbox(tmp_path, monkeypatch):
+    def forbidden_run(*args, **kwargs):
+        raise AssertionError("audit must not execute project-controlled commands without OS isolation")
+
+    monkeypatch.setattr(subprocess, "run", forbidden_run)
+    audit = DevelopmentAuditService(
+        DevelopmentWorker(tmp_path),
+        work_items=WorkItemService(tmp_path / "work_items.json"),
+        recovery=RunRecoveryService(tmp_path / "workflow_runs.json"),
+    )
+
+    gate = audit._behavioral_gate()
+
+    assert gate["status"] == "blocked"
+    assert gate["expected_command_count"] == 4
+    assert len(gate["commands"]) == 4
+    assert all(command["status"] == "not_run" for command in gate["commands"])
+    assert "OS-level sandboxing is not implemented" in gate["reason"]
+
+
+def test_audit_reports_terminal_sandbox_as_unfinished(tmp_path):
+    terminal_path = "app/services/workspace/project_terminal_service.py"
+    terminal_file = tmp_path / terminal_path
+    terminal_file.parent.mkdir(parents=True)
+    terminal_file.write_text(
+        'class ProjectTerminalService:\n    OS_SANDBOX_ENABLED = False\n    COMMANDS: dict = {}\n',
+        encoding="utf-8",
+    )
+    audit = DevelopmentAuditService(
+        DevelopmentWorker(tmp_path),
+        work_items=WorkItemService(tmp_path / "work_items.json"),
+        recovery=RunRecoveryService(tmp_path / "workflow_runs.json"),
+    )
+
+    result = audit._project_terminal_security_status([terminal_path])
+
+    assert result["status"] == "blocked"
+    assert result["command_allowlist"] is True
+    assert result["os_sandbox"] is False
+    assert result["sandbox_verification"] == "not_implemented"
+    assert result["untrusted_project_code_execution_possible"] is True
+
+
+def test_audit_does_not_trust_a_sandbox_boolean_flag(tmp_path):
+    terminal_path = "app/services/workspace/project_terminal_service.py"
+    terminal_file = tmp_path / terminal_path
+    terminal_file.parent.mkdir(parents=True)
+    terminal_file.write_text(
+        'class ProjectTerminalService:\n    OS_SANDBOX_ENABLED = True\n    COMMANDS: dict = {}\n',
+        encoding="utf-8",
+    )
+    audit = DevelopmentAuditService(
+        DevelopmentWorker(tmp_path),
+        work_items=WorkItemService(tmp_path / "work_items.json"),
+        recovery=RunRecoveryService(tmp_path / "workflow_runs.json"),
+    )
+
+    result = audit._project_terminal_security_status([terminal_path])
+
+    assert result["status"] == "blocked"
+    assert result["os_sandbox"] is False
+    assert result["sandbox_verification"] == "not_implemented"
+    assert result["untrusted_project_code_execution_possible"] is True
+
+
+def test_audit_reports_explicit_desktop_terminal_and_preview_gaps(tmp_path):
+    panel = "lumira_desktop/src/components/RightPanel/RightPanel.tsx"
+    panel_path = tmp_path / panel
+    panel_path.parent.mkdir(parents=True)
+    panel_path.write_text(
+        '"Terminal unavailable"; "Preview unavailable";\n',
+        encoding="utf-8",
+    )
+    audit = DevelopmentAuditService(
+        DevelopmentWorker(tmp_path),
+        work_items=WorkItemService(tmp_path / "work_items.json"),
+        recovery=RunRecoveryService(tmp_path / "workflow_runs.json"),
+    )
+
+    findings = audit._desktop_capability_findings([panel], {})
+
+    assert {item["category"] for item in findings} == {"desktop_capability_gap"}
+    assert len(findings) == 2
+
+
+def test_audit_does_not_report_terminal_available_without_verified_sandbox(tmp_path):
+    panel_path = "lumira_desktop/src/components/RightPanel/RightPanel.tsx"
+    terminal_path = "app/services/workspace/project_terminal_service.py"
+    panel = tmp_path / panel_path
+    terminal = tmp_path / terminal_path
+    panel.parent.mkdir(parents=True)
+    terminal.parent.mkdir(parents=True)
+    panel.write_text('const terminalLabel = "Terminal"; const previewLabel = "Preview";\n', encoding="utf-8")
+    terminal.write_text(
+        'class ProjectTerminalService:\n    OS_SANDBOX_ENABLED = False\n    COMMANDS: dict = {}\n',
+        encoding="utf-8",
+    )
+    audit = DevelopmentAuditService(
+        DevelopmentWorker(tmp_path),
+        work_items=WorkItemService(tmp_path / "work_items.json"),
+        recovery=RunRecoveryService(tmp_path / "workflow_runs.json"),
+    )
+    checks = {}
+
+    findings = audit._desktop_capability_findings([panel_path, terminal_path], checks)
+
+    assert findings == []
+    assert checks["desktop_capabilities"]["terminal_ui_present"] is True
+    assert checks["desktop_capabilities"]["terminal_available"] is False
+    assert checks["desktop_capabilities"]["preview_provider_registered"] is True
+
+
+def test_audit_uses_ast_for_unsafe_shell_and_broken_local_import_detection(tmp_path):
+    unsafe_path = "app/services/unsafe.py"
+    broken_path = "app/services/broken.py"
+    (tmp_path / "app/services").mkdir(parents=True)
+    (tmp_path / unsafe_path).write_text(
+        "import subprocess\nsubprocess.run(['echo', 'x'], shell=True)\n",
+        encoding="utf-8",
+    )
+    (tmp_path / broken_path).write_text(
+        "from app.services.missing_module import Missing\n",
+        encoding="utf-8",
+    )
+    audit = DevelopmentAuditService(
+        DevelopmentWorker(tmp_path),
+        work_items=WorkItemService(tmp_path / "work_items.json"),
+        recovery=RunRecoveryService(tmp_path / "workflow_runs.json"),
+    )
+    security_findings = audit._security_findings([unsafe_path], {})
+    integrity_findings = audit._source_integrity_findings([unsafe_path, broken_path], {})
+
+    assert security_findings[0]["category"] == "unsafe_process_execution"
+    assert any(item["category"] == "broken_local_import" for item in integrity_findings)
+
+
+def test_source_integrity_audit_accepts_utf8_bom_python_sources(tmp_path):
+    source_path = tmp_path / "app/services/bom_module.py"
+    source_path.parent.mkdir(parents=True)
+    source_path.write_text("VALUE = 1\n" + "# valid filler\n" * 5_000, encoding="utf-8-sig")
+    audit = DevelopmentAuditService(
+        DevelopmentWorker(tmp_path),
+        work_items=WorkItemService(tmp_path / "work_items.json"),
+        recovery=RunRecoveryService(tmp_path / "workflow_runs.json"),
+    )
+    checks = {}
+
+    findings = audit._source_integrity_findings(["app/services/bom_module.py"], checks)
+
+    assert findings == []
+    assert checks["source_integrity"]["syntax_error_count"] == 0
+    assert checks["source_integrity"]["source_chars_checked"] > 50_000
+
+
 def test_continuation_retries_provider_failure_then_blocks_without_duplicates(tmp_path):
     backlog_path = tmp_path / "memory" / "development_backlog.json"
     backlog = DevelopmentBacklogService(backlog_path)
@@ -404,6 +629,8 @@ def test_fresh_backlog_execution_links_recovery_run_and_task_checkpoint(tmp_path
         "plan": {"steps": ["inspect", "plan", "implement", "test", "verify"]},
     }
     worker = service.development_loop.worker
+    # This unit test injects a fake runner to exercise the success path without launching code.
+    monkeypatch.setattr(worker, "_os_sandbox_is_verified", lambda: True)
 
     def generate(**kwargs):
         worker.begin_iteration(kwargs["iteration"])
@@ -451,3 +678,46 @@ def test_fresh_backlog_execution_links_recovery_run_and_task_checkpoint(tmp_path
     assert recovery["development_program_id"] == program["program_id"]
     assert recovery["development_task_id"] == task["task_id"]
     assert validation_calls == [["python", "-m", "pytest", "-q"]]
+
+def test_audit_blocks_repeated_sandbox_recovery_until_os_isolation_exists(tmp_path):
+    work_items = WorkItemService(tmp_path / "work_items.json")
+    recovery = RunRecoveryService(tmp_path / "workflow_runs.json")
+    objective = "Implement a sandboxed project terminal provider using only the validation command allowlist."
+    workflow = work_items.create_workflow(
+        category="operations",
+        title="Autonomous Lumira Development",
+        request=objective,
+        tasks=["Inspect", "Implement"],
+    )
+    task = workflow["tasks"][0]
+    work_items.update_task(workflow["workflow_id"], task["task_id"], "in_progress")
+    run = recovery.create_run(
+        objective,
+        {
+            "success": True,
+            "autonomous_development": True,
+            "workflow_id": workflow["workflow_id"],
+            "steps": ["generate_changes", "apply_changes"],
+        },
+    )
+    recovery.update(run["run_id"], "start_stage", stage="generate_changes")
+    recovery.update(
+        run["run_id"],
+        "fail_stage",
+        stage="generate_changes",
+        error="Provider did not produce applicable changes after 2 bounded attempts.",
+    )
+
+    audit = DevelopmentAuditService(
+        DevelopmentWorker(tmp_path),
+        work_items=work_items,
+        recovery=recovery,
+    ).run()
+
+    assert all(item.get("recovery_run_id") != run["run_id"] for item in audit["findings"])
+    historical = audit["checks"]["historical_recovery"]
+    assert historical["status"] == "blocked"
+    assert historical["count"] == 1
+    assert "missing verified OS sandbox" in historical["runs"][0]["reason"]
+    assert audit["completion_ready"] is False
+    assert any("OS sandbox" in blocker for blocker in audit["completion_blockers"])

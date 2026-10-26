@@ -68,6 +68,30 @@ def test_operations_workflow_persists_status_and_enforces_dependencies(tmp_path,
     assert refreshed["status"] == "in_progress"
 
 
+def test_work_item_store_rejects_unhashable_persisted_statuses(tmp_path):
+    import json
+    import pytest
+    from app.services.persistence.atomic_json_store import PersistenceIntegrityError
+    from app.services.work_items.work_item_service import WorkItemService
+
+    path = tmp_path / "work_items.json"
+    service = WorkItemService(path)
+    workflow = service.create_workflow(
+        "operations", "Check persisted data", "Verify workflow status validation", ["Inspect data"]
+    )
+    document = json.loads(path.read_text(encoding="utf-8"))
+    document["workflows"][0]["status"] = ["planned"]
+    path.write_text(json.dumps(document), encoding="utf-8")
+    with pytest.raises(PersistenceIntegrityError, match="invalid status"):
+        service.list_workflows()
+
+    document["workflows"][0]["status"] = "planned"
+    document["workflows"][0]["tasks"][0]["status"] = ["pending"]
+    path.write_text(json.dumps(document), encoding="utf-8")
+    with pytest.raises(PersistenceIntegrityError, match="invalid task status"):
+        service.list_workflows()
+
+
 def test_creator_payload_is_saved_as_a_searchable_artifact(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     parsed = CommandParserService().parse("Create a presentation about PCB design services")

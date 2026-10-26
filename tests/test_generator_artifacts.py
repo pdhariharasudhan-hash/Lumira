@@ -19,7 +19,12 @@ def test_binary_artifacts_require_safe_type_extension_and_matching_signature(tmp
     )
     assert saved.status_code == 201
     artifact = saved.json()["artifact"]
-    assert open(artifact["file"], "rb").read() == png
+    assert "file" not in artifact
+    content = client.get(f"/artifacts/{artifact['artifact_id']}/content")
+    assert content.status_code == 200
+    assert content.content == png
+    listed = client.get("/artifacts").json()["artifacts"]
+    assert all("file" not in item for item in listed)
 
     malformed = client.post(
         "/artifacts/binary",
@@ -31,7 +36,9 @@ def test_binary_artifacts_require_safe_type_extension_and_matching_signature(tmp
     )
     assert malformed.status_code == 400
     assert executable.status_code == 400
-    assert ArtifactManagerService().get_all_artifacts() == [artifact]
+    stored_artifacts = ArtifactManagerService().get_all_artifacts()
+    assert len(stored_artifacts) == 1
+    assert stored_artifacts[0]["artifact_id"] == artifact["artifact_id"]
 
 
 def test_report_generator_persists_searchable_outline_and_video_is_truthfully_unavailable(tmp_path, monkeypatch):
@@ -102,3 +109,26 @@ def test_configured_video_provider_runs_through_command_and_persists_artifact(tm
     artifact = ArtifactManagerService().get_artifact(capability["artifact"]["artifact_id"])
     assert artifact["type"] == "video"
     assert open(artifact["file"], "rb").read() == b"\x00\x00\x00\x00ftypisom"
+
+
+def test_artifact_detail_reports_content_availability_without_exposing_path(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    client = TestClient(app)
+    created = client.post(
+        "/artifacts",
+        json={
+            "type": "transcripts",
+            "content": "A durable meeting transcript",
+            "source": "voice capture",
+            "extension": "txt",
+        },
+    )
+    assert created.status_code == 201
+    artifact = created.json()["artifact"]
+
+    details = client.get(f"/artifacts/{artifact['artifact_id']}")
+    assert details.status_code == 200
+    public = details.json()["artifact"]
+    assert public["content_available"] is True
+    assert "file" not in public
+    assert "content_available" not in artifact

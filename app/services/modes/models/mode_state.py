@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
@@ -31,7 +31,7 @@ class ModeState(BaseModel):
 
     last_updated: str = Field(
         default_factory=lambda:
-        datetime.utcnow().isoformat()
+        datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     )
 
     def activate(
@@ -70,7 +70,7 @@ class ModeState(BaseModel):
         self.manually_selected = manual
 
         self.last_updated = (
-            datetime.utcnow().isoformat()
+            datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         )
 
     def reset(self) -> None:
@@ -91,5 +91,5 @@ class ModeState(BaseModel):
         self.confidence = 1.0
 
         self.last_updated = (
-            datetime.utcnow().isoformat()
+            datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         )

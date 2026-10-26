@@ -12,7 +12,7 @@ Ownership:
 Lumira Brain Architecture
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict
 from uuid import uuid4
 
@@ -51,12 +51,12 @@ class BrainContext(BaseModel):
 
     created_at: str = Field(
         default_factory=lambda:
-        datetime.utcnow().isoformat()
+        datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     )
 
     last_updated: str = Field(
         default_factory=lambda:
-        datetime.utcnow().isoformat()
+        datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     )
 
     def update(
@@ -77,7 +77,7 @@ class BrainContext(BaseModel):
                 )
 
         self.last_updated = (
-            datetime.utcnow().isoformat()
+            datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         )
 
     def reset(self) -> None:
@@ -99,7 +99,7 @@ class BrainContext(BaseModel):
 
         self.metadata.clear()
 
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
         self.created_at = timestamp
 

@@ -211,6 +211,8 @@ class BrainExecutor:
             while True:
 
                 attempt += 1
+                state.current_stage = module_name
+                state.status = "running"
 
                 trace_entry = {
                     "module": module_name,
@@ -233,6 +235,7 @@ class BrainExecutor:
                         state = result
 
                     trace_entry["status"] = "completed"
+                    state.last_completed_stage = module_name
 
                     if recovery_state.failures:
 
@@ -290,6 +293,7 @@ class BrainExecutor:
                     controller.abort(
                         recovery_state
                     )
+                    state.status = "failed"
 
                     trace_entry[
                         "recovery_status"
@@ -304,6 +308,8 @@ class BrainExecutor:
         self.last_recovery_state = (
             recovery_state
         )
+        state.status = "completed"
+        state.current_stage = ""
 
         return {
             "state": state,

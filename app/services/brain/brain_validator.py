@@ -21,6 +21,10 @@ from app.services.brain.brain_state import (
     BrainState,
 )
 
+from app.services.features.core_feature_contract import (
+    CoreFeatureContract,
+)
+
 
 class BrainValidator:
     """
@@ -106,12 +110,23 @@ class BrainValidator:
                 "error": "Invalid BrainState instance.",
             }
 
+        contract = CoreFeatureContract()
+        contract_result = contract.validate_state(
+            state.model_dump()
+        )
+        if not contract_result["valid"]:
+            return {
+                "valid": False,
+                "state_type": state.__class__.__name__,
+                "execution_id": state.execution_context.execution_id,
+                "contract": contract_result,
+            }
+
         return {
             "valid": True,
             "state_type": state.__class__.__name__,
-            "execution_id": (
-                state.execution_context.execution_id
-            ),
+            "execution_id": state.execution_context.execution_id,
+            "contract": contract_result,
         }
 
     def validate(

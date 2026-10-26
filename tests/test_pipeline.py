@@ -26,6 +26,54 @@ def test_command_parser_handles_builder_request():
     assert parsed["capability"] in {"project_engineering", "project_generation", "planning"}
 
 
+def test_command_parser_resolves_short_continue_phrases_to_project_resume():
+    parser = CommandParserService()
+    for command in (
+        "continue",
+        "Continue where we stopped",
+        "continue where we left off",
+        "continue my project",
+        "resume my project",
+        "resume the project",
+    ):
+        parsed = parser.parse(command)
+        assert parsed["success"] is True, command
+        assert parsed["capability"] == "resume_project", command
+        assert parsed["payload"] == {}, command
+
+
+def test_command_parser_supports_bounded_tamil_and_tanglish_commands():
+    parser = CommandParserService()
+
+    for command in (
+        "தேடு Raspberry Pi 5",
+        "தேடுங்கள் Raspberry Pi 5",
+        "thedu Raspberry Pi 5",
+        "search pannu Raspberry Pi 5",
+    ):
+        parsed = parser.parse(command)
+        assert parsed["success"] is True, command
+        assert parsed["capability"] == "search", command
+        assert parsed["payload"]["query"] == "Raspberry Pi 5", command
+
+    for command in ("தொடரு", "தொடர்ந்து செய்", "மீண்டும் தொடரு", "continue pannu"):
+        parsed = parser.parse(command)
+        assert parsed["success"] is True, command
+        assert parsed["capability"] == "resume_project", command
+
+    for command in (
+        "ஒரு செயலி உருவாக்கு",
+        "oru website create pannu",
+        "oru app build pannunga",
+    ):
+        parsed = parser.parse(command)
+        assert parsed["success"] is True, command
+        assert parsed["capability"] == "project_generation", command
+        assert parsed["payload"]["idea"] == command
+
+    assert parser.parse("அம்சங்கள் காட்டு")["capability"] == "list_features"
+
+
 def test_mode_manager_switches_modes():
     manager = ModeManagerService()
     manager.select("builder")
@@ -81,3 +129,42 @@ def test_brain_retry_continues_through_learning_and_records_history(tmp_path, mo
     )
     assert record["success"] is True
     assert record["trace"] == response.trace
+
+
+def test_intent_classifier_uses_supported_tamil_and_tanglish_commands():
+    from app.services.language.intent_classifier_service import IntentClassifierService
+
+    classifier = IntentClassifierService()
+    assert classifier.classify("தேடுங்கள் Raspberry Pi 5") == "search"
+    assert classifier.classify("oru app build pannunga") == "build"
+    assert classifier.classify("அம்சங்கள் காட்டு") == "show"
+    assert classifier.classify("தொடரு") == "continue"
+    assert classifier.classify("research this sensor") == "research"
+    assert classifier.classify(None) == "chat"
+
+
+def test_language_detection_recognizes_bounded_tanglish_lexicon():
+    from app.services.language.language_detection_service import LanguageDetectionService
+
+    detector = LanguageDetectionService()
+    assert detector.detect("search pannu Raspberry Pi 5")["language"] == "ta-en"
+    assert detector.detect("epdi iruka")["language"] == "ta"
+    assert detector.detect("oru app create pannu")["language"] == "ta-en"
+
+
+def test_pipeline_history_accepts_execution_without_active_project(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    history = PipelineHistoryService()
+    record = history.record(
+        execution_id="execution-without-project",
+        request_id="request-without-project",
+        session_id="session-without-project",
+        project_id="",
+        user_input="Explain a Python concept",
+        success=True,
+        trace=[{"module": "conversation", "status": "completed"}],
+    )
+
+    assert record["project_id"] == ""
+    assert history.get_by_execution_id("execution-without-project")["project_id"] == ""
+    assert history.get_by_project_id("") == []

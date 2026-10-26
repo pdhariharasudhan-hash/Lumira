@@ -12,7 +12,7 @@ Ownership:
 Handoff 11 - Goal Manager
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.services.goals.goal_models import GoalState
 
@@ -41,7 +41,7 @@ class GoalService:
 
         if state.primary_goal and text.lower().startswith(("add ", "make it ", "change it ", "update it ", "continue ")):
             state.confidence = max(state.confidence, 0.75)
-            state.last_updated = datetime.utcnow().isoformat()
+            state.last_updated = datetime.now(timezone.utc).isoformat()
             return state
 
         state.primary_goal = self._extract_goal(text)
@@ -59,7 +59,7 @@ class GoalService:
         state.confidence = self._calculate_confidence(text)
 
         state.last_updated = (
-            datetime.utcnow().isoformat()
+            datetime.now(timezone.utc).isoformat()
         )
 
         return state
@@ -72,8 +72,10 @@ class GoalService:
         self,
         text: str,
     ) -> str:
-
-        return text.strip()
+        """Bound and normalize input before classification."""
+        if not isinstance(text, str):
+            return ""
+        return text.strip()[:10_000]
 
     def _extract_goal(
         self,

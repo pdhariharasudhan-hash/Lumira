@@ -72,6 +72,8 @@ from app.services.conversation.conversation_models import ConversationState
 from app.services.goals.goal_models import GoalState
 from app.services.objective.objective_models import ObjectiveState
 from app.services.history.event_logger_service import EventLoggerService
+from app.services.language.intent_classifier_service import IntentClassifierService
+from app.services.resources.resource_budget_service import ResourceBudgetService
 
 
 class BrainService:
@@ -109,6 +111,7 @@ class BrainService:
 
         self.sessions = SessionManagerService()
         self.memory = MemoryService()
+        self.intent_classifier = IntentClassifierService()
 
     def _create_pipeline(self):
         """
@@ -140,6 +143,7 @@ class BrainService:
             return state
 
         state.user_input = request.message
+        state.intent = self.intent_classifier.classify(request.message)
 
         state.execution_context.update(
             session_id=request.session_id,
@@ -301,6 +305,126 @@ class BrainService:
             project_id=session.get("active_project") or request.project,
             goal_id=session.get("goal_id"),
         )
+        # Resource guidance is compact and advisory; telemetry failure must never
+        # prevent the main cognitive pipeline from processing the request.
+        try:
+            state.relevant_memory["resource_budget"] = (
+                ResourceBudgetService().execution_guidance()
+            )
+        except Exception:
+            state.relevant_memory["resource_budget_status"] = "unavailable"
+
+        # An explicitly linked session goal is authoritative context even when
+        # its title does not happen to match the user's current query terms.
+        active_goal_id = session.get("goal_id")
+        if isinstance(active_goal_id, str) and active_goal_id:
+            goal_records = self.memory.get_all().get("goals", [])
+            active_goal = next(
+                (
+                    item for item in goal_records
+                    if isinstance(item, dict) and item.get("goal_id") == active_goal_id
+                ),
+                None,
+            )
+            if active_goal is not None:
+                goal_context = {
+                    key: active_goal.get(key)
+                    for key in (
+                        "goal_id", "title", "objective", "status", "priority",
+                        "progress", "deadline", "dependencies", "blockers", "project_id",
+                    )
+                }
+                state.relevant_memory["active_goal"] = redact_sensitive_value(goal_context)
+                if not state.goal.primary_goal.strip():
+                    state.goal = GoalState(
+                        primary_goal=str(active_goal.get("title") or ""),
+                        priority=str(active_goal.get("priority") or "normal"),
+                        completed=active_goal.get("status") == "completed",
+                        confidence=1.0,
+                    )
+                if not state.objective.primary_objective.strip() and active_goal.get("objective"):
+                    state.objective = ObjectiveState(
+                        primary_objective=str(active_goal.get("objective"))[:2000],
+                        confidence=1.0,
+                        completion_status="completed" if active_goal.get("progress") == 100 else "in_progress",
+                    )
+        # Explicit decisions are durable constraints, not merely search results.
+        # Load only recent decisions relevant to this session/project/goal.
+        try:
+            decision_records = self.memory.get_all().get("decisions", [])
+            if isinstance(decision_records, list):
+                active_project_id = session.get("active_project") or request.project
+                relevant_decisions = []
+                for decision in decision_records:
+                    if not isinstance(decision, dict) or decision.get("archived"):
+                        continue
+                    if decision.get("session_id") == session.get("session_id"):
+                        relevant_decisions.append(decision)
+                    elif active_goal_id and decision.get("goal_id") == active_goal_id:
+                        relevant_decisions.append(decision)
+                    elif active_project_id and decision.get("project_id") == active_project_id:
+                        relevant_decisions.append(decision)
+                state.relevant_memory["decisions"] = redact_sensitive_value([
+                    {
+                        key: decision.get(key)
+                        for key in (
+                            "decision_id", "decision", "reason", "alternatives",
+                            "constraints", "confidence", "created_at", "project_id", "goal_id",
+                        )
+                    }
+                    for decision in relevant_decisions[-10:]
+                ])
+        except Exception:
+            # Optional decision context must not stop the primary brain pipeline.
+            state.relevant_memory["decisions_context_status"] = "unavailable"
+
+        # Preserve explicit memory relationships around the active goal and decisions.
+        try:
+            all_memory = self.memory.get_all()
+            links = all_memory.get("memory_links", [])
+            relevant_ids = {active_goal_id} if isinstance(active_goal_id, str) and active_goal_id else set()
+            current_decisions = state.relevant_memory.get("decisions", [])
+            if isinstance(current_decisions, list):
+                relevant_ids.update(
+                    item.get("decision_id") for item in current_decisions
+                    if isinstance(item, dict) and isinstance(item.get("decision_id"), str)
+                )
+            if isinstance(links, list):
+                state.relevant_memory["memory_relationships"] = redact_sensitive_value([
+                    {
+                        "source_id": link.get("source_id"),
+                        "target_id": link.get("target_id"),
+                        "relation": link.get("relation"),
+                    }
+                    for link in links
+                    if isinstance(link, dict)
+                    and (link.get("source_id") in relevant_ids or link.get("target_id") in relevant_ids)
+                ][-20:])
+        except Exception:
+            state.relevant_memory["memory_relationships_status"] = "unavailable"
+
+        # Rehydrate a compact recovery slice rather than replaying the whole session.
+        snapshots = session.get("context_snapshots", [])
+        if isinstance(snapshots, list) and snapshots and isinstance(snapshots[-1], dict):
+            latest = snapshots[-1]
+            state.relevant_memory["session_recovery"] = {
+                "created_at": latest.get("created_at"),
+                "active_project": latest.get("active_project"),
+                "active_version": latest.get("active_version"),
+                "active_mode": latest.get("active_mode"),
+                "current_goal": latest.get("current_goal"),
+                "goal_id": latest.get("goal_id"),
+                "workflows": [
+                    item for item in latest.get("workflows", [])[:10]
+                    if isinstance(item, dict)
+                ] if isinstance(latest.get("workflows", []), list) else [],
+                "pending_tasks": [
+                    item for item in latest.get("pending_tasks", [])[:10]
+                    if isinstance(item, dict)
+                ] if isinstance(latest.get("pending_tasks", []), list) else [],
+                "blockers": latest.get("blockers", [])[:20]
+                if isinstance(latest.get("blockers", []), list) else [],
+            }
         EventLoggerService().log(
             event="memory_retrieved",
             source="brain",

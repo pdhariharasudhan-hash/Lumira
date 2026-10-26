@@ -6,6 +6,7 @@ import time
 
 from app.agents.planner_agent import PlannerAgent
 from app.agents.workflow_step_router import WorkflowStepRouter
+from app.services.persistence.atomic_json_store import PersistenceIntegrityError
 from app.services.sessions.session_manager_service import SessionManagerService, redact_sensitive_value
 from app.services.workflow_recovery.run_recovery_service import (
     RunRecoveryService,
@@ -26,9 +27,11 @@ class WorkflowEngine:
 
     MAX_STEPS = 12
     MAX_GOAL_LENGTH = 10_000
+    # Only stages implemented by WorkflowStepRouter are accepted. Audio capture
+    # requires an interactive upload/microphone input and is not a workflow stage.
     ALLOWED_STEPS = {
         "validate", "builder", "execute", "code", "save_project", "search",
-        "generate_image", "save_artifact", "capture_audio", "transcribe", "summarize",
+        "generate_image", "save_artifact",
     }
     DEFAULT_STAGE_TIMEOUT_SECONDS = 30.0
     MAX_CONCURRENT_CAPABILITIES = 2
@@ -60,20 +63,54 @@ class WorkflowEngine:
     def execute(self, goal: str, session_id: str | None = None):
         if not isinstance(goal, str) or not goal.strip() or len(goal) > self.MAX_GOAL_LENGTH:
             return {"success": False, "state": "rejected", "code": "invalid_goal", "message": "Goal must contain 1 to 10000 characters."}
-        plan = self.planner.execute(goal)
-        if not isinstance(plan, dict) or not plan.get("success", False):
-            return {"success": False, "message": "planning failed", "plan": plan}
+        try:
+            plan = self.planner.execute(goal)
+        except Exception as exc:
+            return {
+                "success": False,
+                "state": "failed",
+                "code": "planning_failed",
+                "message": "Workflow planning failed before any run was persisted.",
+                "error_type": type(exc).__name__,
+            }
+        if not isinstance(plan, dict) or plan.get("success") is not True:
+            return {"success": False, "state": "failed", "code": "planning_failed", "message": "Workflow planner did not return a successful plan.", "plan": redact_sensitive_value(plan)}
         steps = plan.get("steps")
         if not isinstance(steps, list) or not 1 <= len(steps) <= self.MAX_STEPS:
-            return {"success": False, "state": "rejected", "code": "invalid_plan", "message": f"Workflow plans must contain 1 to {self.MAX_STEPS} steps.", "plan": plan}
+            return {"success": False, "state": "rejected", "code": "invalid_plan", "message": f"Workflow plans must contain 1 to {self.MAX_STEPS} steps.", "plan": redact_sensitive_value(plan)}
         unsupported = [step for step in steps if not isinstance(step, str) or step not in self.ALLOWED_STEPS]
         if unsupported:
-            return {"success": False, "state": "rejected", "code": "capability_unavailable", "unsupported_steps": unsupported, "plan": plan}
+            return {"success": False, "state": "rejected", "code": "capability_unavailable", "unsupported_steps": [step if isinstance(step, str) else type(step).__name__ for step in unsupported], "plan": redact_sensitive_value(plan)}
+        if len(set(steps)) != len(steps):
+            return {
+                "success": False,
+                "state": "rejected",
+                "code": "invalid_plan",
+                "message": "Workflow plans cannot contain duplicate stages.",
+                "plan": redact_sensitive_value(plan),
+            }
         run = self.recovery.create_run(goal, plan, session_id)
         return self._continue(run, plan, {}, [])
 
     def resume(self, run_id: str):
-        run = self.recovery.get_run(run_id)
+        try:
+            run = self.recovery.get_run(run_id)
+        except PersistenceIntegrityError as exc:
+            code = (
+                "persisted_plan_invalid"
+                if "persisted plan" in str(exc).lower()
+                else "persisted_state_invalid"
+            )
+            return {
+                "success": False,
+                "state": "blocked",
+                "code": code,
+                "run_id": run_id,
+                "message": (
+                    "Persisted workflow state failed integrity validation. "
+                    "No stages were resumed; manual repair is required."
+                ),
+            }
         if run is None:
             return {"success": False, "state": "rejected", "code": "run_not_found", "run_id": run_id}
         if run.get("status") == "completed":
@@ -92,7 +129,12 @@ class WorkflowEngine:
                 return {"success": False, "state": "rejected", "code": "session_closed", "run_id": run_id}
         plan = run.get("plan")
         steps = plan.get("steps") if isinstance(plan, dict) else None
-        if not isinstance(steps, list) or not 1 <= len(steps) <= self.MAX_STEPS or any(not isinstance(step, str) or step not in self.ALLOWED_STEPS for step in steps):
+        if (
+            not isinstance(steps, list)
+            or not 1 <= len(steps) <= self.MAX_STEPS
+            or steps != run.get("steps")
+            or any(not isinstance(step, str) or step not in self.ALLOWED_STEPS for step in steps)
+        ):
             self.recovery.update(run_id, "block", error="persisted_plan_invalid")
             return {"success": False, "state": "blocked", "code": "persisted_plan_invalid", "run_id": run_id}
         current_record = next(
@@ -135,9 +177,38 @@ class WorkflowEngine:
                         "failure": safe_error, "plan": plan, "results": results,
                         "current_stage": step, "last_completed_stage": self.recovery.get_run(run_id).get("last_completed_stage"),
                     }
+                if not isinstance(result, dict):
+                    result = {
+                        "success": False,
+                        "code": "invalid_capability_result",
+                        "message": "Workflow stage returned an invalid result object; it was not marked complete.",
+                    }
+
                 safe_result = redact_sensitive_value(result)
-                stage_rejected = step in {"builder", "execute", "code"} and isinstance(result, dict) and result.get("status") != "accept"
-                failed = isinstance(result, dict) and (result.get("success") is False or stage_rejected)
+                stage_rejected = step in {"builder", "execute", "code"} and result.get("status") != "accept"
+                non_success_states = {
+                    "failed", "failure", "rejected", "blocked", "cancelled", "canceled", "error",
+                    "pending", "running", "in_progress", "in-progress", "queued", "started", "working",
+                    "stopped",
+                }
+                malformed_state = any(
+                    key in result and (
+                        not isinstance(result[key], str)
+                        or not result[key].strip()
+                    )
+                    for key in ("status", "state")
+                )
+                explicit_non_success = any(
+                    isinstance(result.get(key), str)
+                    and result[key].strip().lower() in non_success_states
+                    for key in ("status", "state")
+                )
+                failed = (
+                    result.get("success") is False
+                    or stage_rejected
+                    or malformed_state
+                    or explicit_non_success
+                )
                 if failed:
                     self.recovery.update(run_id, "fail_stage", stage=step, error=str(safe_result.get("error") or safe_result.get("message") or safe_result.get("code") or "stage_failed"))
                     return {
@@ -146,7 +217,9 @@ class WorkflowEngine:
                         "context": redact_sensitive_value(context), "current_stage": step,
                         "last_completed_stage": self.recovery.get_run(run_id).get("last_completed_stage"),
                     }
-                context[step] = result
+                # Downstream stages receive the same redacted value that is persisted.
+                # Never carry unredacted capability output across a workflow boundary.
+                context[step] = safe_result
                 results.append(safe_result)
                 self.recovery.update(run_id, "complete_stage", stage=step, result=safe_result)
             last_completed = plan["steps"][-1]

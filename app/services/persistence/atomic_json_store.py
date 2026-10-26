@@ -59,7 +59,10 @@ class AtomicJsonStore:
                 delete=False,
             ) as temporary_file:
                 temporary_path = Path(temporary_file.name)
-                json.dump(value, temporary_file, indent=2, ensure_ascii=False)
+                try:
+                    json.dump(value, temporary_file, indent=2, ensure_ascii=False, allow_nan=False)
+                except (TypeError, ValueError, RecursionError) as exc:
+                    raise PersistenceIntegrityError("Stored data must be finite, JSON-compatible values") from exc
                 temporary_file.flush()
                 os.fsync(temporary_file.fileno())
             os.replace(temporary_path, self.path)

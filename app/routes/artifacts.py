@@ -8,6 +8,7 @@ from app.services.artifacts.artifact_manager_service import (
     ArtifactManagerService,
     SUPPORTED_ARTIFACT_TYPES,
 )
+from app.services.artifacts.artifact_library_query_service import ArtifactLibraryQueryService
 
 router = APIRouter()
 
@@ -30,6 +31,11 @@ def _manager() -> ArtifactManagerService:
     return ArtifactManagerService()
 
 
+def _public_artifact(record: dict) -> dict:
+    """Return artifact metadata without exposing internal filesystem paths."""
+    return {key: value for key, value in record.items() if key != "file"}
+
+
 @router.post("/artifacts", status_code=201)
 def create_artifact(request: ArtifactCreateRequest):
     if request.type not in SUPPORTED_ARTIFACT_TYPES:
@@ -46,7 +52,7 @@ def create_artifact(request: ArtifactCreateRequest):
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {"success": True, "artifact": artifact}
+    return {"success": True, "artifact": _public_artifact(artifact)}
 
 
 @router.post("/artifacts/binary", status_code=201)
@@ -70,37 +76,38 @@ def create_binary_artifact(request: BinaryArtifactCreateRequest):
         artifact = _manager().create_binary_artifact(request.type, content, request.source, extension)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {"success": True, "artifact": artifact}
+    return {"success": True, "artifact": _public_artifact(artifact)}
 
 
 @router.get("/artifacts")
-def list_artifacts(artifact_type: str | None = None, q: str | None = Query(default=None, max_length=500)):
-    manager = _manager()
-    if artifact_type and artifact_type not in SUPPORTED_ARTIFACT_TYPES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported artifact type: {artifact_type}",
+def list_artifacts(
+    artifact_type: str | None = None,
+    q: str | None = Query(default=None, max_length=500),
+    include_archived: bool = False,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0, le=100000),
+):
+    try:
+        result = ArtifactLibraryQueryService(_manager()).list_artifacts(
+            artifact_type=artifact_type,
+            query=q,
+            include_archived=include_archived,
+            limit=limit,
+            offset=offset,
         )
-    artifacts = manager.get_all_artifacts()
-    if artifact_type:
-        artifacts = [
-            artifact
-            for artifact in artifacts
-            if artifact.get("type") == artifact_type
-        ]
-    if q:
-        query = q.lower()
-        artifacts = [
-            artifact
-            for artifact in artifacts
-            if query in " ".join(str(value) for value in artifact.values()).lower()
-        ]
-    return {"success": True, "artifacts": artifacts}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"success": True, **result}
 
 
 @router.get("/artifacts/stats")
 def artifact_stats():
-    return {"success": True, "stats": _manager().stats()}
+    manager = _manager()
+    stats = manager.stats()
+    artifacts = manager.get_all_artifacts()
+    stats["archived"] = sum(1 for item in artifacts if item.get("archived", False))
+    stats["active"] = len(artifacts) - stats["archived"]
+    return {"success": True, "stats": stats}
 
 
 @router.get("/artifacts/{artifact_id}/content")
@@ -117,10 +124,40 @@ def get_artifact_content(artifact_id: str):
 
 @router.get("/artifacts/{artifact_id}")
 def get_artifact(artifact_id: str):
-    artifact = _manager().get_artifact(artifact_id)
+    manager = _manager()
+    artifact = manager.get_artifact(artifact_id)
     if artifact is None:
         raise HTTPException(status_code=404, detail="artifact not found")
-    return {"success": True, "artifact": artifact}
+    try:
+        content_path = manager.get_artifact_path(artifact_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail="artifact content path is invalid") from exc
+    public_artifact = _public_artifact(artifact)
+    # Expose availability, never the local filesystem path itself.
+    public_artifact["content_available"] = content_path is not None and content_path.is_file()
+    return {"success": True, "artifact": public_artifact}
+
+
+@router.post("/artifacts/{artifact_id}/archive")
+def archive_artifact(artifact_id: str):
+    try:
+        archived = _manager().archive_artifact(artifact_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    if not archived:
+        raise HTTPException(status_code=404, detail="artifact not found")
+    return {"success": True, "artifact_id": artifact_id, "archived": True}
+
+
+@router.post("/artifacts/{artifact_id}/restore")
+def restore_artifact(artifact_id: str):
+    try:
+        restored = _manager().restore_artifact(artifact_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    if not restored:
+        raise HTTPException(status_code=404, detail="artifact not found")
+    return {"success": True, "artifact_id": artifact_id, "archived": False}
 
 
 @router.delete("/artifacts/{artifact_id}")

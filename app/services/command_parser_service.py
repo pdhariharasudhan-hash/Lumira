@@ -24,6 +24,78 @@ class CommandParserService:
                 "message": "Command cannot be empty",
             }
 
+        # Agent delegation is explicit; ordinary commands never auto-dispatch.
+        named_agent_prefixes = (
+            ("delegate to code_agent: ", "code_agent"),
+            ("delegate to planner_agent: ", "planner_agent"),
+            ("delegate to research_agent: ", "research_agent"),
+        )
+        for prefix, agent_name in named_agent_prefixes:
+            if text.startswith(prefix):
+                task = command.strip()[len(prefix):].strip()
+                if task:
+                    return {
+                        "success": True,
+                        "capability": "agent_task",
+                        "payload": {"task": task, "agent_name": agent_name},
+                    }
+                return {"success": False, "message": "Agent task cannot be empty"}
+
+        agent_prefix = "delegate to agent: "
+        if text.startswith(agent_prefix):
+            task = command.strip()[len(agent_prefix):].strip()
+            if task:
+                return {
+                    "success": True,
+                    "capability": "agent_task",
+                    "payload": {"task": task, "agent_name": None},
+                }
+            return {"success": False, "message": "Agent task cannot be empty"}
+
+        # Deterministic Tamil and Tamil-English command forms. This is a
+        # deliberately bounded phrase map, not a claim of general translation.
+        search_prefixes = (
+            "search pannu ", "search pannunga ", "thedu ", "thedunga ",
+            "தேடு ", "தேடுங்கள் ",
+        )
+        for prefix in search_prefixes:
+            if text.startswith(prefix):
+                query = command.strip()[len(prefix):].strip()
+                if query:
+                    return {
+                        "success": True,
+                        "capability": "search",
+                        "payload": {"query": query},
+                    }
+                return {"success": False, "message": "Search query cannot be empty"}
+
+        if text in {
+            "தொடரு", "தொடர்ந்து செய்", "மீண்டும் தொடரு",
+            "continue pannu", "continue pannunga",
+        }:
+            return {"success": True, "capability": "resume_project", "payload": {}}
+
+        if text in {"features kaatu", "feature list kaatu", "அம்சங்களை காட்டு", "அம்சங்கள் காட்டு"}:
+            return {"success": True, "capability": "list_features", "payload": {}}
+
+        creation_phrases = (
+            "create pannu", "create pannunga", "build pannu", "build pannunga",
+            "உருவாக்கு", "உருவாக்குங்கள்", "செயலி உருவாக்கு", "இணையதளம் உருவாக்கு",
+        )
+        has_english_project_term = any(
+            term in text.split()
+            for term in ("api", "application", "app", "backend", "project", "website")
+        )
+        has_tamil_project_term = any(term in text for term in ("செயலி", "இணையதளம்", "திட்டம்"))
+        if any(phrase in text for phrase in creation_phrases) and (
+            has_english_project_term or has_tamil_project_term
+        ):
+            return {
+                "success": True,
+                "capability": "project_generation",
+                "payload": {"idea": command},
+            }
+
         if any(phrase in text for phrase in (
             "business plan", "plan for launching", "plan to launch",
             "launch my business", "launch my ", "launching my", "business idea",
@@ -108,6 +180,32 @@ class CommandParserService:
         # FEATURE CONTROL
         # ----------------------------------------------------
 
+        status_prefixes = (
+            "feature status ",
+            "status of feature ",
+            "check feature ",
+        )
+        for prefix in status_prefixes:
+            if text.startswith(prefix):
+                feature = command.strip()[len(prefix):].strip()
+                if feature:
+                    return {
+                        "success": True,
+                        "capability": "feature_status",
+                        "payload": {"feature": feature},
+                    }
+                return {"success": False, "message": "Feature name cannot be empty"}
+
+        if text.startswith("is feature ") and text.endswith(" enabled"):
+            feature = command.strip()[len("is feature "):-len(" enabled")].strip()
+            if feature:
+                return {
+                    "success": True,
+                    "capability": "feature_status",
+                    "payload": {"feature": feature},
+                }
+            return {"success": False, "message": "Feature name cannot be empty"}
+
         if text.startswith("activate "):
             return {
                 "success": True,
@@ -126,7 +224,7 @@ class CommandParserService:
                 },
             }
 
-        if text == "list features":
+        if text in {"list features", "list all features", "show features", "show me features"}:
             return {
                 "success": True,
                 "capability": "list_features",
@@ -163,7 +261,13 @@ class CommandParserService:
                 "payload": {"instruction": command},
             }
 
-        if text.startswith("continue "):
+        if text == "continue" or text.startswith((
+            "continue ",
+            "resume my project",
+            "resume the project",
+            "continue where we stopped",
+            "continue where we left off",
+        )):
             return {
                 "success": True,
                 "capability": "resume_project",

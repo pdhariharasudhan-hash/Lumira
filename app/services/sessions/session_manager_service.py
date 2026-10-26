@@ -16,6 +16,8 @@ from app.services.history.event_logger_service import EventLoggerService
 SESSION_SCHEMA_VERSION = 1
 MAX_RECENT_MESSAGES = 20
 MAX_CONTEXT_SNAPSHOTS = 30
+MAX_SESSIONS = 1000
+MAX_SESSION_ID_LENGTH = 128
 SECRET_PATTERN = re.compile(
     r"(?i)(password|api[_ -]?key|access[_ -]?token|secret|authorization)"
     r"(\s*[:=]\s*)([^\r\n]+)|\bBearer\s+[A-Za-z0-9._~+/-]+=*"
@@ -155,8 +157,9 @@ class SessionManagerService:
             raise PersistenceIntegrityError(
                 f"Unsupported session schema version: {version!r}"
             )
-        if not isinstance(document.get("sessions"), list):
-            raise PersistenceIntegrityError("Session store sessions must be a list")
+        sessions = document.get("sessions")
+        if not isinstance(sessions, list) or len(sessions) > MAX_SESSIONS:
+            raise PersistenceIntegrityError("Session store sessions must be a bounded list")
         required = {
             "session_id",
             "conversation_id",
@@ -169,19 +172,34 @@ class SessionManagerService:
             "context_snapshots",
             "schema_version",
         }
+        seen_session_ids: set[str] = set()
         for session in document["sessions"]:
             if not isinstance(session, dict) or not required.issubset(session):
                 raise PersistenceIntegrityError("Session record is incomplete")
             if session["schema_version"] != SESSION_SCHEMA_VERSION:
                 raise PersistenceIntegrityError("Unsupported session record schema version")
-            if session["status"] not in {"active", "paused", "closed"}:
+            for field in ("session_id", "conversation_id", "workspace_id"):
+                value = session.get(field)
+                if not isinstance(value, str) or not value.strip() or len(value) > MAX_SESSION_ID_LENGTH:
+                    raise PersistenceIntegrityError(f"Session record has an invalid {field}")
+            for field in ("created_at", "updated_at"):
+                value = session.get(field)
+                if not isinstance(value, str) or not value or len(value) > 40:
+                    raise PersistenceIntegrityError(f"Session record has an invalid {field}")
+            if session["session_id"] in seen_session_ids:
+                raise PersistenceIntegrityError("Session IDs must be unique")
+            seen_session_ids.add(session["session_id"])
+            status = session.get("status")
+            if not isinstance(status, str) or status not in {"active", "paused", "closed"}:
                 raise PersistenceIntegrityError("Session record has an invalid status")
             if not isinstance(session["conversation"], dict):
                 raise PersistenceIntegrityError("Session conversation must be an object")
-            if not isinstance(session["recent_messages"], list):
-                raise PersistenceIntegrityError("Session messages must be a list")
-            if not isinstance(session["context_snapshots"], list):
-                raise PersistenceIntegrityError("Session snapshots must be a list")
+            messages = session["recent_messages"]
+            if not isinstance(messages, list) or len(messages) > MAX_RECENT_MESSAGES:
+                raise PersistenceIntegrityError("Session messages must be a bounded list")
+            snapshots = session["context_snapshots"]
+            if not isinstance(snapshots, list) or len(snapshots) > MAX_CONTEXT_SNAPSHOTS:
+                raise PersistenceIntegrityError("Session snapshots must be a bounded list")
         return document
 
     def create_session(
@@ -225,6 +243,8 @@ class SessionManagerService:
 
         def add(document):
             self._validate_document(document)
+            if len(document["sessions"]) >= MAX_SESSIONS:
+                raise ValueError("session capacity reached; archive or remove old sessions first")
             document["sessions"].append(session)
             return deepcopy(session)
 
@@ -292,8 +312,12 @@ class SessionManagerService:
         content: str,
         metadata: dict | None = None,
     ) -> dict:
-        if role not in {"user", "assistant", "system"}:
+        if not isinstance(role, str) or role not in {"user", "assistant", "system"}:
             raise ValueError("unsupported conversation role")
+        if not isinstance(content, str):
+            raise ValueError("message content must be a string")
+        if metadata is not None and not isinstance(metadata, dict):
+            raise ValueError("message metadata must be an object")
         message = {
             "message_id": str(uuid4()),
             "role": role,
@@ -386,20 +410,61 @@ class SessionManagerService:
         return deepcopy(cognitive)
 
     def snapshot_context(self, session_id: str) -> dict:
+        # Import lazily to avoid a module cycle: WorkItemService uses session redaction.
+        from app.services.work_items.work_item_service import WorkItemService
+
         def save(session):
             snapshots = session.setdefault("context_snapshots", [])
+            workflows = WorkItemService().list_workflows(session_id=session_id, limit=200)
+            pending_tasks = []
+            workflow_summaries = []
+            for workflow in workflows:
+                incomplete = [
+                    task for task in workflow.get("tasks", [])
+                    if isinstance(task, dict) and task.get("status") != "completed"
+                ]
+                if not incomplete:
+                    continue
+                workflow_summaries.append({
+                    "workflow_id": workflow.get("workflow_id"),
+                    "title": workflow.get("title"),
+                    "status": workflow.get("status"),
+                    "project_id": workflow.get("project_id"),
+                    "goal_id": workflow.get("goal_id"),
+                    "incomplete_task_count": len(incomplete),
+                    "updated_at": workflow.get("updated_at"),
+                })
+                for task in incomplete:
+                    pending_tasks.append({
+                        "workflow_id": workflow.get("workflow_id"),
+                        "workflow_title": workflow.get("title"),
+                        "task_id": task.get("task_id"),
+                        "title": task.get("title"),
+                        "status": task.get("status"),
+                        "dependencies": list(task.get("dependencies", []))[:20],
+                        "blocker": task.get("blocker"),
+                        "result": task.get("result"),
+                        "updated_at": task.get("updated_at"),
+                    })
+                    if len(pending_tasks) >= 50:
+                        break
+                if len(pending_tasks) >= 50:
+                    break
             snapshot = {
                 "snapshot_id": str(uuid4()),
                 "session_id": session_id,
                 "active_project": session.get("active_project"),
                 "active_version": session.get("active_version"),
                 "active_mode": session.get("active_mode"),
+                "current_goal": session.get("current_goal"),
                 "goal_id": session.get("goal_id"),
                 "recent_artifacts": list(session.get("recent_artifact_ids", []))[-10:],
                 "recent_decisions": list(session.get("recent_decision_ids", []))[-10:],
                 "recent_memory_ids": list(session.get("recent_memory_ids", []))[-10:],
-                "pending_tasks": [],
-                "blockers": (session.get("cognitive_state") or {}).get("blockers", []),
+                "recent_workflow_ids": list(session.get("recent_workflow_ids", []))[-20:],
+                "workflows": workflow_summaries[:50],
+                "pending_tasks": pending_tasks,
+                "blockers": (session.get("cognitive_state") or {}).get("blockers", [])[:50],
                 "created_at": _timestamp(),
                 "schema_version": SESSION_SCHEMA_VERSION,
             }

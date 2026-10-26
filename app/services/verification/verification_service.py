@@ -10,7 +10,7 @@ Ownership:
 Handoff 11 - Verification Engine
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.services.verification.verification_models import (
     VerificationState,
@@ -167,7 +167,7 @@ class VerificationService:
         # ----------------------------------
 
         state.last_updated = (
-            datetime.utcnow().isoformat()
+            datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         )
 
         return state

@@ -7,7 +7,7 @@ Ownership:
 Handoff 11 - Prediction Engine
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.services.prediction.prediction_models import (
     PredictionState,
@@ -94,7 +94,7 @@ class PredictionService:
         )
 
         state.last_updated = (
-            datetime.utcnow().isoformat()
+            datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         )
 
         return state

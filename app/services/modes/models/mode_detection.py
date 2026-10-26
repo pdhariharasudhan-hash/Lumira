@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 
 from pydantic import BaseModel, Field, model_validator
@@ -85,7 +85,7 @@ class ModeDetectionResult(BaseModel):
 
     detected_at: str = Field(
         default_factory=lambda:
-        datetime.utcnow().isoformat()
+        datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     )
 
     @model_validator(mode="after")

@@ -12,7 +12,7 @@ Ownership:
 Handoff 11 - Objective Extraction
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.services.objective.objective_models import (
     ObjectiveState,
@@ -43,7 +43,7 @@ class ObjectiveService:
 
         if state.primary_objective and text.lower().startswith(("add ", "make it ", "change it ", "update it ", "continue ")):
             state.completion_status = "in_progress"
-            state.last_updated = datetime.utcnow().isoformat()
+            state.last_updated = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
             return state
 
         state.primary_objective = self._extract_objective(
@@ -69,7 +69,7 @@ class ObjectiveService:
         )
 
         state.last_updated = (
-            datetime.utcnow().isoformat()
+            datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         )
 
         return state
@@ -82,8 +82,10 @@ class ObjectiveService:
         self,
         text: str,
     ) -> str:
-
-        return text.strip()
+        """Bound and normalize input before objective extraction."""
+        if not isinstance(text, str):
+            return ""
+        return text.strip()[:10_000]
 
     def _extract_objective(
         self,

@@ -4,7 +4,7 @@ reflection_service.py
 Implements Lumira's Reflection Engine.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.services.reflection.reflection_models import (
     ReflectionState,
@@ -107,10 +107,10 @@ class ReflectionService:
         mode: ModeState | None = None,
     ) -> ReflectionState:
 
-        state.observations = [
-
-            "Reflection completed."
-        ]
+        state.observations = ["Reflection completed."]
+        state.strengths = []
+        state.weaknesses = []
+        state.missed_opportunities = []
 
         mode_observation = (
             self._observation_for_mode(mode)
@@ -167,7 +167,7 @@ class ReflectionService:
         )
 
         state.last_updated = (
-            datetime.utcnow().isoformat()
+            datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         )
 
         return state

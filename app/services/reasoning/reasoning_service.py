@@ -11,7 +11,7 @@ Ownership:
 Handoff 11 - Reasoning Engine
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.services.reasoning.reasoning_models import (
     ReasoningState,
@@ -96,7 +96,7 @@ class ReasoningService:
         )
 
         state.last_updated = (
-            datetime.utcnow().isoformat()
+            datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         )
 
         return state

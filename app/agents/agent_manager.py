@@ -8,20 +8,25 @@ from app.agents.agent_registry import AgentRegistry
 from app.agents.code_agent import CodeAgent
 from app.agents.planner_agent import PlannerAgent
 from app.agents.research_agent import ResearchAgent
+from app.services.resources.resource_budget_service import ResourceBudgetService
 
 
 def _execute_agent_process(agent, task, output):
     try:
         output.put({"ok": True, "result": agent.execute(task)})
     except BaseException as exc:
-        output.put({"ok": False, "error_type": type(exc).__name__, "error": str(exc)})
+        # Exception text may contain local paths, credentials, or prompt data.
+        # Keep only the type for diagnostics; never return raw child exceptions.
+        output.put({"ok": False, "error_type": type(exc).__name__})
 
 
 class AgentManager:
     """Deterministic, bounded dispatcher for the locally available agents."""
 
     MAX_TASK_LENGTH = 10000
-    MAX_CONCURRENT_AGENTS = 2
+    # Lumira's current target host has 8 GiB RAM. Keep direct callers bounded
+    # to one child process as well as the higher-level orchestrator path.
+    MAX_CONCURRENT_AGENTS = 1
     _slots = BoundedSemaphore(MAX_CONCURRENT_AGENTS)
 
     def __init__(self, timeout_seconds: float = 30.0):
@@ -43,6 +48,23 @@ class AgentManager:
         agent = self.registry.get(agent_name)
         if not agent:
             return {"success": False, "state": "rejected", "code": "agent_not_found", "message": "agent not found"}
+
+        # Direct AgentManager callers receive the same critical-RAM guard as
+        # orchestrated calls; telemetry failure must never block normal work.
+        try:
+            resource_state = ResourceBudgetService().snapshot()
+            if resource_state.get("resource_pressure") == "critical":
+                return {
+                    "success": False,
+                    "state": "deferred",
+                    "code": "resource_pressure_critical",
+                    "message": "Agent execution is deferred because available system memory is critically low.",
+                    "agent": agent_name,
+                    "retry_count": 0,
+                    "resource_pressure": "critical",
+                }
+        except Exception:
+            pass
 
         started = time.monotonic()
         if not self._slots.acquire(blocking=False):
@@ -103,7 +125,10 @@ class AgentManager:
                     "state": "failed",
                     "agent": agent_name,
                     "task": task.strip(),
-                    "error": {"type": outcome["error_type"], "message": outcome["error"]},
+                    "error": {
+                        "type": outcome["error_type"],
+                        "message": "Agent execution failed; internal details were withheld.",
+                    },
                     "retry_count": 0,
                     "duration_ms": round((time.monotonic() - started) * 1000, 2),
                 }
@@ -114,7 +139,10 @@ class AgentManager:
                 "state": "failed",
                 "agent": agent_name,
                 "task": task.strip(),
-                "error": {"type": type(exc).__name__, "message": str(exc)},
+                "error": {
+                    "type": type(exc).__name__,
+                    "message": "Agent execution failed; internal details were withheld.",
+                },
                 "retry_count": 0,
                 "duration_ms": round((time.monotonic() - started) * 1000, 2),
             }
@@ -125,10 +153,28 @@ class AgentManager:
             if output is not None:
                 output.close()
             self._slots.release()
-        succeeded = not (isinstance(result, dict) and result.get("success") is False)
+        if not isinstance(result, dict):
+            return {
+                "success": False,
+                "state": "failed",
+                "code": "invalid_agent_result",
+                "message": "Agent returned a non-object result; it was not accepted as successful.",
+                "agent": agent_name,
+                "task": task.strip(),
+                "retry_count": 0,
+                "timeout_seconds": self.timeout_seconds,
+                "duration_ms": round((time.monotonic() - started) * 1000, 2),
+            }
+
+        # Keep the legacy default for structured results that omit success,
+        # but reject truthy non-boolean values such as 1 or "false".
+        succeeded = result.get("success", True) is True
+        state = result.get("status", "completed" if succeeded else "failed")
+        if not succeeded and state == "completed":
+            state = "failed"
         return {
             "success": succeeded,
-            "state": result.get("status", "completed") if isinstance(result, dict) else "completed",
+            "state": state,
             "agent": agent_name,
             "capabilities": list(agent.capabilities),
             "task": task.strip(),
@@ -141,14 +187,35 @@ class AgentManager:
     def dispatch(self, task: str):
         if not isinstance(task, str):
             return self.run("", task)
-        task_lower = task.lower()
-        if re.search(r"\b(build|create|generate|code|api|app|website)\b", task_lower):
-            return self.run("code_agent", task)
-        if re.search(r"\b(plan|planning|steps|roadmap)\b", task_lower):
-            return self.run("planner_agent", task)
-        if re.search(r"\b(research|find|analyze|investigate|learn|explain)\b", task_lower):
+        normalized = " ".join(task.casefold().split())
+        if not normalized:
             return self.run("research_agent", task)
-        return {"success": False, "state": "rejected", "code": "no_matching_agent", "message": "No registered agent capability matches this task."}
+
+        # Specific intent families must be checked before broad verbs such as
+        # "create" or "build", otherwise "create a research comparison" would
+        # be incorrectly sent to the code agent.
+        research_intents = (
+            r"\b(research|compare|comparison|versus|vs|investigate|analy[sz]e|analysis|evidence|summari[sz]e|extract knowledge|market research|technical research|document research|knowledge retrieval|find sources|gather sources|fact check|fact-check)\b",
+        )
+        planning_intents = (
+            r"\b(plan|planning|steps|roadmap|prioriti[sz]e|break down|decompose|milestone|schedule|sequence tasks|goal)\b",
+        )
+        code_intents = (
+            r"\b(debug|fix|repair|refactor|implement|code|api|app|website|software|program|script|compile|syntax error|bug|patch|generate files)\b",
+        )
+        if any(re.search(pattern, normalized) for pattern in research_intents):
+            return self.run("research_agent", task)
+        if any(re.search(pattern, normalized) for pattern in planning_intents):
+            return self.run("planner_agent", task)
+        if any(re.search(pattern, normalized) for pattern in code_intents):
+            return self.run("code_agent", task)
+        return {
+            "success": False,
+            "state": "rejected",
+            "code": "no_matching_agent",
+            "message": "No registered agent capability matches this task.",
+            "available_agents": self.list_agents(),
+        }
 
     def list_agents(self):
         return self.registry.list_agents()

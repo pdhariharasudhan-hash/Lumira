@@ -4,7 +4,9 @@ import sys
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime, UTC
+
 from core.generation.artifact_generator import materialize_code_output
+
 from core.constants import (
     BASE_URL,
     GENERATED_DIR,
@@ -41,6 +43,7 @@ from core.memory.storage import (
     save_learning_insights,
     save_pipeline
 )
+
 from core.orchestration.validation import (
     validate_builder_output,
     validate_execute_output,
@@ -64,6 +67,7 @@ from core.orchestration.executor import (
     execute_pipeline
 )
 
+
 MAX_COMPLETED_RUNS_PER_INPUT = 2
 MAX_FAILED_RUNS_PER_INPUT = 1
 MAX_REJECTED_RUNS_PER_INPUT = 1
@@ -71,23 +75,41 @@ MAX_REFINE_RUNS_PER_INPUT = 1
 MAX_INCOMPLETE_RUNS_PER_INPUT = 1
 
 
-
 # -------------------------
 # BUILDER QUALITY HELPERS
 # -------------------------
+
 STOPWORDS = {
-    "the","is","at","which","on","a","an","and","or","to",
-    "for","of","in","with","by","from","as","it"
+    "the",
+    "is",
+    "at",
+    "which",
+    "on",
+    "a",
+    "an",
+    "and",
+    "or",
+    "to",
+    "for",
+    "of",
+    "in",
+    "with",
+    "by",
+    "from",
+    "as",
+    "it"
 }
 
 
 def extract_stage_result(response: Dict[str, Any]) -> Dict[str, Any]:
     data = response.get("data", {})
-    return data.get("result") if isinstance(data.get("result"), dict) else data
 
+    return (
+        data.get("result")
+        if isinstance(data.get("result"), dict)
+        else data
+    )
 
-
-    
 
 def build_pipeline_payload(text: str) -> Dict[str, Any]:
     return {
@@ -133,7 +155,9 @@ def synthesize_execute_refine(
         return {
             "execution_order": [],
             "today_task": "refine_builder_output",
-            "task_steps": [f"Fix builder issue: {reason}"],
+            "task_steps": [
+                f"Fix builder issue: {reason}"
+            ],
             "expected_output": "builder output fixed",
             "blockers": [reason],
             "status": "refine"
@@ -142,12 +166,15 @@ def synthesize_execute_refine(
     return {
         "execution_order": step_ids,
         "today_task": step_ids[0],
-        "task_steps": [f"Fix builder alignment issue: {reason}"],
+        "task_steps": [
+            f"Fix builder alignment issue: {reason}"
+        ],
         "expected_output": "Aligned execute plan",
         "blockers": [reason],
         "status": "refine"
     }
-        
+
+
 def run_pipeline(
     text: str
 ) -> None:
@@ -161,7 +188,6 @@ def run_pipeline(
     adaptive_rules = {}
 
     if memory:
-
         adaptive_rules = memory.get(
             "adaptive_rules",
             {}
@@ -184,6 +210,7 @@ def run_pipeline(
         )
     )
 
+
 def continue_pipeline() -> None:
     payload = get_latest_pipeline()
 
@@ -195,7 +222,10 @@ def continue_pipeline() -> None:
         print("Blocked: pipeline aborted")
         return
 
-    if payload.get("status") == "completed" or payload.get("final_status") == "completed":
+    if (
+        payload.get("status") == "completed"
+        or payload.get("final_status") == "completed"
+    ):
         print("Blocked: already completed")
         return
 
@@ -208,11 +238,17 @@ def continue_pipeline() -> None:
         return
 
     current_stage = payload.get("current_stage")
+
     if current_stage not in VALID_STAGES:
         print("Blocked: invalid current stage")
         return
 
-    print(json.dumps(execute_pipeline(payload), indent=2))
+    print(
+        json.dumps(
+            execute_pipeline(payload),
+            indent=2
+        )
+    )
 
 
 def reset_pipeline() -> None:
@@ -225,7 +261,10 @@ def reset_pipeline() -> None:
     final_status = payload.get("final_status")
     current_stage = payload.get("current_stage")
 
-    if payload.get("status") == "completed" or final_status == "completed":
+    if (
+        payload.get("status") == "completed"
+        or final_status == "completed"
+    ):
         print("Blocked: completed pipeline cannot reset")
         return
 
@@ -256,7 +295,13 @@ def reset_pipeline() -> None:
     )
 
     save_pipeline(payload)
-    print(json.dumps(payload, indent=2))
+
+    print(
+        json.dumps(
+            payload,
+            indent=2
+        )
+    )
 
 
 def abort_pipeline() -> None:
@@ -266,7 +311,10 @@ def abort_pipeline() -> None:
         print("No pipeline")
         return
 
-    if payload.get("status") == "completed" or payload.get("final_status") == "completed":
+    if (
+        payload.get("status") == "completed"
+        or payload.get("final_status") == "completed"
+    ):
         print("Blocked: completed pipeline cannot abort")
         return
 
@@ -287,7 +335,13 @@ def abort_pipeline() -> None:
     )
 
     save_pipeline(payload)
-    print(json.dumps(payload, indent=2))
+
+    print(
+        json.dumps(
+            payload,
+            indent=2
+        )
+    )
 
 
 def show_memory() -> None:
@@ -301,15 +355,19 @@ def show_memory() -> None:
         "fallback_pipeline": fallback
     }
 
-    print(json.dumps(result, indent=2))
-
-
+    print(
+        json.dumps(
+            result,
+            indent=2
+        )
+    )
 
 
 def build_adaptive_rules(
     failure_patterns: List[Dict[str, Any]],
     recommended_upgrades: List[str]
 ) -> Dict[str, Any]:
+
     rules: Dict[str, Any] = {
         "validate": {
             "reject_exact_inputs": [],
@@ -335,18 +393,31 @@ def build_adaptive_rules(
         examples = pattern.get("examples", [])
 
         if stage == "validate":
+
             for example in examples:
-                cleaned = normalize_text(str(example))
+
+                cleaned = normalize_text(
+                    str(example)
+                )
 
                 if not cleaned:
                     continue
 
-                word_count = len(cleaned.split())
+                word_count = len(
+                    cleaned.split()
+                )
 
                 if word_count <= 2:
-                    add_unique(rules["validate"]["reject_exact_inputs"], cleaned)
+                    add_unique(
+                        rules["validate"]["reject_exact_inputs"],
+                        cleaned
+                    )
 
-                if cleaned in {"build app", "make ai", "test"}:
+                if cleaned in {
+                    "build app",
+                    "make ai",
+                    "test"
+                }:
                     add_unique(
                         rules["validate"]["reject_patterns"],
                         f"^{re.escape(cleaned)}$"
@@ -365,6 +436,7 @@ def build_adaptive_rules(
             rules["code"]["force_specific_test_steps"] = True
 
     for rec in recommended_upgrades:
+
         lowered = rec.lower()
 
         if "validation rules" in lowered:
@@ -376,15 +448,27 @@ def build_adaptive_rules(
         if "execute-builder alignment" in lowered:
             rules["execute"]["force_builder_alignment"] = True
 
-        if "file_plan" in lowered or "test_steps" in lowered:
+        if (
+            "file_plan" in lowered
+            or "test_steps" in lowered
+        ):
             rules["code"]["force_specific_file_plan"] = True
             rules["code"]["force_specific_test_steps"] = True
 
     rules["validate"]["reject_exact_inputs"] = sorted(
-        list(set(rules["validate"]["reject_exact_inputs"]))
+        list(
+            set(
+                rules["validate"]["reject_exact_inputs"]
+            )
+        )
     )
+
     rules["validate"]["reject_patterns"] = sorted(
-        list(set(rules["validate"]["reject_patterns"]))
+        list(
+            set(
+                rules["validate"]["reject_patterns"]
+            )
+        )
     )
 
     return rules
@@ -574,7 +658,6 @@ def learn_from_memory() -> None:
         )
 
         most_failed_stage = [
-
             stage
 
             for stage, count
@@ -678,7 +761,9 @@ def learn_from_memory() -> None:
         )
     )
 
+
 def is_valid_pipeline_run(run: Any) -> bool:
+
     if not isinstance(run, dict):
         return False
 
@@ -702,139 +787,319 @@ def is_valid_pipeline_run(run: Any) -> bool:
         "state_fixes",
     }
 
-    if not required_top_keys.issubset(run.keys()):
+    if not required_top_keys.issubset(
+        run.keys()
+    ):
         return False
 
     if run.get("type") != "pipeline_run":
         return False
 
     run_id = run.get("id")
-    if not isinstance(run_id, str) or not run_id.strip():
+
+    if not isinstance(
+        run_id,
+        str
+    ) or not run_id.strip():
         return False
 
-    input_text = run.get("input")
-    if not isinstance(input_text, str) or not input_text.strip():
+    input_text = run.get(
+        "input"
+    )
+
+    if not isinstance(
+        input_text,
+        str
+    ) or not input_text.strip():
         return False
 
-    current_stage = run.get("current_stage")
-    last_completed_stage = run.get("last_completed_stage")
-    status = run.get("status")
-    final_status = run.get("final_status")
+    current_stage = run.get(
+        "current_stage"
+    )
 
-    if current_stage not in VALID_STAGES.union({None}):
+    last_completed_stage = run.get(
+        "last_completed_stage"
+    )
+
+    status = run.get(
+        "status"
+    )
+
+    final_status = run.get(
+        "final_status"
+    )
+
+    if current_stage not in VALID_STAGES.union(
+        {None}
+    ):
         return False
 
-    if last_completed_stage not in VALID_STAGES.union({None}):
+    if last_completed_stage not in VALID_STAGES.union(
+        {None}
+    ):
         return False
 
-    if status not in {"running", "stopped", "completed", "retrying"}:
+    if status not in {
+        "running",
+        "stopped",
+        "completed",
+        "retrying"
+    }:
         return False
 
-    if final_status not in {"incomplete","completed","rejected","failed","refine_required","retrying"}:
+    if final_status not in {
+        "incomplete",
+        "completed",
+        "rejected",
+        "failed",
+        "refine_required",
+        "retrying"
+    }:
         return False
 
-    if not isinstance(run.get("retry_count"), int):
+    if not isinstance(
+        run.get("retry_count"),
+        int
+    ):
         return False
 
-    if not isinstance(run.get("resume_allowed"), bool):
+    if not isinstance(
+        run.get("resume_allowed"),
+        bool
+    ):
         return False
 
-    if not isinstance(run.get("aborted"), bool):
+    if not isinstance(
+        run.get("aborted"),
+        bool
+    ):
         return False
 
-    if run.get("state_fixes") is not None and not isinstance(run.get("state_fixes"), list):
+    if (
+        run.get("state_fixes") is not None
+        and not isinstance(
+            run.get("state_fixes"),
+            list
+        )
+    ):
         return False
 
     # Purge obsolete known-bug runs from memory
-    if isinstance(run.get("error"), str):
+    if isinstance(
+        run.get("error"),
+        str
+    ):
+
         if "today_task_not_atomic" in run["error"]:
             return False
 
-    execute_stage = run.get("execute")
-    if isinstance(execute_stage, dict):
-        blockers = execute_stage.get("blockers", [])
-        if any("today_task_not_atomic" in str(b) for b in blockers):
+    execute_stage = run.get(
+        "execute"
+    )
+
+    if isinstance(
+        execute_stage,
+        dict
+    ):
+
+        blockers = execute_stage.get(
+            "blockers",
+            []
+        )
+
+        if any(
+            "today_task_not_atomic" in str(b)
+            for b in blockers
+        ):
             return False
 
-    validate_stage = run.get("validate")
-    builder_stage = run.get("builder")
-    code_stage = run.get("code")
+    validate_stage = run.get(
+        "validate"
+    )
 
-    if final_status in {"completed", "rejected", "failed", "refine_required"} and not validate_validate_stage_output(validate_stage):
+    builder_stage = run.get(
+        "builder"
+    )
+
+    code_stage = run.get(
+        "code"
+    )
+
+    if final_status in {
+        "completed",
+        "rejected",
+        "failed",
+        "refine_required"
+    } and not validate_validate_stage_output(
+        validate_stage
+    ):
         return False
 
-    if builder_stage is not None and not validate_builder_stage_output(builder_stage):
+    if (
+        builder_stage is not None
+        and not validate_builder_stage_output(
+            builder_stage
+        )
+    ):
         return False
 
     if execute_stage is not None:
+
         if builder_stage is None:
             return False
-        if not validate_execute_stage_output_for_memory(execute_stage, builder_stage):
+
+        if not validate_execute_stage_output_for_memory(
+            execute_stage,
+            builder_stage
+        ):
             return False
 
-    if code_stage is not None and not validate_code_stage_output(code_stage):
+    if (
+        code_stage is not None
+        and not validate_code_stage_output(
+            code_stage
+        )
+    ):
         return False
 
     if final_status == "completed":
-        if not all([validate_stage, builder_stage, execute_stage, code_stage]):
+
+        if not all([
+            validate_stage,
+            builder_stage,
+            execute_stage,
+            code_stage
+        ]):
             return False
+
         if current_stage is not None:
             return False
+
         if last_completed_stage != "code":
             return False
+
         if status != "completed":
             return False
-        if run.get("resume_allowed") is not False:
+
+        if run.get(
+            "resume_allowed"
+        ) is not False:
             return False
 
     if final_status == "rejected":
+
         if validate_stage is None:
             return False
-        if validate_stage.get("verdict") != "reject":
+
+        if validate_stage.get(
+            "verdict"
+        ) != "reject":
             return False
-        if any(stage is not None for stage in [builder_stage, execute_stage, code_stage]):
+
+        if any(
+            stage is not None
+            for stage in [
+                builder_stage,
+                execute_stage,
+                code_stage
+            ]
+        ):
             return False
 
     if final_status == "refine_required":
-        if execute_stage is None and builder_stage is None:
+
+        if (
+            execute_stage is None
+            and builder_stage is None
+        ):
             return False
 
     return True
 
 
-def pipeline_quality_score(run: Dict[str, Any]) -> Tuple[int, int, int, int]:
+def pipeline_quality_score(
+    run: Dict[str, Any]
+) -> Tuple[int, int, int, int]:
+
     status_rank = {
         "completed": 5,
         "refine_required": 4,
         "failed": 3,
         "rejected": 2,
         "incomplete": 1,
-    }.get(run.get("final_status"), 0)
-
-    completed_stage_count = sum(
-        1 for key in ["validate", "builder", "execute", "code"]
-        if isinstance(run.get(key), dict)
+    }.get(
+        run.get("final_status"),
+        0
     )
 
-    state_fix_count = len(run.get("state_fixes") or [])
-    retry_score = -int(run.get("retry_count", 0))
+    completed_stage_count = sum(
+        1
+        for key in [
+            "validate",
+            "builder",
+            "execute",
+            "code"
+        ]
+        if isinstance(
+            run.get(key),
+            dict
+        )
+    )
 
-    return (status_rank, completed_stage_count, state_fix_count, retry_score)
+    state_fix_count = len(
+        run.get("state_fixes") or []
+    )
+
+    retry_score = -int(
+        run.get(
+            "retry_count",
+            0
+        )
+    )
+
+    return (
+        status_rank,
+        completed_stage_count,
+        state_fix_count,
+        retry_score
+    )
 
 
-def choose_best_run(existing: Dict[str, Any], candidate: Dict[str, Any]) -> Dict[str, Any]:
-    existing_score = pipeline_quality_score(existing)
-    candidate_score = pipeline_quality_score(candidate)
-    return candidate if candidate_score > existing_score else existing
+def choose_best_run(
+    existing: Dict[str, Any],
+    candidate: Dict[str, Any]
+) -> Dict[str, Any]:
+
+    existing_score = pipeline_quality_score(
+        existing
+    )
+
+    candidate_score = pipeline_quality_score(
+        candidate
+    )
+
+    return (
+        candidate
+        if candidate_score > existing_score
+        else existing
+    )
 
 
+def sort_runs_best_first(
+    runs: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+
+    return sorted(
+        runs,
+        key=pipeline_quality_score,
+        reverse=True
+    )
 
 
-def sort_runs_best_first(runs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    return sorted(runs, key=pipeline_quality_score, reverse=True)
+def split_runs_by_status(
+    runs: List[Dict[str, Any]]
+) -> Dict[str, List[Dict[str, Any]]]:
 
-
-def split_runs_by_status(runs: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
     buckets = {
         "completed": [],
         "failed": [],
@@ -842,126 +1107,354 @@ def split_runs_by_status(runs: List[Dict[str, Any]]) -> Dict[str, List[Dict[str,
         "refine_required": [],
         "incomplete": [],
     }
+
     for run in runs:
-        buckets.setdefault(run.get("final_status", "incomplete"), []).append(run)
+
+        buckets.setdefault(
+            run.get(
+                "final_status",
+                "incomplete"
+            ),
+            []
+        ).append(
+            run
+        )
+
     return buckets
 
 
-def select_runs_per_input(runs: List[Dict[str, Any]], keep_ids: Optional[set] = None) -> List[Dict[str, Any]]:
+def select_runs_per_input(
+    runs: List[Dict[str, Any]],
+    keep_ids: Optional[set] = None
+) -> List[Dict[str, Any]]:
+
     keep_ids = keep_ids or set()
-    buckets = split_runs_by_status(runs)
 
-    selected: List[Dict[str, Any]] = []
+    buckets = split_runs_by_status(
+        runs
+    )
 
-    def pick(status: str, limit: int) -> None:
-        chosen = sort_runs_best_first(buckets.get(status, []))
-        forced = [r for r in chosen if r.get("id") in keep_ids]
-        normal = [r for r in chosen if r.get("id") not in keep_ids]
+    selected: List[
+        Dict[str, Any]
+    ] = []
+
+    def pick(
+        status: str,
+        limit: int
+    ) -> None:
+
+        chosen = sort_runs_best_first(
+            buckets.get(
+                status,
+                []
+            )
+        )
+
+        forced = [
+            r
+            for r in chosen
+            if r.get("id") in keep_ids
+        ]
+
+        normal = [
+            r
+            for r in chosen
+            if r.get("id") not in keep_ids
+        ]
 
         taken_ids = set()
+
         for run in forced:
-            if run["id"] not in taken_ids:
-                selected.append(run)
-                taken_ids.add(run["id"])
 
-        remaining_slots = max(0, limit - len(taken_ids))
-        for run in normal[:remaining_slots]:
             if run["id"] not in taken_ids:
-                selected.append(run)
-                taken_ids.add(run["id"])
 
-    pick("completed", MAX_COMPLETED_RUNS_PER_INPUT)
-    pick("failed", MAX_FAILED_RUNS_PER_INPUT)
-    pick("rejected", MAX_REJECTED_RUNS_PER_INPUT)
-    pick("refine_required", MAX_REFINE_RUNS_PER_INPUT)
-    pick("incomplete", MAX_INCOMPLETE_RUNS_PER_INPUT)
+                selected.append(
+                    run
+                )
+
+                taken_ids.add(
+                    run["id"]
+                )
+
+        remaining_slots = max(
+            0,
+            limit - len(taken_ids)
+        )
+
+        for run in normal[
+            :remaining_slots
+        ]:
+
+            if run["id"] not in taken_ids:
+
+                selected.append(
+                    run
+                )
+
+                taken_ids.add(
+                    run["id"]
+                )
+
+    pick(
+        "completed",
+        MAX_COMPLETED_RUNS_PER_INPUT
+    )
+
+    pick(
+        "failed",
+        MAX_FAILED_RUNS_PER_INPUT
+    )
+
+    pick(
+        "rejected",
+        MAX_REJECTED_RUNS_PER_INPUT
+    )
+
+    pick(
+        "refine_required",
+        MAX_REFINE_RUNS_PER_INPUT
+    )
+
+    pick(
+        "incomplete",
+        MAX_INCOMPLETE_RUNS_PER_INPUT
+    )
 
     return selected
 
 
 def smart_cleanup_memory() -> None:
+
     memory = post_memory_get()
 
     if not memory:
-        print("Cleanup unavailable: backend memory not reachable")
+
+        print(
+            "Cleanup unavailable: backend memory not reachable"
+        )
+
         return
 
-    safe_write_json(CLEANUP_BACKUP_PATH, memory)
+    safe_write_json(
+        CLEANUP_BACKUP_PATH,
+        memory
+    )
 
-    original_runs = memory.get("pipeline_runs", [])
-    latest_pipeline = memory.get("latest_pipeline_run")
+    original_runs = memory.get(
+        "pipeline_runs",
+        []
+    )
+
+    latest_pipeline = memory.get(
+        "latest_pipeline_run"
+    )
 
     invalid_count = 0
     duplicate_id_count = 0
 
-    deduped_by_id: Dict[str, Dict[str, Any]] = {}
+    deduped_by_id: Dict[
+        str,
+        Dict[str, Any]
+    ] = {}
+
     for run in original_runs:
-        if not is_valid_pipeline_run(run):
+
+        if not is_valid_pipeline_run(
+            run
+        ):
+
             invalid_count += 1
             continue
 
         run_id = run["id"]
+
         if run_id in deduped_by_id:
+
             duplicate_id_count += 1
-            deduped_by_id[run_id] = choose_best_run(deduped_by_id[run_id], run)
+
+            deduped_by_id[
+                run_id
+            ] = choose_best_run(
+                deduped_by_id[
+                    run_id
+                ],
+                run
+            )
+
         else:
-            deduped_by_id[run_id] = run
+
+            deduped_by_id[
+                run_id
+            ] = run
 
     keep_ids = set()
-    if is_valid_pipeline_run(latest_pipeline):
-        latest_id = latest_pipeline["id"]
-        keep_ids.add(latest_id)
+
+    if is_valid_pipeline_run(
+        latest_pipeline
+    ):
+
+        latest_id = latest_pipeline[
+            "id"
+        ]
+
+        keep_ids.add(
+            latest_id
+        )
+
         if latest_id in deduped_by_id:
-            deduped_by_id[latest_id] = choose_best_run(deduped_by_id[latest_id], latest_pipeline)
+
+            deduped_by_id[
+                latest_id
+            ] = choose_best_run(
+                deduped_by_id[
+                    latest_id
+                ],
+                latest_pipeline
+            )
+
         else:
-            deduped_by_id[latest_id] = latest_pipeline
+
+            deduped_by_id[
+                latest_id
+            ] = latest_pipeline
+
     else:
+
         latest_pipeline = None
 
-    deduped_runs = list(deduped_by_id.values())
+    deduped_runs = list(
+        deduped_by_id.values()
+    )
 
-    grouped: Dict[str, List[Dict[str, Any]]] = {}
+    grouped: Dict[
+        str,
+        List[Dict[str, Any]]
+    ] = {}
+
     for run in deduped_runs:
-        key = normalized_input_key(run["input"])
-        grouped.setdefault(key, []).append(run)
 
-    cleaned_runs: List[Dict[str, Any]] = []
+        key = normalized_input_key(
+            run["input"]
+        )
+
+        grouped.setdefault(
+            key,
+            []
+        ).append(
+            run
+        )
+
+    cleaned_runs: List[
+        Dict[str, Any]
+    ] = []
+
     removed_same_input_noise = 0
 
     for _, runs_for_input in grouped.items():
-        before_count = len(runs_for_input)
-        kept = select_runs_per_input(runs_for_input, keep_ids=keep_ids)
-        cleaned_runs.extend(kept)
-        removed_same_input_noise += max(0, before_count - len(kept))
 
-    if latest_pipeline and latest_pipeline["id"] not in {r["id"] for r in cleaned_runs}:
-        cleaned_runs.append(latest_pipeline)
+        before_count = len(
+            runs_for_input
+        )
 
-    if not latest_pipeline and cleaned_runs:
-        latest_pipeline = max(cleaned_runs, key=pipeline_quality_score)
+        kept = select_runs_per_input(
+            runs_for_input,
+            keep_ids=keep_ids
+        )
 
-    res_all = post_memory_update("pipeline_runs", cleaned_runs)
-    res_latest = post_memory_update("latest_pipeline_run", latest_pipeline)
+        cleaned_runs.extend(
+            kept
+        )
 
-    if res_all.get("status") != "ok" or res_latest.get("status") != "ok":
-        print("Cleanup failed: could not write cleaned memory back to backend")
+        removed_same_input_noise += max(
+            0,
+            before_count - len(kept)
+        )
+
+    if (
+        latest_pipeline
+        and latest_pipeline["id"]
+        not in {
+            r["id"]
+            for r in cleaned_runs
+        }
+    ):
+
+        cleaned_runs.append(
+            latest_pipeline
+        )
+
+    if (
+        not latest_pipeline
+        and cleaned_runs
+    ):
+
+        latest_pipeline = max(
+            cleaned_runs,
+            key=pipeline_quality_score
+        )
+
+    res_all = post_memory_update(
+        "pipeline_runs",
+        cleaned_runs
+    )
+
+    res_latest = post_memory_update(
+        "latest_pipeline_run",
+        latest_pipeline
+    )
+
+    if (
+        res_all.get("status") != "ok"
+        or res_latest.get("status") != "ok"
+    ):
+
+        print(
+            "Cleanup failed: could not write cleaned memory back to backend"
+        )
+
         return
 
     result = {
+
         "cleanup": "smart_complete",
-        "original_runs": len(original_runs),
-        "cleaned_runs": len(cleaned_runs),
+
+        "original_runs": len(
+            original_runs
+        ),
+
+        "cleaned_runs": len(
+            cleaned_runs
+        ),
+
         "removed_invalid_runs": invalid_count,
+
         "removed_duplicate_id_entries": duplicate_id_count,
-        "removed_same_input_noise": removed_same_input_noise,
-        "backup_path": CLEANUP_BACKUP_PATH,
-        "latest_pipeline_run_id": latest_pipeline.get("id") if isinstance(latest_pipeline, dict) else None
+
+        "removed_same_input_noise":
+            removed_same_input_noise,
+
+        "backup_path":
+            CLEANUP_BACKUP_PATH,
+
+        "latest_pipeline_run_id":
+            latest_pipeline.get("id")
+            if isinstance(
+                latest_pipeline,
+                dict
+            )
+            else None
     }
 
-    print(json.dumps(result, indent=2))
+    print(
+        json.dumps(
+            result,
+            indent=2
+        )
+    )
 
 
 def main() -> None:
+
     if len(sys.argv) < 2:
 
         print(
@@ -970,12 +1463,22 @@ def main() -> None:
 
         return
 
-    cmd = sys.argv[1].strip().lower()
+    cmd = sys.argv[
+        1
+    ].strip().lower()
 
     if cmd == "run":
-        text = " ".join(sys.argv[2:]).strip()
+
+        text = " ".join(
+            sys.argv[2:]
+        ).strip()
+
         if not text:
-            print('Usage: python ai.py run "<text>"')
+
+            print(
+                'Usage: python ai.py run "<text>"'
+            )
+
             return
 
         run_pipeline(
@@ -1015,26 +1518,36 @@ def main() -> None:
         )
 
     elif cmd == "continue":
+
         continue_pipeline()
 
     elif cmd == "reset":
+
         reset_pipeline()
 
     elif cmd == "abort":
+
         abort_pipeline()
 
     elif cmd == "cleanup":
+
         smart_cleanup_memory()
 
     elif cmd == "learn":
+
         learn_from_memory()
 
     elif cmd == "memory":
+
         show_memory()
 
     else:
-        print("Invalid command")
+
+        print(
+            "Invalid command"
+        )
 
 
 if __name__ == "__main__":
+
     main()

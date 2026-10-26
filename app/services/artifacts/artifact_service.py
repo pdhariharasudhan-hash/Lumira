@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from uuid import uuid4
@@ -102,7 +102,7 @@ class ArtifactService:
             "type": artifact_type,
             "source": source,
             "file": str(artifact_path),
-            "created": datetime.utcnow().isoformat(),
+            "created": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         }
 
         self._save_metadata(metadata)
@@ -147,7 +147,7 @@ class ArtifactService:
             "type": artifact_type,
             "source": source,
             "file": str(dst),
-            "created": datetime.utcnow().isoformat(),
+            "created": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         }
 
         self._save_metadata(metadata)

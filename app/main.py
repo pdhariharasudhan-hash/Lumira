@@ -1,7 +1,11 @@
+
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from urllib.parse import urlsplit
+from pathlib import Path
 
 from app.routes.builder import (
     router as builder_router
@@ -27,6 +31,8 @@ from app.routes.health import (
     router as health_router
 )
 
+from app.routes.resources import router as resources_router
+
 from app.routes.brain import (
     router as brain_router
 )
@@ -38,6 +44,7 @@ from app.routes.run import (
 from app.routes.projects import (
     router as projects_router
 )
+from app.routes.project_insights import router as project_insights_router
 
 from app.routes.project_details import (
     router as project_details_router
@@ -82,18 +89,30 @@ from app.routes.command import (
 from app.routes.sessions import (
     router as sessions_router
 )
+from app.routes.session_insights import router as session_insights_router
 
 from app.routes.goals import (
     router as goals_router
 )
+from app.routes.goal_intelligence import router as goal_intelligence_router
 
 from app.routes.agents import router as agents_router
 from app.routes.workflows import router as workflows_router
+from app.routes.workflow_insights import router as workflow_insights_router
 from app.routes.auth import router as auth_router
 from app.routes.devices import router as devices_router
+from app.routes.project_terminal import router as project_terminal_router
+from app.routes.project_preview import router as project_preview_router
+from app.routes.web import router as web_router
+from app.routes.recovery import router as recovery_router
+from app.routes.features import router as features_router
+from app.routes.intelligence import router as intelligence_router
+from app.routes.notepad import router as notepad_router
+from app.routes.image_understanding import router as image_understanding_router
 import ipaddress
 
 from app.services.auth.local_auth_service import LocalAuthService
+from app.services.providers.startup_registration import register_configured_providers
 
 
 app = FastAPI(
@@ -103,11 +122,40 @@ app = FastAPI(
     "Simple FastAPI backend MVP for Personal AI Core"
 )
 
+register_configured_providers()
+
 
 @app.middleware("http")
 async def local_auth_boundary(request: Request, call_next):
     if request.url.path == "/health":
         return await call_next(request)
+
+    # Loopback-only API access is not sufficient protection against browser
+    # CSRF: a hostile website can make requests to localhost from the user's
+    # browser. Accept browser-origin requests only from local workbench origins.
+    origin = request.headers.get("origin")
+    if origin:
+        try:
+            parsed_origin = urlsplit(origin)
+            origin_port = parsed_origin.port  # Validate malformed and out-of-range ports.
+            trusted_origin = (
+                parsed_origin.scheme in {"http", "https"}
+                and parsed_origin.hostname in {"localhost", "127.0.0.1", "::1"}
+                and origin_port in {5000, 8000}
+                and parsed_origin.username is None
+                and parsed_origin.password is None
+                and not parsed_origin.path
+                and not parsed_origin.query
+                and not parsed_origin.fragment
+            )
+        except ValueError:
+            trusted_origin = False
+        if not trusted_origin:
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Untrusted browser origin"},
+            )
+
     client_host = request.client.host if request.client else ""
     try:
         loopback = ipaddress.ip_address(client_host).is_loopback
@@ -131,7 +179,7 @@ async def local_auth_boundary(request: Request, call_next):
 app.mount(
     "/static",
     StaticFiles(
-        directory="app/frontend"
+        directory=str(Path(__file__).resolve().parent / "frontend")
     ),
     name="static"
 )
@@ -166,6 +214,8 @@ app.include_router(
     health_router
 )
 
+app.include_router(resources_router)
+
 app.include_router(
     brain_router,
     tags=["Brain"]
@@ -174,6 +224,11 @@ app.include_router(
 app.include_router(
     run_router,
     tags=["Run"]
+)
+
+app.include_router(
+    project_insights_router,
+    tags=["Project Insights"]
 )
 
 app.include_router(
@@ -232,6 +287,11 @@ app.include_router(
 )
 
 app.include_router(
+    session_insights_router,
+    tags=["Session Insights"]
+)
+
+app.include_router(
     sessions_router,
     tags=["Sessions"]
 )
@@ -242,8 +302,18 @@ app.include_router(
 )
 
 app.include_router(
+    goal_intelligence_router,
+    tags=["Goal Intelligence"]
+)
+
+app.include_router(
     agents_router,
     tags=["Agents"]
+)
+
+app.include_router(
+    workflow_insights_router,
+    tags=["Workflow Insights"]
 )
 
 app.include_router(
@@ -259,6 +329,46 @@ app.include_router(
 app.include_router(
     devices_router,
     tags=["Device Gateway"]
+)
+
+app.include_router(
+    project_terminal_router,
+    tags=["Project Terminal"]
+)
+
+app.include_router(
+    project_preview_router,
+    tags=["Project Preview"]
+)
+
+app.include_router(
+    web_router,
+    tags=["Web Access"]
+)
+
+app.include_router(
+    recovery_router,
+    tags=["Workflow Recovery"]
+)
+
+app.include_router(
+    features_router,
+    tags=["Features"]
+)
+
+app.include_router(
+    intelligence_router,
+    tags=["Intelligence and Modes"]
+)
+
+app.include_router(
+    notepad_router,
+    tags=["Notepad"]
+)
+
+app.include_router(
+    image_understanding_router,
+    tags=["Image Understanding"]
 )
 
 

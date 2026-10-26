@@ -35,6 +35,7 @@ def test_expense_api_name_ignores_framework_and_feature_terms():
     assert "README.md" in generated["files"]
     assert "LUMIRA_AUTH_DATA_DIR" in generated["files"]["README.md"]
     assert "survive application restarts" in generated["files"]["README.md"]
+    assert "run a single worker" in generated["files"]["README.md"]
     compile(source, "generated_expense_api.py", "exec")
 
 
@@ -91,8 +92,17 @@ def test_generated_optional_routes_execute_against_entity_and_respect_owners(tmp
     alice_headers = {"Authorization": f"Bearer {alice}"}
     bob_headers = {"Authorization": f"Bearer {bob}"}
 
-    assert client.post("/expenses", json={"amount": "20", "category": "food"}, headers=alice_headers).status_code == 200
-    assert client.post("/expenses", json={"amount": "5", "category": "travel"}, headers=bob_headers).status_code == 200
+    alice_create = client.post("/expenses", json={"amount": "20", "category": "food"}, headers=alice_headers)
+    bob_create = client.post("/expenses", json={"amount": "5", "category": "travel"}, headers=bob_headers)
+    assert alice_create.status_code == 200
+    assert bob_create.status_code == 200
+    alice_record_id = alice_create.json()["expenses"][0]["id"]
+    assert client.put(
+        f"/expenses/{alice_record_id}",
+        json={"amount": "999", "category": "attacker"},
+        headers=bob_headers,
+    ).json()["success"] is False
+    assert client.delete(f"/expenses/{alice_record_id}", headers=bob_headers).json()["success"] is False
     assert client.get("/expenses/search?query=food", headers=bob_headers).json() == []
     assert client.get("/expenses/search?query=" + "x" * 501, headers=alice_headers).status_code == 422
     assert client.get("/expenses/page?page=0", headers=alice_headers).status_code == 422
@@ -101,6 +111,46 @@ def test_generated_optional_routes_execute_against_entity_and_respect_owners(tmp
     assert exported.status_code == 200
     assert "20" in exported.text and "5" not in exported.text
     assert exported.headers["content-type"].startswith("text/csv")
+
+
+def test_generated_crud_uses_stable_database_record_ids(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    generated = CodeService().generate(
+        "Build an expense API",
+        {"status": "accept", "execution_order": ["step_1"], "task_steps": ["step_1"]},
+    )
+    module = type(sys)("generated_stable_record_ids")
+    exec(compile(generated["files"]["main.py"], module.__name__, "exec"), module.__dict__)
+    client = TestClient(module.app)
+
+    first = client.post("/expenses", json={"amount": "20", "category": "food"})
+    assert first.status_code == 200
+    first_record = first.json()["expenses"][0]
+    first_id = first_record["id"]
+    assert isinstance(first_id, int) and first_id > 0
+
+    updated = client.put(
+        f"/expenses/{first_id}",
+        json={"amount": "25", "category": "food"},
+    )
+    assert updated.json()["success"] is True
+    assert updated.json()["expenses"][0]["id"] == first_id
+    assert updated.json()["expenses"][0]["amount"] == "25"
+
+    deleted = client.delete(f"/expenses/{first_id}")
+    assert deleted.json()["success"] is True
+
+    second = client.post("/expenses", json={"amount": "5", "category": "travel"})
+    second_id = second.json()["expenses"][0]["id"]
+    assert second_id > first_id
+    assert client.put(
+        f"/expenses/{first_id}",
+        json={"amount": "999", "category": "wrong"},
+    ).json()["success"] is False
+    assert client.put(
+        f"/expenses/{second_id}",
+        json={"amount": "6", "category": "travel"},
+    ).json()["success"] is True
 
 
 def test_brain_executor_recovers_and_retries_failed_stage():

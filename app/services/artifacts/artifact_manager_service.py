@@ -1,5 +1,5 @@
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 import os
 import re
@@ -33,6 +33,7 @@ class ArtifactManagerService:
 
     MAX_CONTENT_LENGTH = 1_000_000
     MAX_BINARY_CONTENT_BYTES = 25_000_000
+    MAX_ARTIFACTS = 10_000
     BINARY_FORMATS = {
         "audio": {"wav", "mp3", "m4a", "ogg", "webm"},
         "images": {"png", "jpg", "jpeg", "webp"},
@@ -112,14 +113,40 @@ class ArtifactManagerService:
     def _validate_index(self, data):
         if not isinstance(data, dict) or not isinstance(data.get("artifacts"), list):
             raise PersistenceIntegrityError("Artifact index must contain an artifacts list")
+        if len(data["artifacts"]) > ArtifactManagerService.MAX_ARTIFACTS:
+            raise PersistenceIntegrityError("Artifact index exceeds the configured retention limit")
         required = {"artifact_id", "type", "source", "file", "timestamp"}
         for record in data["artifacts"]:
             if not isinstance(record, dict) or not required.issubset(record):
                 raise PersistenceIntegrityError("Artifact index contains an incomplete record")
-            if record["type"] not in SUPPORTED_ARTIFACT_TYPES:
+            try:
+                record_size = len(__import__("json").dumps(record, ensure_ascii=False, allow_nan=False).encode("utf-8"))
+            except (TypeError, ValueError, RecursionError) as exc:
+                raise PersistenceIntegrityError("Artifact index record is not valid JSON") from exc
+            if record_size > 20_000:
+                raise PersistenceIntegrityError("Artifact index record exceeds the metadata size limit")
+            if not isinstance(record["type"], str) or record["type"] not in SUPPORTED_ARTIFACT_TYPES:
                 raise PersistenceIntegrityError("Artifact index contains an unsupported artifact type")
             if not all(isinstance(record[field], str) and record[field] for field in required):
                 raise PersistenceIntegrityError("Artifact index contains invalid record fields")
+            if (
+                len(record["artifact_id"]) > 128
+                or len(record["source"]) > 500
+                or len(record["file"]) > 4096
+                or len(record["timestamp"]) > 40
+            ):
+                raise PersistenceIntegrityError("Artifact index record fields exceed their limits")
+            owner_id = record.get("owner_id", "local")
+            if not isinstance(owner_id, str) or not owner_id or len(owner_id) > 128:
+                raise PersistenceIntegrityError("Artifact owner identifier is invalid")
+            if "archived" in record and not isinstance(record["archived"], bool):
+                raise PersistenceIntegrityError("Artifact archive state must be a boolean")
+            for timestamp_field in ("archived_at", "restored_at"):
+                if timestamp_field in record and (
+                    not isinstance(record[timestamp_field], str)
+                    or len(record[timestamp_field]) > 40
+                ):
+                    raise PersistenceIntegrityError("Artifact lifecycle timestamps are invalid")
         return data
 
     def _save_index(
@@ -157,12 +184,7 @@ class ArtifactManagerService:
             uuid.uuid4()
         )
 
-        timestamp = (
-            datetime.now()
-            .strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
-        )
+        timestamp = datetime.now(timezone.utc).isoformat()
 
         filename = (
             f"{artifact_id}.{extension}"
@@ -264,7 +286,7 @@ class ArtifactManagerService:
             "type": artifact_type,
             "source": source,
             "file": str(artifact_path),
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         try:
             self.register_artifact(record)
@@ -313,6 +335,54 @@ class ArtifactManagerService:
             raise ValueError("Artifact path is outside the artifact store")
         return path
 
+    def archive_artifact(self, artifact_id: str) -> bool:
+        """Mark an indexed artifact archived without deleting its file or index record."""
+        now = datetime.now(timezone.utc).isoformat()
+        archived = {"value": False, "at": None}
+
+        def mark(index):
+            self._validate_index(index)
+            artifact = next((item for item in index["artifacts"] if item.get("artifact_id") == artifact_id), None)
+            if artifact is None:
+                return False
+            if not artifact.get("archived", False):
+                artifact["archived"] = True
+                artifact["archived_at"] = now
+            if not isinstance(artifact.get("archived_at"), str):
+                artifact["archived_at"] = now
+            archived["at"] = artifact["archived_at"]
+            archived["value"] = True
+            return True
+
+        self.store.update(mark, {"artifacts": []})
+        if archived["value"]:
+            self.memory.update_artifact(artifact_id, {"archived": True, "archived_at": archived["at"]})
+        return archived["value"]
+
+    def restore_artifact(self, artifact_id: str) -> bool:
+        """Restore an archived artifact without changing its stored content."""
+        now = datetime.now(timezone.utc).isoformat()
+        restored = {"value": False, "at": None}
+
+        def mark(index):
+            self._validate_index(index)
+            artifact = next((item for item in index["artifacts"] if item.get("artifact_id") == artifact_id), None)
+            if artifact is None:
+                return False
+            if artifact.get("archived", False):
+                artifact["archived"] = False
+                artifact["restored_at"] = now
+            if not isinstance(artifact.get("restored_at"), str):
+                artifact["restored_at"] = now
+            restored["at"] = artifact["restored_at"]
+            restored["value"] = True
+            return True
+
+        self.store.update(mark, {"artifacts": []})
+        if restored["value"]:
+            self.memory.update_artifact(artifact_id, {"archived": False})
+        return restored["value"]
+
     def delete_artifact(self, artifact_id: str) -> bool:
         removed = {}
 
@@ -345,23 +415,35 @@ class ArtifactManagerService:
     def stats(self) -> dict:
         artifacts = self.get_all_artifacts()
         counts = {artifact_type: 0 for artifact_type in SUPPORTED_ARTIFACT_TYPES}
+        active_counts = {artifact_type: 0 for artifact_type in SUPPORTED_ARTIFACT_TYPES}
+        archived = 0
         for artifact in artifacts:
             artifact_type = artifact.get("type")
             if artifact_type in counts:
                 counts[artifact_type] += 1
-        return {"total": len(artifacts), "by_type": counts}
+            if artifact.get("archived", False):
+                archived += 1
+            elif artifact_type in active_counts:
+                active_counts[artifact_type] += 1
+        return {
+            "total": len(artifacts),
+            "active": len(artifacts) - archived,
+            "archived": archived,
+            "by_type": counts,
+            "active_by_type": active_counts,
+        }
 
     def search(
         self,
-        artifact_type: str = None
+        artifact_type: str = None,
+        include_archived: bool = False,
     ):
-
-        artifacts = (
-            self.get_all_artifacts()
-        )
+        """Search active artifacts by default; include archived records only on request."""
+        artifacts = self.get_all_artifacts()
+        if not include_archived:
+            artifacts = [item for item in artifacts if not item.get("archived", False)]
 
         if not artifact_type:
-
             return artifacts
 
         return [

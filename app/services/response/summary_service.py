@@ -5,6 +5,8 @@ from app.services.artifacts.artifact_manager_service import (
     ArtifactManagerService
 )
 
+from app.services.resources.resource_budget_service import ResourceBudgetService
+
 
 class SummaryProvider(Protocol):
     def summarize(self, transcript: str) -> str:
@@ -83,7 +85,33 @@ class SummaryService:
             }
 
         try:
+            guidance = ResourceBudgetService().execution_guidance()
+        except Exception:
+            guidance = {}
+        if guidance.get("defer_optional_heavy_media_work") is True:
+            return {
+                "success": False,
+                "state": "deferred",
+                "code": "resource_pressure_deferred",
+                "resource_pressure": guidance.get("resource_pressure", "unknown"),
+                "message": "Summary generation was deferred because available system memory is constrained. The transcript artifact is preserved.",
+            }
+
+        try:
             summary_text = self.provider.summarize(transcript_text)
+        except RuntimeError as error:
+            if "deferred" in str(error).lower():
+                return {
+                    "success": False,
+                    "state": "deferred",
+                    "code": "resource_pressure_deferred",
+                    "message": "Summary generation was deferred because available system memory is constrained. The transcript artifact is preserved.",
+                }
+            return {
+                "success": False,
+                "code": "provider_error",
+                "message": "The summarization provider failed; no summary was created.",
+            }
         except Exception:
             return {
                 "success": False,
@@ -128,6 +156,8 @@ class SummaryService:
 
             "transcript_artifact":
             transcript_artifact_id,
+
+            "summary_text": summary_text,
 
             "summary_artifact":
             summary_artifact,

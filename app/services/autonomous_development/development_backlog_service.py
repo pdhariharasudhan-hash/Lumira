@@ -115,6 +115,8 @@ class DevelopmentBacklogService:
                     "last_error": None,
                     "last_validation": None,
                     "recovery_run_id": None,
+                    "recovery_window_count": 0,
+                    "recovery_history": [],
                     "source_workflow_id": source.get("source_workflow_id"),
                     "audit_evidence": redact_sensitive_value(source.get("audit_evidence")),
                     "resume_run_id": source.get("recovery_run_id"),
@@ -168,6 +170,8 @@ class DevelopmentBacklogService:
                 "last_error": None,
                 "last_validation": None,
                 "recovery_run_id": None,
+                "recovery_window_count": 0,
+                "recovery_history": [],
                 "source_workflow_id": task.get("source_workflow_id"),
                 "audit_evidence": redact_sensitive_value(task.get("audit_evidence")),
                 "resume_run_id": task.get("recovery_run_id"),
@@ -234,7 +238,18 @@ class DevelopmentBacklogService:
         return deepcopy(sorted(candidates, key=lambda task: (-task["priority"], task["order"], task["created_at"]))[0]) if candidates else None
 
     def update_task(self, program_id: str, task_id: str, **updates: Any) -> dict[str, Any]:
-        allowed = {"status", "attempts", "iteration", "last_error", "last_validation", "recovery_run_id", "relevant_files", "acceptance_criteria"}
+        allowed = {
+            "status",
+            "attempts",
+            "iteration",
+            "last_error",
+            "last_validation",
+            "recovery_run_id",
+            "recovery_window_count",
+            "recovery_history",
+            "relevant_files",
+            "acceptance_criteria",
+        }
         if set(updates) - allowed:
             raise ValueError("Unsupported development-task update")
         if "status" in updates and updates["status"] not in TASK_STATES:
@@ -308,6 +323,86 @@ class DevelopmentBacklogService:
 
     def link_recovery_run(self, program_id: str, task_id: str, recovery_run_id: str) -> dict[str, Any]:
         return self.update_task(program_id, task_id, recovery_run_id=recovery_run_id)
+
+    def open_recovery_window(
+        self,
+        program_id: str,
+        task_id: str,
+        recovery_run_id: str,
+        *,
+        parent_run_id: str,
+        reason: str,
+    ) -> dict[str, Any]:
+        """
+        Reopen a blocked development task for a new bounded recovery window.
+
+        Task attempts are intentionally preserved. A recovery window is a
+        separate bounded execution budget and does not erase task history.
+        """
+        if not isinstance(recovery_run_id, str) or not recovery_run_id.strip():
+            raise ValueError("recovery_run_id is required")
+        if not isinstance(parent_run_id, str) or not parent_run_id.strip():
+            raise ValueError("parent_run_id is required")
+        if not isinstance(reason, str) or not reason.strip():
+            raise ValueError("recovery-window reason is required")
+
+        updated: dict[str, Any] = {}
+        now = datetime.now(UTC).isoformat()
+
+        def mutate(document: dict[str, Any]) -> bool:
+            self._validate(document)
+
+            program = next(
+                (item for item in document["programs"] if item["program_id"] == program_id),
+                None,
+            )
+            if program is None:
+                raise KeyError("development program not found")
+
+            task = next(
+                (item for item in program["tasks"] if item["task_id"] == task_id),
+                None,
+            )
+            if task is None:
+                raise KeyError("development task not found")
+
+            history = task.get("recovery_history", [])
+            if not isinstance(history, list):
+                history = []
+
+            history.append(
+                {
+                    "run_id": recovery_run_id,
+                    "parent_run_id": parent_run_id,
+                    "reason": redact_sensitive_text(reason)[:1000],
+                    "created_at": now,
+                }
+            )
+
+            # Keep recovery history bounded.
+            history = history[-10:]
+
+            task["recovery_run_id"] = recovery_run_id
+            task["recovery_window_count"] = int(
+                task.get("recovery_window_count", 0)
+            ) + 1
+            task["recovery_history"] = history
+            task["status"] = "in_progress"
+            task["last_error"] = None
+            task["updated_at"] = now
+
+            program["current_task_id"] = task_id
+            program["status"] = "in_progress"
+            program["updated_at"] = now
+
+            updated.update(deepcopy(task))
+            return True
+
+        self.store.update(
+            mutate,
+            {"schema_version": BACKLOG_SCHEMA_VERSION, "programs": [], "lessons": []},
+        )
+        return updated
 
     def add_lesson(self, lesson: dict[str, Any]) -> None:
         safe = redact_sensitive_value(lesson)

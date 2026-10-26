@@ -11,7 +11,7 @@ Ownership:
 Handoff 11 - Constraint Analysis
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.services.constraints.constraint_models import (
     ConstraintState,
@@ -100,7 +100,7 @@ class ConstraintService:
         )
 
         state.last_updated = (
-            datetime.utcnow().isoformat()
+            datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         )
 
         return state

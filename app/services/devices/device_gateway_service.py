@@ -54,7 +54,7 @@ class DeviceGatewayService:
         if not isinstance(payload, dict):
             raise ValueError("payload must be an object")
         try:
-            payload_size = len(json.dumps(payload, ensure_ascii=False).encode("utf-8"))
+            payload_size = len(json.dumps(payload, ensure_ascii=False, allow_nan=False).encode("utf-8"))
         except (TypeError, ValueError, RecursionError) as exc:
             raise ValueError("payload must contain valid JSON data") from exc
         if payload_size > cls.MAX_PAYLOAD_BYTES:
@@ -115,7 +115,7 @@ class DeviceGatewayService:
         if payload is None:
             payload = {}
         try:
-            if not isinstance(payload, dict) or len(json.dumps(payload, ensure_ascii=False).encode("utf-8")) > self.MAX_PAYLOAD_BYTES:
+            if not isinstance(payload, dict) or len(json.dumps(payload, ensure_ascii=False, allow_nan=False).encode("utf-8")) > self.MAX_PAYLOAD_BYTES:
                 return {"success": False, "code": "invalid_payload", "message": "Command payload must be an object of at most 64000 bytes."}
         except (TypeError, ValueError, RecursionError):
             return {"success": False, "code": "invalid_payload", "message": "Command payload must contain valid JSON data."}

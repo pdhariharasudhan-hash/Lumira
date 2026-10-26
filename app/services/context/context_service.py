@@ -11,7 +11,7 @@ Ownership:
 Handoff 11 - Context Engine
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.services.context.context_models import (
     ContextState,
@@ -83,7 +83,7 @@ class ContextService:
         )
 
         state.last_updated = (
-            datetime.utcnow().isoformat()
+            datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         )
 
         return state

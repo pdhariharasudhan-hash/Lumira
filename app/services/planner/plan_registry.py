@@ -33,10 +33,11 @@ class PlanRegistry:
         self,
         plan_name: str
     ):
-
-        return self.plans.get(
-            plan_name
-        )
+        """Return an isolated copy so callers cannot mutate registered plans."""
+        if not isinstance(plan_name, str):
+            return None
+        plan = self.plans.get(plan_name)
+        return list(plan) if isinstance(plan, list) else None
 
     def list_plans(
         self

@@ -64,8 +64,13 @@ class TranscriptService:
             if audio_path is None or not audio_path.is_file() or audio_path.stat().st_size > self.artifacts.MAX_BINARY_CONTENT_BYTES:
                 return {"success": False, "code": "invalid_audio_artifact", "message": "Audio artifact is unavailable or exceeds the processing limit."}
             extension = audio_path.suffix.lstrip(".").lower()
+            # Only the file header is needed for format validation. Reading the
+            # entire recording here needlessly duplicates up to the full upload size
+            # in memory before handing the path to the transcription provider.
+            with audio_path.open("rb") as audio_file:
+                signature = audio_file.read(12)
             if extension not in self.artifacts.BINARY_FORMATS["audio"] or not self.artifacts._has_binary_signature(
-                "audio", audio_path.read_bytes(), extension
+                "audio", signature, extension
             ):
                 return {"success": False, "code": "invalid_audio_artifact", "message": "Audio content does not match a supported audio format."}
         except Exception:
@@ -84,6 +89,19 @@ class TranscriptService:
 
         try:
             transcript_text = self.provider.transcribe(str(audio_path))
+        except RuntimeError as error:
+            if "deferred" in str(error).lower():
+                return {
+                    "success": False,
+                    "state": "deferred",
+                    "code": "resource_pressure_deferred",
+                    "message": "Transcription was deferred because available system memory is constrained. The audio artifact is preserved.",
+                }
+            return {
+                "success": False,
+                "code": "provider_error",
+                "message": "The transcription provider failed; no transcript was created.",
+            }
         except Exception:
             return {
                 "success": False,
@@ -132,6 +150,8 @@ class TranscriptService:
 
             "audio_artifact":
             audio_artifact_id,
+
+            "transcript_text": transcript_text,
 
             "transcript_artifact":
             transcript_artifact,

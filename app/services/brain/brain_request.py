@@ -31,7 +31,7 @@ class BrainRequest(BaseModel):
     # User Request
     # ----------------------------------
 
-    message: str = ""
+    message: str = Field(default="", max_length=100_000)
 
     # ----------------------------------
     # Execution Context

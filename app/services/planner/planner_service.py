@@ -15,7 +15,7 @@ Ownership:
 Handoff 12 - Planner Intelligence
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.services.decision.decision_models import (
     DecisionState,
@@ -146,21 +146,32 @@ class PlannerService:
         planner API and is separate from Brain-aware planning.
         """
 
-        decomposition = (
-            self.decomposer.decompose(goal)
-        )
-
-        intent = decomposition["intent"]
-
-        steps = self.registry.get_plan(
-            intent
-        )
+        if not isinstance(goal, str) or not goal.strip():
+            return {
+                "success": False,
+                "error": "goal must be a non-empty string",
+                "goal": "",
+                "intent": None,
+                "steps": [],
+            }
+        normalized_goal = goal.strip()[:10_000]
+        decomposition = self.decomposer.decompose(normalized_goal)
+        intent = decomposition.get("intent")
+        steps = self.registry.get_plan(intent) if isinstance(intent, str) else None
+        if not isinstance(steps, list) or not steps:
+            return {
+                "success": False,
+                "error": "no registered plan for the selected intent",
+                "goal": normalized_goal,
+                "intent": intent,
+                "steps": [],
+            }
 
         return {
             "success": True,
-            "goal": goal,
+            "goal": normalized_goal,
             "intent": intent,
-            "steps": steps,
+            "steps": list(steps),
         }
 
     # ----------------------------------
@@ -190,9 +201,9 @@ class PlannerService:
 
         state.execution_steps = []
 
-        state.dependencies = list(
-            decision.accepted_constraints
-        )
+        # Accepted constraints are requirements, not unresolved dependencies.
+        # Only unanswered reasoning questions should block dependency readiness.
+        state.dependencies = list(reasoning.unresolved_questions)
 
         state.priorities = (
             self._priorities_for_mode(mode)
@@ -263,7 +274,7 @@ class PlannerService:
             )
 
             state.last_updated = (
-                datetime.utcnow().isoformat()
+                datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
             )
 
             return state
@@ -307,7 +318,7 @@ class PlannerService:
         )
 
         state.last_updated = (
-            datetime.utcnow().isoformat()
+            datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         )
 
         return state

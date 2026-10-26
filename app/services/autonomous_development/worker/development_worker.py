@@ -236,40 +236,39 @@ class DevelopmentWorker:
                 "Invalid development iteration."
             )
 
-        if len(content) > self.MAX_FILE_SIZE:
+        if len(content.encode("utf-8")) > self.MAX_FILE_SIZE:
             raise ValueError(
                 "File exceeds maximum size of "
                 f"{self.MAX_FILE_SIZE} bytes."
             )
 
-        path = self.boundary.write_text(
-            relative_path,
-            content,
-        )
-
         record = self._get_iteration(
             iteration
         )
 
+        # Resolve and enforce the change-count limit before writing. Checking
+        # after write_text() would raise correctly but leave an untracked file
+        # behind when the iteration limit had already been reached.
+        resolved_path = self.boundary.resolve(relative_path)
         relative = str(
-            path.relative_to(
+            resolved_path.relative_to(
                 self.boundary.workspace
             )
         )
-
-        if relative not in record.files_changed:
-            if (
-                len(record.files_changed)
-                >= self.MAX_FILES_PER_ITERATION
-            ):
-                raise ValueError(
-                    "Maximum changed files per "
-                    "iteration reached."
-                )
-
-            record.files_changed.append(
-                relative
+        is_new_change = relative not in record.files_changed
+        if is_new_change and len(record.files_changed) >= self.MAX_FILES_PER_ITERATION:
+            raise ValueError(
+                "Maximum changed files per "
+                "iteration reached."
             )
+
+        self.boundary.write_text(
+            relative_path,
+            content,
+        )
+
+        if is_new_change:
+            record.files_changed.append(relative)
 
         return relative
 
@@ -296,9 +295,9 @@ class DevelopmentWorker:
         # Keep local development models usable by bounding the amount of
         # repository context sent to the provider.  The change limit above
         # controls writes; these limits control model input size.
-        MAX_PROVIDER_FILES = 12
-        MAX_PROVIDER_CONTEXT_CHARS = 100_000
-        MAX_PROVIDER_FILE_CHARS = 50_000
+        MAX_PROVIDER_FILES = 6
+        MAX_PROVIDER_CONTEXT_CHARS = 30_000
+        MAX_PROVIDER_FILE_CHARS = 12_000
 
         excluded_parts = {
             ".git",
@@ -442,9 +441,19 @@ class DevelopmentWorker:
                 continue
 
             if len(content) > MAX_PROVIDER_FILE_CHARS:
-                content = content[
-                    :MAX_PROVIDER_FILE_CHARS
-                ]
+                return {
+                    "success": False,
+                    "state": "blocked",
+                    "code": "provider_file_too_large",
+                    "message": (
+                        "Development generation was stopped because a relevant source "
+                        "file exceeds the provider context limit. The source was not "
+                        "truncated, so any proposed old_content can remain exact. Split "
+                        "the task or refactor the file before retrying."
+                    ),
+                    "file": relative_path,
+                    "file_character_limit": MAX_PROVIDER_FILE_CHARS,
+                }
 
             remaining = (
                 MAX_PROVIDER_CONTEXT_CHARS
@@ -455,7 +464,20 @@ class DevelopmentWorker:
                 break
 
             if len(content) > remaining:
-                content = content[:remaining]
+                return {
+                    "success": False,
+                    "state": "blocked",
+                    "code": "provider_context_too_large",
+                    "message": (
+                        "Development generation was stopped because the selected source "
+                        "files exceed the total provider context budget. Source contents "
+                        "were not truncated. Split the task into smaller steps or narrow "
+                        "the relevant-file list before retrying."
+                    ),
+                    "file": relative_path,
+                    "context_character_limit": MAX_PROVIDER_CONTEXT_CHARS,
+                    "context_characters_already_selected": total_chars,
+                }
 
             files.append(
                 {
@@ -841,6 +863,15 @@ class DevelopmentWorker:
             command
         )
 
+        if not self._os_sandbox_is_verified():
+            record.status = "blocked"
+            record.return_code = None
+            record.output = (
+                "Validation blocked: OS-level sandboxing is not implemented. "
+                "Project-controlled test/build commands must not execute without verified isolation."
+            )
+            return record
+
         try:
             result = subprocess.run(
                 list(command),
@@ -940,6 +971,11 @@ class DevelopmentWorker:
             )
 
         return record
+
+    @staticmethod
+    def _os_sandbox_is_verified() -> bool:
+        """Fail closed until a concrete OS-level sandbox provider is implemented."""
+        return False
 
     def _is_allowed_command(
         self,

@@ -1,6 +1,7 @@
 import {
-	FiArchive, FiBriefcase, FiClock, FiCpu, FiFolder, FiMessageSquare,
-	FiMinus, FiPlus, FiSearch, FiSettings, FiTarget, FiZap,
+	FiActivity, FiArchive, FiBriefcase, FiCode, FiCpu, FiDatabase,
+	FiEye, FiFolder, FiLayers, FiMessageSquare, FiMinus, FiPlus,
+	FiSearch, FiTarget, FiZap,
 } from "react-icons/fi";
 import type { CSSProperties, ReactNode } from "react";
 import type { PanelMode, WorkspacePage } from "../../store/appStore";
@@ -10,24 +11,29 @@ type Props = {
 	activePage: WorkspacePage;
 	width: number;
 	onNavigate: (page: WorkspacePage) => void;
+	onNewChat: () => void;
+	onModeSelect: () => void;
 	onToggle: () => void;
 	onResize: (change: number) => void;
 };
 
 const items: Array<{ id: WorkspacePage; label: string; icon: ReactNode }> = [
-	{ id: "chats", label: "Chats", icon: <FiMessageSquare /> },
+	{ id: "chats", label: "New Chat", icon: <FiPlus /> },
+	{ id: "settings", label: "Mode Selector", icon: <FiZap /> },
 	{ id: "projects", label: "Projects", icon: <FiFolder /> },
-	{ id: "artifacts", label: "Artifacts", icon: <FiArchive /> },
-	{ id: "memory", label: "Memory", icon: <FiCpu /> },
+	{ id: "artifacts", label: "Artifact Library", icon: <FiArchive /> },
+	{ id: "memory", label: "Memory", icon: <FiDatabase /> },
 	{ id: "goals", label: "Goals", icon: <FiTarget /> },
-	{ id: "search", label: "Search", icon: <FiSearch /> },
-	{ id: "generator", label: "Generator", icon: <FiZap /> },
+	{ id: "search", label: "Unified Search", icon: <FiSearch /> },
+	{ id: "generator", label: "Project Generator", icon: <FiCode /> },
 	{ id: "business", label: "Business", icon: <FiBriefcase /> },
-	{ id: "operations", label: "Operations", icon: <FiClock /> },
-	{ id: "settings", label: "Settings", icon: <FiSettings /> },
+	{ id: "operations", label: "Operations", icon: <FiActivity /> },
+	{ id: "features", label: "Feature Control (28)", icon: <FiLayers /> },
+	{ id: "image-understanding", label: "Image Analysis", icon: <FiEye /> },
+	{ id: "chats", label: "Recent Chats", icon: <FiMessageSquare /> },
 ];
 
-export function Sidebar({ mode, activePage, width, onNavigate, onToggle, onResize }: Props) {
+export function Sidebar({ mode, activePage, width, onNavigate, onNewChat, onModeSelect, onToggle, onResize }: Props) {
 	if (mode === "hidden") return null;
 	const compact = mode === "compact";
 	return (
@@ -41,13 +47,17 @@ export function Sidebar({ mode, activePage, width, onNavigate, onToggle, onResiz
 			<nav className="nav-items" aria-label="Workspace pages">
 				{items.map((item) => (
 					<button
-						key={item.id}
+						key={`${item.id}-${item.label}`}
 						className={`nav-item ${activePage === item.id ? "active" : ""}`}
 						type="button"
 						aria-label={item.label}
 						aria-current={activePage === item.id ? "page" : undefined}
 						title={compact ? item.label : undefined}
-						onClick={() => onNavigate(item.id)}
+						onClick={() => {
+						if (item.label === "New Chat") onNewChat();
+						else if (item.label === "Mode Selector") onModeSelect();
+						else onNavigate(item.id);
+					}}
 					>
 						<span className="nav-icon" aria-hidden="true">{item.icon}</span>
 						{!compact && <span>{item.label}</span>}

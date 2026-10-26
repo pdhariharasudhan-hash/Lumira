@@ -11,6 +11,8 @@ from app.services.memory.memory_service import MemoryService
 from app.services.projects.project_discovery_service import ProjectDiscoveryService
 from app.services.sessions.session_manager_service import SessionManagerService
 from app.services.projects.project_paths import resolve_project_path
+from app.services.work_items.work_item_service import WorkItemService
+from app.services.devices.device_registry_service import DeviceRegistryService
 
 
 class UnifiedSearchService:
@@ -29,13 +31,19 @@ class UnifiedSearchService:
         self.artifacts = ArtifactManagerService()
         self.pipeline_history = PipelineHistoryService()
         self.sessions = SessionManagerService()
+        self.work_items = WorkItemService()
+        self.devices = DeviceRegistryService()
 
     @classmethod
     def _terms(cls, query: str) -> list[str]:
-        if not isinstance(query, str):
+        """Normalize a bounded query into a small set of searchable terms."""
+        if not isinstance(query, str) or not query.strip():
             return []
-        return [term for term in re.findall(r"[a-z0-9_+-]+", query.lower())
-                if len(term) > 1 and term not in cls.STOP_WORDS]
+        bounded_query = query[:4000].lower()
+        terms = [term for term in re.findall(r"[a-z0-9_+-]+", bounded_query)
+                 if len(term) > 1 and term not in cls.STOP_WORDS]
+        # Avoid repeated work on huge or repetitive user-supplied search strings.
+        return list(dict.fromkeys(terms))[:32]
 
     @classmethod
     def _matches(cls, searchable: str, query: str) -> bool:
@@ -127,7 +135,14 @@ class UnifiedSearchService:
     def search_artifacts(self, query: str) -> list[dict]:
         results = []
         for artifact in self.artifacts.get_all_artifacts():
-            searchable = json.dumps(artifact, ensure_ascii=False)
+            if artifact.get("archived", False):
+                continue
+            # The persisted file path is an implementation detail, not searchable
+            # user metadata. Keep it available only for the guarded content read.
+            public_metadata = {
+                key: value for key, value in artifact.items() if key != "file"
+            }
+            searchable = json.dumps(public_metadata, ensure_ascii=False)
             text = None
             if Path(str(artifact.get("file", ""))).suffix.lower() in {".txt", ".md", ".json", ".csv", ".svg"}:
                 try:
@@ -138,7 +153,7 @@ class UnifiedSearchService:
                 if text:
                     searchable += " " + text
             if self._matches(searchable, query):
-                result = dict(artifact)
+                result = dict(public_metadata)
                 if text:
                     result["snippet"] = self._safe_snippet(text)
                 results.append(result)
@@ -168,6 +183,101 @@ class UnifiedSearchService:
         return [record for record in records
                 if cls._matches(json.dumps(record, ensure_ascii=False), query)][:200]
 
+    def search_workflows(self, query: str) -> list[dict]:
+        """Search durable workflows and their task metadata."""
+        if not self._terms(query):
+            return []
+        results = []
+        for workflow in self.work_items.list_workflows(limit=200):
+            searchable = json.dumps(workflow, ensure_ascii=False)
+            if self._matches(searchable, query):
+                results.append({
+                    **workflow,
+                    "type": "workflow",
+                    "title": workflow.get("title", "Untitled workflow"),
+                    "source": "work_items",
+                    "reference": workflow.get("workflow_id"),
+                    "timestamp": workflow.get("updated_at") or workflow.get("created_at"),
+                    "project": workflow.get("project_id"),
+                    "relevance": sum(
+                        1 for term in self._terms(query)
+                        if term in searchable.lower()
+                    ),
+                })
+            if len(results) >= 200:
+                break
+        return results
+
+    def search_devices(self, query: str) -> list[dict]:
+        """Search only the persisted device registry; never probe hardware."""
+        if not self._terms(query):
+            return []
+        return [
+            device for device in self.devices.list_devices(limit=200)
+            if self._matches(json.dumps(device, ensure_ascii=False), query)
+        ][:200]
+
+    @classmethod
+    def _build_unified_items(cls, grouped_results: dict[str, Any], query: str) -> list[dict]:
+        """Build a bounded, backwards-compatible flat list with common metadata."""
+        items = []
+        terms = cls._terms(query)
+        for result_type, records in grouped_results.items():
+            if result_type == "items" or not isinstance(records, (list, dict)):
+                continue
+            if isinstance(records, dict):
+                iterable = [
+                    {"memory_key": key, "value": value}
+                    for key, value in records.items()
+                ]
+            else:
+                iterable = records
+            for record in iterable:
+                if isinstance(record, dict):
+                    payload = record
+                else:
+                    payload = {"value": record}
+                searchable = json.dumps(payload, ensure_ascii=False).lower()
+                score = sum(1 for term in terms if term in searchable)
+                identifier = next((
+                    payload.get(key) for key in (
+                        "reference", "artifact_id", "workflow_id", "goal_id",
+                        "session_id", "project_id", "version_id", "experience_id",
+                        "decision_id", "learning_id", "id", "path"
+                    ) if payload.get(key) is not None
+                ), None)
+                title = next((
+                    payload.get(key) for key in (
+                        "title", "name", "project", "path", "file", "memory_key",
+                        "summary", "request"
+                    ) if isinstance(payload.get(key), str) and payload.get(key).strip()
+                ), result_type.replace("_", " ").title())
+                timestamp = next((
+                    payload.get(key) for key in (
+                        "timestamp", "updated_at", "created_at", "last_updated"
+                    ) if payload.get(key) is not None
+                ), None)
+                project = payload.get("project_id", payload.get("project"))
+                snippet = next((
+                    payload.get(key) for key in (
+                        "snippet", "summary", "description", "request", "lesson", "observation"
+                    ) if isinstance(payload.get(key), str) and payload.get(key).strip()
+                ), None)
+                items.append({
+                    "type": result_type,
+                    "title": cls._safe_snippet(str(title), 180),
+                    "relevance": score,
+                    "source": payload.get("source", result_type),
+                    "timestamp": timestamp,
+                    "project": project,
+                    "reference": identifier,
+                    "snippet": cls._safe_snippet(snippet, 500) if snippet else None,
+                    "record": payload,
+                })
+                if len(items) >= 1000:
+                    return sorted(items, key=lambda item: (item["relevance"], str(item.get("timestamp") or "")), reverse=True)
+        return sorted(items, key=lambda item: (item["relevance"], str(item.get("timestamp") or "")), reverse=True)
+
     def search_sessions(self, query: str) -> list[dict]:
         if not self._terms(query):
             return []
@@ -195,7 +305,7 @@ class UnifiedSearchService:
                 "projects", "project_versions", "files", "code", "documentation",
                 "voice_ideas", "images", "artifacts", "memory", "feature_history",
                 "pipeline_history", "sessions", "conversations", "goals", "decisions",
-                "experiences", "learning",
+                "experiences", "learning", "memory_links", "workflows", "devices", "items",
             )}
         memory = self.memory.get_all()
         artifacts = self.search_artifacts(query)
@@ -218,4 +328,7 @@ class UnifiedSearchService:
             "decisions": self._search_records(memory.get("decisions", []), query),
             "experiences": self._search_records(memory.get("experiences", []), query),
             "learning": self._search_records(memory.get("learning_records", []), query),
+            "memory_links": self._search_records(memory.get("memory_links", []), query),
+            "workflows": self.search_workflows(query),
+            "devices": self.search_devices(query),
         })

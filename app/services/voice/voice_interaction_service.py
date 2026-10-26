@@ -58,6 +58,15 @@ class SpeechPlaybackService:
             return {"success": False, "code": "provider_unavailable", "message": "No speech synthesis provider is configured."}
         try:
             result = self.provider.synthesize(text.strip(), language)
+        except RuntimeError as error:
+            if "deferred" in str(error).lower():
+                return {
+                    "success": False,
+                    "state": "deferred",
+                    "code": "resource_pressure_deferred",
+                    "message": "Speech synthesis was deferred because available system memory is constrained.",
+                }
+            return {"success": False, "code": "provider_error", "message": "The speech synthesis provider failed; no audio was created."}
         except Exception:
             return {"success": False, "code": "provider_error", "message": "The speech synthesis provider failed; no audio was created."}
         if not isinstance(result, dict) or result.get("success") is not True:

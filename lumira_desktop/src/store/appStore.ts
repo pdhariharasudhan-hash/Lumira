@@ -3,8 +3,8 @@ import { persist } from "zustand/middleware";
 
 export type PanelMode = "full" | "compact" | "hidden";
 export type InputMode = "full" | "compact" | "hidden";
-export type WorkspacePage = "chats" | "projects" | "artifacts" | "memory" | "goals" | "search" | "generator" | "business" | "operations" | "settings";
-export type LumiraMode = "auto" | "creator" | "generator" | "business" | "operations";
+export type WorkspacePage = "chats" | "projects" | "artifacts" | "memory" | "goals" | "search" | "generator" | "business" | "operations" | "features" | "image-understanding" | "settings";
+export type LumiraMode = "auto" | "personal" | "builder" | "growth" | "business" | "creator" | "generator" | "research" | "assistant" | "operations";
 
 export interface WorkspaceUiState {
 	navMode: PanelMode;
