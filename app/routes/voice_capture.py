@@ -17,6 +17,15 @@ router = APIRouter()
 _wake_word_listener = WakeWordListenerService()
 
 
+def _raise_for_voice_readiness(result: dict) -> None:
+    """Map missing providers and resource-pressure deferrals to retryable HTTP errors."""
+    code = result.get("code") if isinstance(result, dict) else None
+    if code not in {"provider_unavailable", "resource_pressure_deferred"}:
+        return
+    headers = {"Retry-After": "30"} if code == "resource_pressure_deferred" else None
+    raise HTTPException(status_code=503, detail=result, headers=headers)
+
+
 class ArtifactRequest(BaseModel):
     artifact_id: str = Field(min_length=1, max_length=128)
 
@@ -76,16 +85,14 @@ async def upload_voice(
 @router.post("/voice/transcript")
 def transcribe_voice(request: ArtifactRequest):
     result = TranscriptService().generate_transcript(request.artifact_id)
-    if not result["success"] and result.get("code") == "provider_unavailable":
-        raise HTTPException(status_code=501, detail=result)
+    _raise_for_voice_readiness(result)
     return result
 
 
 @router.post("/voice/summary")
 def summarize_voice(request: ArtifactRequest):
     result = SummaryService().generate_summary(request.artifact_id)
-    if not result["success"] and result.get("code") == "provider_unavailable":
-        raise HTTPException(status_code=501, detail=result)
+    _raise_for_voice_readiness(result)
     return result
 
 
@@ -94,8 +101,7 @@ def activate_voice(request: ArtifactRequest):
     from app.services.voice.voice_interaction_service import WakeWordActivationService
 
     result = WakeWordActivationService().activate(request.artifact_id)
-    if not result["success"] and result.get("code") == "provider_unavailable":
-        raise HTTPException(status_code=501, detail=result)
+    _raise_for_voice_readiness(result)
     if not result["success"] and result.get("code") == "audio_artifact_not_found":
         raise HTTPException(status_code=404, detail=result)
     return result
@@ -106,8 +112,7 @@ def playback_voice(request: PlaybackRequest):
     from app.services.voice.voice_interaction_service import SpeechPlaybackService
 
     result = SpeechPlaybackService().play(request.text, request.language)
-    if not result["success"] and result.get("code") == "provider_unavailable":
-        raise HTTPException(status_code=501, detail=result)
+    _raise_for_voice_readiness(result)
     if not result["success"] and result.get("code") == "invalid_request":
         raise HTTPException(status_code=422, detail=result)
     return result
@@ -117,7 +122,7 @@ def playback_voice(request: PlaybackRequest):
 def start_wake_word_listener():
     result = _wake_word_listener.start()
     if not result["success"] and result.get("code") == "provider_unavailable":
-        raise HTTPException(status_code=501, detail=result)
+        raise HTTPException(status_code=503, detail=result)
     return result
 
 
