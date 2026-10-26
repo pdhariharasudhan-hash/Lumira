@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import { ImageUnderstandingPanel } from "../components/ImageUnderstanding/ImageUnderstandingPanel";
 
 vi.mock("../api/client", () => ({
-  api: { analyzeImage: vi.fn(), createBinaryArtifact: vi.fn(), createArtifact: vi.fn() },
+  api: { providerStatus: vi.fn().mockResolvedValue({ providers: { image_understanding: { registered: false, configured: false } } }), analyzeImage: vi.fn(), createBinaryArtifact: vi.fn(), createArtifact: vi.fn() },
 }));
 
 function pngFile() {
@@ -61,6 +61,26 @@ describe("ImageUnderstandingPanel", () => {
     expect(api.createBinaryArtifact).toHaveBeenCalledTimes(1);
     expect(api.createArtifact).toHaveBeenCalledTimes(2);
     expect(api.createBinaryArtifact).toHaveBeenCalledWith(expect.objectContaining({ extension: "png", type: "images" }));
+  });
+
+
+  it("shows provider registration without claiming the model is reachable", async () => {
+    vi.mocked(api.providerStatus).mockResolvedValue({
+      providers: {
+        image_understanding: {
+          registered: true,
+          configured: true,
+          implementation: "OllamaVisionProvider",
+          execution_mode: "local",
+          model: "moondream",
+        },
+      },
+    });
+
+    render(<ImageUnderstandingPanel />);
+    expect(await screen.findByText(/OllamaVisionProvider · local/)).toBeTruthy();
+    expect(screen.getByText(/does not prove the model is installed or reachable/i)).toBeTruthy();
+    expect(api.providerStatus).toHaveBeenCalledTimes(1);
   });
 
 });

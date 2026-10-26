@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../../api/client";
 
 const MAX_IMAGE_BYTES = 10_000_000;
@@ -23,6 +23,12 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
 export function ImageUnderstandingPanel() {
   const [file, setFile] = useState<File | null>(null);
   const [prompt, setPrompt] = useState("Describe this image and extract any readable text.");
@@ -33,6 +39,36 @@ export function ImageUnderstandingPanel() {
   const [savedImageArtifactId, setSavedImageArtifactId] = useState("");
   const [savedReportArtifactId, setSavedReportArtifactId] = useState("");
   const [savedReport, setSavedReport] = useState("");
+  const [visionProviderState, setVisionProviderState] = useState<Record<string, unknown> | null>(null);
+  const [providerStatusLoading, setProviderStatusLoading] = useState(true);
+  const [providerStatusError, setProviderStatusError] = useState("");
+  const [providerStatusRefresh, setProviderStatusRefresh] = useState(0);
+
+  useEffect(() => {
+    let current = true;
+    setProviderStatusLoading(true);
+    setProviderStatusError("");
+    api.providerStatus()
+      .then((result) => {
+        if (current) setVisionProviderState(asRecord(asRecord(result.providers).image_understanding));
+      })
+      .catch((cause: unknown) => {
+        if (!current) return;
+        setVisionProviderState(null);
+        setProviderStatusError(cause instanceof Error ? cause.message : "Provider status could not be loaded.");
+      })
+      .finally(() => {
+        if (current) setProviderStatusLoading(false);
+      });
+    return () => { current = false; };
+  }, [providerStatusRefresh]);
+
+  const providerRegistered = visionProviderState?.registered === true;
+  const providerConfigured = visionProviderState?.configured === true;
+  const providerImplementation = typeof visionProviderState?.implementation === "string"
+    ? visionProviderState.implementation
+    : "Configured provider";
+  const providerExecutionMode = visionProviderState?.execution_mode === "local" ? "local" : "remote/external";
 
   async function saveAnalysis() {
     if (!description.trim() || !file || savingReport) return;
@@ -145,6 +181,24 @@ export function ImageUnderstandingPanel() {
           <p>Ask Lumira to describe an image, inspect a circuit, or extract readable text. A configured vision provider is required.</p>
         </div>
       </header>
+      <div className="image-analysis-message" aria-live="polite">
+        <div className="entity-actions">
+          <strong>Vision provider</strong>
+          <span className="status-pill">
+            {providerStatusLoading ? "Checking…" : providerRegistered ? "Registered" : providerConfigured ? "Configured, not registered" : "Not configured"}
+          </span>
+          <button className="secondary-action" type="button" disabled={providerStatusLoading} onClick={() => setProviderStatusRefresh((value) => value + 1)}>
+            {providerStatusLoading ? "Refreshing…" : "Refresh status"}
+          </button>
+        </div>
+        {providerStatusError
+          ? <p role="alert">Could not load provider status: {providerStatusError}</p>
+          : providerRegistered
+            ? <p>{providerImplementation} · {providerExecutionMode}. Registration confirms configuration only; it does not prove the model is installed or reachable. An analysis request verifies actual availability.</p>
+            : providerConfigured
+              ? <p>A vision provider is enabled in configuration but was not registered. Check the relevant API key or local provider setup, then refresh.</p>
+              : <p>No vision provider is registered. Configure either the remote vision provider with its API key or enable local Ollama vision.</p>}
+      </div>
       <form className="image-analysis-form" onSubmit={(event) => void analyze(event)}>
         <label>
           Image file

@@ -46,6 +46,7 @@ function json(method: string, body: unknown): RequestInit {
 
 export const api = {
 	health: () => request<JsonObject>("/health"),
+	providerStatus: () => request<JsonObject>("/providers/status"),
 	resourceRuntime: () => request<JsonObject>("/resources/runtime"),
 	resourcePolicy: () => request<JsonObject>("/resources/policy"),
 	intelligenceStatus: () => request<JsonObject>("/intelligence/status"),
