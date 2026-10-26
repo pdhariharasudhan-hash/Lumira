@@ -30,40 +30,84 @@ export function ImageUnderstandingPanel() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
+  const [savedImageArtifactId, setSavedImageArtifactId] = useState("");
+  const [savedReportArtifactId, setSavedReportArtifactId] = useState("");
   const [savedReport, setSavedReport] = useState("");
 
   async function saveAnalysis() {
     if (!description.trim() || !file || savingReport) return;
     setSavingReport(true);
     setError("");
+    let imageWasSaved = Boolean(savedImageArtifactId);
     try {
-      const imageExtension = file.name.split(".").pop()?.toLowerCase() ?? "png";
-      const imageBase64 = await fileToBase64(file);
-      const imageResult = await api.createBinaryArtifact({
-        type: "images",
-        content_base64: imageBase64,
-        source: `image_analysis_source:${file.name}`,
-        extension: imageExtension,
-      });
-      const imageRecord = typeof imageResult.artifact === "object" && imageResult.artifact !== null ? imageResult.artifact as Record<string, unknown> : {};
-      const imageArtifactId = typeof imageRecord.artifact_id === "string" ? imageRecord.artifact_id : "";
-      const title = `Image analysis — ${file.name}`;
-      const content = `# ${title}\n\n**Original image artifact:** ${imageArtifactId || "Saved to Artifact Manager"}\n\n**Image:** ${file.name}\n\n**Inspection request:**\n${prompt.trim()}\n\n**Lumira analysis:**\n${description.trim()}\n`;
-      const result = await api.createArtifact({ type: "reports", content, source: `image_analysis:${file.name}`, extension: "md" });
-      const artifactId = typeof result.artifact === "object" && result.artifact !== null && "artifact_id" in result.artifact ? String(result.artifact.artifact_id) : "";
-      setSavedReport(imageArtifactId && artifactId ? `Saved original image (${imageArtifactId}) and analysis report (${artifactId}) to Artifact Manager.` : "Saved the original image and analysis report to Artifact Manager.");
+      let imageArtifactId = savedImageArtifactId;
+      if (!imageArtifactId) {
+        const imageExtension = file.type === "image/jpeg" ? "jpg" : file.type === "image/webp" ? "webp" : "png";
+        const imageBase64 = await fileToBase64(file);
+        const imageResult = await api.createBinaryArtifact({
+          type: "images",
+          content_base64: imageBase64,
+          source: `image_analysis_source:${file.name}`,
+          extension: imageExtension,
+        });
+        const imageRecord = typeof imageResult.artifact === "object" && imageResult.artifact !== null
+          ? imageResult.artifact as Record<string, unknown>
+          : {};
+        imageArtifactId = typeof imageRecord.artifact_id === "string"
+          ? imageRecord.artifact_id
+          : typeof imageResult.artifact_id === "string" ? imageResult.artifact_id : "";
+        if (imageResult.success !== true) {
+          throw new Error("The original image could not be saved to Artifact Manager.");
+        }
+        imageWasSaved = true;
+        setSavedImageArtifactId(imageArtifactId || "saved");
+      }
+
+      if (!savedReportArtifactId) {
+        const title = `Image analysis — ${file.name}`;
+        const imageReference = imageArtifactId && imageArtifactId !== "saved"
+          ? imageArtifactId
+          : "Saved to Artifact Manager";
+        const content = `# ${title}\n\n**Original image artifact:** ${imageReference}\n\n**Image:** ${file.name}\n\n**Inspection request:**\n${prompt.trim()}\n\n**Lumira analysis:**\n${description.trim()}\n`;
+        const result = await api.createArtifact({
+          type: "reports",
+          content,
+          source: `image_analysis:${file.name}`,
+          extension: "md",
+        });
+        const reportRecord = typeof result.artifact === "object" && result.artifact !== null
+          ? result.artifact as Record<string, unknown>
+          : {};
+        const reportArtifactId = typeof reportRecord.artifact_id === "string"
+          ? reportRecord.artifact_id
+          : typeof result.artifact_id === "string" ? result.artifact_id : "";
+        if (result.success !== true) {
+          throw new Error("The analysis report could not be saved to Artifact Manager.");
+        }
+        setSavedReportArtifactId(reportArtifactId || "saved");
+        setSavedReport(
+          imageArtifactId && imageArtifactId !== "saved" && reportArtifactId
+            ? `Saved original image (${imageArtifactId}) and analysis report (${reportArtifactId}) to Artifact Manager.`
+            : "Saved the original image and analysis report to Artifact Manager.",
+        );
+      } else {
+        setSavedReport("The image and analysis report are saved to Artifact Manager.");
+      }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "The analysis could not be saved.");
+      const message = cause instanceof Error ? cause.message : "The analysis could not be saved.";
+      setError(imageWasSaved
+        ? `The original image is saved. ${message} Retry to save the report without duplicating the image.`
+        : message);
     } finally {
       setSavingReport(false);
     }
   }
-
   async function analyze(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setDescription("");
     setSavedReport("");
+    setSavedReportArtifactId("");
     if (!file) {
       setError("Choose a PNG, JPEG, or WebP image first.");
       return;
@@ -104,10 +148,12 @@ export function ImageUnderstandingPanel() {
       <form className="image-analysis-form" onSubmit={(event) => void analyze(event)}>
         <label>
           Image file
-          <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => {
+          <input type="file" accept="image/png,image/jpeg,image/webp" disabled={loading || savingReport} onChange={(event) => {
             setFile(event.target.files?.[0] ?? null);
             setDescription("");
             setError("");
+            setSavedImageArtifactId("");
+            setSavedReportArtifactId("");
             setSavedReport("");
           }} />
         </label>

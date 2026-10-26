@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import { ImageUnderstandingPanel } from "../components/ImageUnderstanding/ImageUnderstandingPanel";
 
 vi.mock("../api/client", () => ({
-  api: { analyzeImage: vi.fn() },
+  api: { analyzeImage: vi.fn(), createBinaryArtifact: vi.fn(), createArtifact: vi.fn() },
 }));
 
 function pngFile() {
@@ -33,4 +33,34 @@ describe("ImageUnderstandingPanel", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("Only PNG, JPEG, and WebP");
     expect(api.analyzeImage).not.toHaveBeenCalled();
   });
+
+  it("retries a failed report save without duplicating the already-saved image", async () => {
+    vi.mocked(api.analyzeImage).mockResolvedValue({ success: true, description: "A circuit board." });
+    vi.mocked(api.createBinaryArtifact).mockResolvedValue({
+      success: true,
+      artifact: { artifact_id: "image-1" },
+    });
+    vi.mocked(api.createArtifact)
+      .mockRejectedValueOnce(new Error("Report storage temporarily failed"))
+      .mockResolvedValueOnce({ success: true, artifact: { artifact_id: "report-1" } });
+
+    render(<ImageUnderstandingPanel />);
+    fireEvent.change(screen.getByLabelText("Image file"), { target: { files: [pngFile()] } });
+    fireEvent.change(screen.getByLabelText("What should Lumira inspect?"), { target: { value: "Inspect this board" } });
+    fireEvent.click(screen.getByRole("button", { name: "Analyze image" }));
+    expect(await screen.findByText("A circuit board.")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save image + analysis to Artifact Manager" }));
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toContain("Retry to save the report without duplicating the image");
+
+    fireEvent.click(screen.getByRole("button", { name: "Save image + analysis to Artifact Manager" }));
+    expect(await screen.findByRole("status")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain("image-1");
+    expect(screen.getByRole("status").textContent).toContain("report-1");
+    expect(api.createBinaryArtifact).toHaveBeenCalledTimes(1);
+    expect(api.createArtifact).toHaveBeenCalledTimes(2);
+    expect(api.createBinaryArtifact).toHaveBeenCalledWith(expect.objectContaining({ extension: "png", type: "images" }));
+  });
+
 });
