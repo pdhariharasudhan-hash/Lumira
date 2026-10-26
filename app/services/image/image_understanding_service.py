@@ -91,7 +91,7 @@ class ImageUnderstandingService:
             "description": description.strip(),
             "model": str(result.get("model", "configured provider"))[:100],
         }
-        if save_artifact:
+        if save_artifact is True:
             try:
                 response["artifact"] = self._save_analysis_artifact(
                     image_bytes,

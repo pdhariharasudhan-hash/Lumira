@@ -345,3 +345,15 @@ def test_terminal_sandbox_gate_applies_to_transitive_dependencies(tmp_path):
 
     assert allowed is False
     assert any("verified OS-level sandbox is not implemented" in blocker for blocker in blockers)
+
+
+def test_image_understanding_readiness_mentions_local_and_remote_provider_options(monkeypatch, tmp_path):
+    from app.services.providers.provider_registry import ProviderRegistry
+
+    monkeypatch.setattr(ProviderRegistry, "get", classmethod(lambda cls, name: None))
+    registry = FeatureRegistryService(str(tmp_path / "features.json"))
+    allowed, blockers = registry.can_enable("image_understanding")
+
+    assert allowed is False
+    assert any("LUMIRA_VISION_API_KEY" in blocker for blocker in blockers)
+    assert any("LUMIRA_OLLAMA_VISION_ENABLED" in blocker for blocker in blockers)

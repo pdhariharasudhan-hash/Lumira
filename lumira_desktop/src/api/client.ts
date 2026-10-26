@@ -51,7 +51,7 @@ export const api = {
 	intelligenceStatus: () => request<JsonObject>("/intelligence/status"),
 	intelligenceHistory: (limit = 20, sessionId?: string) => request<JsonObject>(`/intelligence/history?limit=${limit}${sessionId ? `&session_id=${encodeURIComponent(sessionId)}` : ""}`),
 	analyzeInput: (text: string) => request<JsonObject>("/intelligence/analyze", json("POST", { text })),
-	analyzeImage: (image_base64: string, prompt: string) => request<JsonObject>("/images/analyze", json("POST", { image_base64, prompt })),
+	analyzeImage: (image_base64: string, prompt: string, saveArtifact = false) => request<JsonObject>("/images/analyze", json("POST", { image_base64, prompt, save_artifact: saveArtifact })),
 	listModes: (sessionId?: string) => request<JsonObject>(`/modes${sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ""}`),
 	selectMode: (session_id: string, mode_id: string) => request<JsonObject>("/modes/select", json("POST", { session_id, mode_id })),
 	listFeatures: () => request<JsonObject>("/features"),

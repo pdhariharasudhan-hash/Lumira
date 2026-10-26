@@ -39,9 +39,10 @@ def test_image_understanding_returns_validated_provider_description():
 
 def test_image_analysis_route_returns_description(monkeypatch):
     class FakeService:
-        def analyze(self, image_bytes, prompt):
+        def analyze(self, image_bytes, prompt, *, save_artifact=False):
             assert image_bytes == PNG_HEADER
             assert prompt == "Read this image"
+            assert save_artifact is False
             return {"success": True, "description": "A test image with readable text."}
 
     monkeypatch.setattr(route, "ImageUnderstandingService", FakeService)
@@ -99,7 +100,7 @@ def test_vision_provider_rejects_invalid_image_bytes():
 
 def test_image_analysis_route_returns_service_unavailable_without_provider(monkeypatch):
     class UnavailableService:
-        def analyze(self, image_bytes, prompt):
+        def analyze(self, image_bytes, prompt, *, save_artifact=False):
             return {"success": False, "code": "provider_unavailable", "message": "No image-understanding provider is configured."}
 
     monkeypatch.setattr(route, "ImageUnderstandingService", UnavailableService)
@@ -111,3 +112,81 @@ def test_image_analysis_route_returns_service_unavailable_without_provider(monke
         assert "provider is configured" in exc.detail
     else:
         raise AssertionError("missing provider must return HTTP 503")
+
+
+def test_image_analysis_can_save_a_report_without_saving_original_image():
+    import hashlib
+    import json
+
+    class FakeArtifacts:
+        def __init__(self):
+            self.saved = None
+
+        def create_artifact(self, artifact_type, content, source, extension):
+            self.saved = {
+                "type": artifact_type,
+                "content": content,
+                "source": source,
+                "extension": extension,
+            }
+            return {
+                "artifact_id": "report-123",
+                "type": artifact_type,
+                "timestamp": "2026-10-26T00:00:00+00:00",
+            }
+
+    artifacts = FakeArtifacts()
+    service = ImageUnderstandingService(provider=FakeVisionProvider(), artifacts=artifacts)
+    result = service.analyze(PNG_HEADER, "Read this image", save_artifact=True)
+
+    assert result["success"] is True
+    assert result["artifact_saved"] is True
+    assert result["artifact"] == {
+        "artifact_id": "report-123",
+        "artifact_type": "reports",
+        "created_at": "2026-10-26T00:00:00+00:00",
+    }
+    assert artifacts.saved["type"] == "reports"
+    assert artifacts.saved["source"] == "image_understanding"
+    assert artifacts.saved["extension"] == "json"
+    report = json.loads(artifacts.saved["content"])
+    assert report["description"] == "A test image with readable text."
+    assert report["image_sha256"] == hashlib.sha256(PNG_HEADER).hexdigest()
+    assert "image_bytes" not in report
+
+
+def test_image_analysis_keeps_result_when_artifact_storage_fails():
+    class BrokenArtifacts:
+        def create_artifact(self, *args, **kwargs):
+            raise OSError("local disk detail must not leak")
+
+    result = ImageUnderstandingService(
+        provider=FakeVisionProvider(),
+        artifacts=BrokenArtifacts(),
+    ).analyze(PNG_HEADER, "Read this image", save_artifact=True)
+
+    assert result["success"] is True
+    assert result["description"] == "A test image with readable text."
+    assert result["artifact_saved"] is False
+    assert "local disk detail" not in result["artifact_warning"]
+
+
+def test_image_analysis_route_reports_resource_pressure_as_temporary_unavailable(monkeypatch):
+    class DeferredService:
+        def analyze(self, image_bytes, prompt, *, save_artifact=False):
+            return {
+                "success": False,
+                "state": "deferred",
+                "code": "resource_pressure_deferred",
+                "message": "Image analysis was deferred because available system memory is constrained.",
+            }
+
+    monkeypatch.setattr(route, "ImageUnderstandingService", DeferredService)
+    request = route.ImageAnalysisRequest(image_base64=base64.b64encode(PNG_HEADER).decode("ascii"))
+    try:
+        route.analyze_image(request)
+    except HTTPException as exc:
+        assert exc.status_code == 503
+        assert exc.headers["Retry-After"] == "30"
+    else:
+        raise AssertionError("resource-pressure deferral must be a temporary unavailable response")

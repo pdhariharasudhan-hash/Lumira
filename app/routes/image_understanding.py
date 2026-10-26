@@ -29,8 +29,10 @@ def analyze_image(request: ImageAnalysisRequest):
     if result.get("success") is True:
         return result
     code = result.get("code")
-    if code == "provider_unavailable":
-        raise HTTPException(status_code=503, detail=result["message"])
+    if code in {"provider_unavailable", "resource_pressure_deferred"}:
+        # These are temporary readiness conditions, not malformed image input.
+        headers = {"Retry-After": "30"} if code == "resource_pressure_deferred" else None
+        raise HTTPException(status_code=503, detail=result["message"], headers=headers)
     if code in {"invalid_image", "invalid_prompt"}:
         raise HTTPException(status_code=422, detail=result["message"])
     raise HTTPException(status_code=502, detail=result.get("message", "Image analysis failed"))

@@ -258,8 +258,9 @@ class FeatureRegistryService:
                 if ProviderRegistry.get(provider_name) is None:
                     if provider_name == "image_understanding":
                         blockers.append(
-                            "image-understanding provider is not configured; "
-                            "set LUMIRA_VISION_ENABLED=1 and LUMIRA_VISION_API_KEY"
+                            "image-understanding provider is not configured; use either "
+                            "LUMIRA_VISION_ENABLED=1 with LUMIRA_VISION_API_KEY, or "
+                            "LUMIRA_OLLAMA_VISION_ENABLED=1 with a local Ollama vision model"
                         )
                     else:
                         blockers.append(
