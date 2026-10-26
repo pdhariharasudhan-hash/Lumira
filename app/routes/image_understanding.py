@@ -12,6 +12,7 @@ router = APIRouter()
 class ImageAnalysisRequest(BaseModel):
     image_base64: str = Field(min_length=16, max_length=14_000_000)
     prompt: str = Field(default="Describe this image and extract any readable text.", min_length=1, max_length=4000)
+    save_artifact: bool = Field(default=False, description="Save the analysis report locally; the original image is not stored.")
 
 
 @router.post("/images/analyze")
@@ -20,7 +21,11 @@ def analyze_image(request: ImageAnalysisRequest):
         image_bytes = base64.b64decode(request.image_base64, validate=True)
     except (binascii.Error, ValueError) as exc:
         raise HTTPException(status_code=422, detail="image_base64 must be valid Base64") from exc
-    result = ImageUnderstandingService().analyze(image_bytes, request.prompt)
+    result = ImageUnderstandingService().analyze(
+        image_bytes,
+        request.prompt,
+        save_artifact=request.save_artifact,
+    )
     if result.get("success") is True:
         return result
     code = result.get("code")

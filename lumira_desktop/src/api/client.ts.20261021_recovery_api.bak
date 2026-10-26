@@ -1,0 +1,126 @@
+export type JsonObject = Record<string, unknown>;
+
+export class ApiError extends Error {
+	readonly status: number;
+	readonly body: JsonObject;
+
+	constructor(message: string, status: number, body: JsonObject) {
+		super(message);
+		this.status = status;
+		this.body = body;
+		this.name = "ApiError";
+	}
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+	const response = await fetch(path, init);
+	const body = (await response.json().catch(() => ({}))) as JsonObject;
+	if (!response.ok) {
+		const detail = body.detail;
+		const message = typeof detail === "string"
+			? detail
+			: typeof detail === "object" && detail !== null
+				? String((detail as JsonObject).message ?? (detail as JsonObject).code ?? `Request failed (${response.status})`)
+				: String(body.message ?? body.error ?? `Request failed (${response.status})`);
+		throw new ApiError(message, response.status, body);
+	}
+	return body as T;
+}
+
+function json(method: string, body: unknown): RequestInit {
+	return {
+		method,
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(body),
+	};
+}
+
+export const api = {
+	health: () => request<JsonObject>("/health"),
+	intelligenceStatus: () => request<JsonObject>("/intelligence/status"),
+	intelligenceHistory: (limit = 20, sessionId?: string) => request<JsonObject>(`/intelligence/history?limit=${limit}${sessionId ? `&session_id=${encodeURIComponent(sessionId)}` : ""}`),
+	analyzeInput: (text: string) => request<JsonObject>("/intelligence/analyze", json("POST", { text })),
+	analyzeImage: (image_base64: string, prompt: string) => request<JsonObject>("/images/analyze", json("POST", { image_base64, prompt })),
+	listModes: (sessionId?: string) => request<JsonObject>(`/modes${sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ""}`),
+	selectMode: (session_id: string, mode_id: string) => request<JsonObject>("/modes/select", json("POST", { session_id, mode_id })),
+	listFeatures: () => request<JsonObject>("/features"),
+	activateFeature: (featureId: string) => request<JsonObject>(`/features/${encodeURIComponent(featureId)}/activate`, { method: "POST" }),
+	deactivateFeature: (featureId: string) => request<JsonObject>(`/features/${encodeURIComponent(featureId)}/deactivate`, { method: "POST" }),
+	listNotes: () => request<JsonObject>("/notepad"),
+	createNote: (title: string, content: string) => request<JsonObject>("/notepad", json("POST", { title, content })),
+	updateNote: (noteId: string, content: string) => request<JsonObject>(`/notepad/${encodeURIComponent(noteId)}`, json("PATCH", { content })),
+	deleteNote: (noteId: string) => request<JsonObject>(`/notepad/${encodeURIComponent(noteId)}`, { method: "DELETE" }),
+	createSession: (workspace_id = "default", project_id?: string) =>
+		request<JsonObject>("/sessions", json("POST", { workspace_id, ...(project_id ? { project_id } : {}) })),
+	listSessions: (limit = 100) => request<{ sessions: JsonObject[] }>(`/sessions?limit=${limit}`),
+	getSession: (sessionId: string) => request<JsonObject>(`/sessions/${encodeURIComponent(sessionId)}`),
+	updateSessionContext: (sessionId: string, updates: JsonObject) =>
+		request<JsonObject>(`/sessions/${encodeURIComponent(sessionId)}/context`, json("PATCH", updates)),
+	resumeSession: (sessionId: string) => request<JsonObject>(`/sessions/${encodeURIComponent(sessionId)}/resume`, { method: "POST" }),
+	pauseSession: (sessionId: string) => request<JsonObject>(`/sessions/${encodeURIComponent(sessionId)}/pause`, { method: "POST" }),
+	closeSession: (sessionId: string) => request<JsonObject>(`/sessions/${encodeURIComponent(sessionId)}/close`, { method: "POST" }),
+	command: (input: string, session_id?: string) =>
+		request<JsonObject>("/command", json("POST", { input, session_id, workspace_id: "default" })),
+	listProjects: () => request<JsonObject>("/projects"),
+	getProjectVersions: (project: string) => request<JsonObject>(`/projects/${encodeURIComponent(project)}`),
+	getProjectVersion: (project: string, version: string) =>
+		request<JsonObject>(`/projects/${encodeURIComponent(project)}/${encodeURIComponent(version)}`),
+	getProjectFiles: (project: string, version: string) =>
+		request<JsonObject>(`/projects/${encodeURIComponent(project)}/${encodeURIComponent(version)}/files`),
+	getProjectFile: (project: string, version: string, file: string) =>
+		request<JsonObject>(`/projects/${encodeURIComponent(project)}/${encodeURIComponent(version)}/${encodeURIComponent(file)}`),
+	getTerminalCommands: (project: string, version: string) =>
+		request<JsonObject>(`/projects/${encodeURIComponent(project)}/${encodeURIComponent(version)}/terminal/commands`),
+	runTerminalCommand: (project: string, version: string, command_id: string, trusted_project = false) =>
+		request<JsonObject>(`/projects/${encodeURIComponent(project)}/${encodeURIComponent(version)}/terminal/run`, json("POST", { project, version, command_id, trusted_project })),
+	getTerminalRuns: (project: string, version: string) =>
+		request<JsonObject>(`/projects/${encodeURIComponent(project)}/${encodeURIComponent(version)}/terminal/runs`),
+	getProjectPreview: (project: string, version: string) =>
+		request<JsonObject>(`/projects/${encodeURIComponent(project)}/${encodeURIComponent(version)}/preview`),
+	registerProjectPreview: (project: string, version: string, url: string) =>
+		request<JsonObject>(`/projects/${encodeURIComponent(project)}/${encodeURIComponent(version)}/preview`, json("POST", { project, version, url })),
+	stopProjectPreview: (project: string, version: string) =>
+		request<JsonObject>(`/projects/${encodeURIComponent(project)}/${encodeURIComponent(version)}/preview/stop`, { method: "POST" }),
+	listArtifacts: () => request<JsonObject>("/artifacts"),
+	listGoals: (filters: { project_id?: string; status?: string; parent_goal_id?: string } = {}) => {
+		const query = new URLSearchParams();
+		for (const [key, value] of Object.entries(filters)) if (value) query.set(key, value);
+		return request<JsonObject>(`/goals${query.size ? `?${query.toString()}` : ""}`);
+	},
+	createGoal: (title: string, objective = "", parent_goal_id?: string, project_id?: string, deadline?: string) =>
+		request<JsonObject>("/goals", json("POST", { title, objective, ...(parent_goal_id ? { parent_goal_id } : {}), ...(project_id ? { project_id } : {}), ...(deadline ? { deadline } : {}) })),
+	decomposeGoal: (goalId: string, objectives: string[]) =>
+		request<JsonObject>(`/goals/${encodeURIComponent(goalId)}/decompose`, json("POST", { objectives })),
+	getGoalTree: (goalId: string) => request<JsonObject>(`/goals/${encodeURIComponent(goalId)}/tree`),
+	getGoalHistory: (goalId: string) => request<JsonObject>(`/goals/${encodeURIComponent(goalId)}/history`),
+	generateGoalPlan: (goalId: string, category: "business" | "operations" = "operations") =>
+		request<JsonObject>(`/goals/${encodeURIComponent(goalId)}/plan?category=${category}`, { method: "POST" }),
+	updateGoal: (goalId: string, updates: JsonObject) =>
+		request<JsonObject>(`/goals/${encodeURIComponent(goalId)}`, json("PATCH", updates)),
+	listWorkflows: (category?: "business" | "operations") =>
+		request<JsonObject>(`/workflows${category ? `?category=${category}` : ""}`),
+	createWorkflow: (input: { category: "business" | "operations"; title: string; request: string; tasks: string[]; goal_id?: string; project_id?: string; session_id?: string }) =>
+		request<JsonObject>("/workflows", json("POST", input)),
+	getWorkflow: (workflowId: string) => request<JsonObject>(`/workflows/${encodeURIComponent(workflowId)}`),
+	updateWorkflowTask: (workflowId: string, taskId: string, body: JsonObject) =>
+		request<JsonObject>(`/workflows/${encodeURIComponent(workflowId)}/tasks/${encodeURIComponent(taskId)}`, json("PATCH", body)),
+	search: (query: string) => request<JsonObject>(`/search?q=${encodeURIComponent(query)}`),
+	getRelevantMemory: (query: string, sessionId?: string) =>
+		request<JsonObject>(`/memory/relevant?q=${encodeURIComponent(query)}${sessionId ? `&session_id=${encodeURIComponent(sessionId)}` : ""}`),
+	getOpenApi: () => request<JsonObject>("/openapi.json"),
+	listRuns: () => request<JsonObject>("/runs"),
+	getRun: (runId: string) => request<JsonObject>(`/runs/${encodeURIComponent(runId)}`),
+	resumeRun: (runId: string) => request<JsonObject>(`/runs/${encodeURIComponent(runId)}/resume`, { method: "POST" }),
+	uploadVoice: async (file: File) => {
+		const form = new FormData();
+		form.append("audio", file);
+		return request<JsonObject>("/voice/upload", { method: "POST", body: form });
+	},
+	transcribeVoice: (artifact_id: string) => request<JsonObject>("/voice/transcript", json("POST", { artifact_id })),
+	summarizeVoice: (artifact_id: string) => request<JsonObject>("/voice/summary", json("POST", { artifact_id })),
+	saveVoiceResult: (sessionId: string, audio_artifact_id: string, transcript_artifact_id?: string, summary_artifact_id?: string) =>
+		request<JsonObject>(`/sessions/${encodeURIComponent(sessionId)}/voice-result`, json("POST", { audio_artifact_id, ...(transcript_artifact_id ? { transcript_artifact_id } : {}), ...(summary_artifact_id ? { summary_artifact_id } : {}) })),
+	getWakeWordStatus: () => request<JsonObject>("/voice/wake-word/status"),
+	startWakeWord: () => request<JsonObject>("/voice/wake-word/start", { method: "POST" }),
+	stopWakeWord: () => request<JsonObject>("/voice/wake-word/stop", { method: "POST" }),
+};

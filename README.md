@@ -250,7 +250,12 @@ Image understanding is available at `POST /images/analyze` with JSON fields
 `image_base64` and optional `prompt`; configure `LUMIRA_VISION_ENABLED=1`,
 `LUMIRA_VISION_API_KEY`, and optionally `LUMIRA_VISION_BASE_URL` / `LUMIRA_VISION_MODEL`.
 The endpoint accepts PNG, JPEG, or WebP images up to 10 MB and returns a validated
-text description; no analysis is fabricated when the provider is unavailable. In PowerShell, configure it for the current terminal before starting Lumira:
+text description; no analysis is fabricated when the provider is unavailable. Set
+`save_artifact: true` in the request to save a JSON report through Artifact Manager;
+only the prompt, model, description, timestamp, and SHA-256 image fingerprint are
+stored—the original image is not saved by this option. Persistence is opt-in, and a
+storage failure preserves the successful analysis while returning `artifact_saved: false`.
+In PowerShell, configure the provider for the current terminal before starting Lumira:
 
 ```powershell
 $env:LUMIRA_VISION_ENABLED = "1"

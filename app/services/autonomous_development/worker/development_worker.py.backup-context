@@ -1,0 +1,609 @@
+﻿from __future__ import annotations
+
+import subprocess
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+from .development_code_generator import DevelopmentCodeGenerator
+from .workspace_boundary import WorkspaceBoundary
+
+
+@dataclass
+class DevelopmentIteration:
+    number: int
+    status: str = "created"
+    files_changed: list[str] = field(default_factory=list)
+    command: list[str] = field(default_factory=list)
+    output: str = ""
+    return_code: int | None = None
+
+
+class DevelopmentWorker:
+    """
+    Bounded workspace worker for autonomous development.
+
+    Mechanical flow:
+
+        inspect
+        ↓
+        generate changes
+        ↓
+        verify proposed old content
+        ↓
+        apply changes
+        ↓
+        validate
+
+    Reasoning and planning remain outside this class.
+    """
+
+    MAX_ITERATIONS = 5
+    MAX_FILES_PER_ITERATION = 20
+    MAX_FILE_SIZE = 500_000
+    MAX_OUTPUT_CHARS = 50_000
+    DEFAULT_TIMEOUT = 120
+
+    ALLOWED_COMMANDS = {
+        ("python", "-m", "pytest"),
+        ("python", "-m", "compileall"),
+        ("npm", "test"),
+        ("npm", "run", "build"),
+    }
+
+    def __init__(
+        self,
+        workspace: str | Path,
+        *,
+        max_iterations: int = MAX_ITERATIONS,
+        timeout_seconds: int = DEFAULT_TIMEOUT,
+        code_generator: DevelopmentCodeGenerator | None = None,
+    ) -> None:
+        self.boundary = WorkspaceBoundary(workspace)
+
+        self.max_iterations = max(
+            1,
+            min(
+                max_iterations,
+                self.MAX_ITERATIONS,
+            ),
+        )
+
+        self.timeout_seconds = max(
+            10,
+            min(
+                timeout_seconds,
+                600,
+            ),
+        )
+
+        self.code_generator = (
+            code_generator
+            or DevelopmentCodeGenerator(
+                self.boundary.workspace
+            )
+        )
+
+        self.iterations: list[DevelopmentIteration] = []
+
+    def inspect(self) -> dict[str, Any]:
+        files = self.boundary.list_files()
+
+        return {
+            "workspace": str(
+                self.boundary.workspace
+            ),
+            "file_count": len(files),
+            "files": files,
+        }
+
+    def read_file(
+        self,
+        relative_path: str,
+    ) -> str:
+        return self.boundary.read_text(
+            relative_path
+        )
+
+    def write_file(
+        self,
+        relative_path: str,
+        content: str,
+        *,
+        iteration: int,
+    ) -> str:
+        if (
+            iteration < 1
+            or iteration > self.max_iterations
+        ):
+            raise ValueError(
+                "Invalid development iteration."
+            )
+
+        if len(content) > self.MAX_FILE_SIZE:
+            raise ValueError(
+                "File exceeds maximum size of "
+                f"{self.MAX_FILE_SIZE} bytes."
+            )
+
+        path = self.boundary.write_text(
+            relative_path,
+            content,
+        )
+
+        record = self._get_iteration(
+            iteration
+        )
+
+        relative = str(
+            path.relative_to(
+                self.boundary.workspace
+            )
+        )
+
+        if relative not in record.files_changed:
+            if (
+                len(record.files_changed)
+                >= self.MAX_FILES_PER_ITERATION
+            ):
+                raise ValueError(
+                    "Maximum changed files per "
+                    "iteration reached."
+                )
+
+            record.files_changed.append(
+                relative
+            )
+
+        return relative
+
+    def generate_changes(
+        self,
+        *,
+        goal: str,
+        iteration: int,
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """
+        Ask the configured development provider for
+        structured source-file changes.
+
+        No files are modified by this method.
+        """
+
+        self.begin_iteration(
+            iteration
+        )
+
+        inspection = self.inspect()
+
+        files = []
+
+        for relative_path in inspection[
+            "files"
+        ]:
+            try:
+                content = self.read_file(
+                    relative_path
+                )
+            except (
+                OSError,
+                UnicodeDecodeError,
+            ):
+                continue
+
+            files.append(
+                {
+                    "path": relative_path,
+                    "content": content,
+                }
+            )
+
+        return self.code_generator.generate_changes(
+            goal=goal,
+            files=files,
+            context={
+                **(context or {}),
+                "iteration": iteration,
+                "workspace": inspection[
+                    "workspace"
+                ],
+            },
+        )
+
+    def apply_changes(
+        self,
+        *,
+        iteration: int,
+        changes: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """
+        Safely apply provider-generated changes.
+
+        Existing files require old_content to match the
+        current workspace exactly. This prevents a stale
+        provider response from overwriting newer work.
+        """
+
+        record = self._get_iteration(
+            iteration
+        )
+
+        if len(changes) > self.MAX_FILES_PER_ITERATION:
+            return {
+                "success": False,
+                "code": "too_many_changes",
+                "message": (
+                    "Provider returned more changes than "
+                    "the iteration limit allows."
+                ),
+            }
+
+        applied: list[str] = []
+
+        try:
+            for change in changes:
+                if not isinstance(
+                    change,
+                    dict,
+                ):
+                    raise ValueError(
+                        "Each change must be an object."
+                    )
+
+                relative_path = change.get(
+                    "path"
+                )
+
+                if not isinstance(
+                    relative_path,
+                    str,
+                ) or not relative_path.strip():
+                    raise ValueError(
+                        "Change path is required."
+                    )
+
+                new_content = change.get(
+                    "new_content"
+                )
+
+                if not isinstance(
+                    new_content,
+                    str,
+                ):
+                    raise ValueError(
+                        f"new_content is required for "
+                        f"{relative_path}."
+                    )
+
+                if len(new_content) > self.MAX_FILE_SIZE:
+                    raise ValueError(
+                        f"File exceeds maximum size: "
+                        f"{relative_path}"
+                    )
+
+                current_exists = True
+
+                try:
+                    current_content = self.read_file(
+                        relative_path
+                    )
+                except FileNotFoundError:
+                    current_exists = False
+                    current_content = ""
+
+                old_content = change.get(
+                    "old_content"
+                )
+
+                if current_exists:
+                    if not isinstance(
+                        old_content,
+                        str,
+                    ):
+                        raise ValueError(
+                            f"old_content is required "
+                            f"for existing file: "
+                            f"{relative_path}"
+                        )
+
+                    if current_content != old_content:
+                        raise ValueError(
+                            "Stale change rejected for "
+                            f"{relative_path}: "
+                            "current file content does "
+                            "not match old_content."
+                        )
+                elif old_content not in (
+                    None,
+                    "",
+                ):
+                    raise ValueError(
+                        f"New file {relative_path} "
+                        "must not contain old_content."
+                    )
+
+                self.write_file(
+                    relative_path,
+                    new_content,
+                    iteration=iteration,
+                )
+
+                applied.append(
+                    relative_path
+                )
+
+        except Exception as exc:
+            record.status = "failed"
+
+            return {
+                "success": False,
+                "code": "change_application_failed",
+                "message": str(exc),
+                "files_changed": applied,
+            }
+
+        record.status = "changes_applied"
+
+        return {
+            "success": True,
+            "files_changed": applied,
+        }
+
+    def generate_and_apply(
+        self,
+        *,
+        goal: str,
+        iteration: int,
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """
+        Generate and safely apply one bounded development
+        iteration.
+        """
+
+        generated = self.generate_changes(
+            goal=goal,
+            iteration=iteration,
+            context=context,
+        )
+
+        if not generated.get(
+            "success",
+            False,
+        ):
+            record = self._get_iteration(
+                iteration
+            )
+            record.status = "failed"
+
+            return generated
+
+        changes = generated.get(
+            "changes"
+        )
+
+        if not isinstance(
+            changes,
+            list,
+        ):
+            record = self._get_iteration(
+                iteration
+            )
+            record.status = "failed"
+
+            return {
+                "success": False,
+                "code": "invalid_provider_changes",
+                "message": (
+                    "Provider did not return a changes list."
+                ),
+            }
+
+        return self.apply_changes(
+            iteration=iteration,
+            changes=changes,
+        )
+
+    def begin_iteration(
+        self,
+        number: int,
+    ) -> DevelopmentIteration:
+        if (
+            number < 1
+            or number > self.max_iterations
+        ):
+            raise ValueError(
+                "Development iteration limit exceeded."
+            )
+
+        existing = next(
+            (
+                item
+                for item in self.iterations
+                if item.number == number
+            ),
+            None,
+        )
+
+        if existing is not None:
+            return existing
+
+        iteration = DevelopmentIteration(
+            number=number,
+            status="in_progress",
+        )
+
+        self.iterations.append(
+            iteration
+        )
+
+        return iteration
+
+    def run_validation(
+        self,
+        iteration: int,
+        command: tuple[str, ...] = (
+            "python",
+            "-m",
+            "pytest",
+            "-q",
+        ),
+    ) -> DevelopmentIteration:
+        record = self._get_iteration(
+            iteration
+        )
+
+        if not self._is_allowed_command(
+            command
+        ):
+            raise ValueError(
+                "Validation command is not allowed: "
+                f"{' '.join(command)}"
+            )
+
+        record.command = list(
+            command
+        )
+
+        try:
+            result = subprocess.run(
+                list(command),
+                cwd=self.boundary.workspace,
+                capture_output=True,
+                text=True,
+                timeout=self.timeout_seconds,
+                shell=False,
+            )
+
+        except subprocess.TimeoutExpired as exc:
+            record.status = "failed"
+            record.return_code = None
+            record.output = (
+                f"Validation timed out after "
+                f"{self.timeout_seconds} seconds.\n"
+                f"{exc}"
+            )[-self.MAX_OUTPUT_CHARS :]
+
+            return record
+
+        output = "\n".join(
+            value
+            for value in (
+                result.stdout,
+                result.stderr,
+            )
+            if value
+        )
+
+        record.return_code = (
+            result.returncode
+        )
+
+        record.output = (
+            output[-self.MAX_OUTPUT_CHARS :]
+        )
+
+        record.status = (
+            "completed"
+            if result.returncode == 0
+            else "failed"
+        )
+
+        return record
+
+    def can_continue(
+        self,
+        iteration: int,
+    ) -> bool:
+        return (
+            iteration
+            < self.max_iterations
+        )
+
+    def result(
+        self,
+        iteration: int,
+    ) -> dict[str, Any]:
+        record = self._get_iteration(
+            iteration
+        )
+
+        return {
+            "iteration": record.number,
+            "status": record.status,
+            "files_changed": list(
+                record.files_changed
+            ),
+            "command": list(
+                record.command
+            ),
+            "return_code": record.return_code,
+            "output": record.output,
+            "can_continue": self.can_continue(
+                record.number
+            ),
+        }
+
+    def _get_iteration(
+        self,
+        number: int,
+    ) -> DevelopmentIteration:
+        record = next(
+            (
+                item
+                for item in self.iterations
+                if item.number == number
+            ),
+            None,
+        )
+
+        if record is None:
+            raise ValueError(
+                f"Development iteration "
+                f"{number} has not been started."
+            )
+
+        return record
+
+    def _is_allowed_command(
+        self,
+        command: tuple[str, ...],
+    ) -> bool:
+        if not command:
+            return False
+
+        executable = command[0].lower()
+
+        if executable == "python":
+            return (
+                len(command) >= 3
+                and tuple(command[:3])
+                in {
+                    (
+                        "python",
+                        "-m",
+                        "pytest",
+                    ),
+                    (
+                        "python",
+                        "-m",
+                        "compileall",
+                    ),
+                }
+            )
+
+        if executable == "npm":
+            if (
+                len(command) == 2
+                and command[1] == "test"
+            ):
+                return True
+
+            return (
+                len(command) == 3
+                and command[1] == "run"
+                and command[2] == "build"
+            )
+
+        return False

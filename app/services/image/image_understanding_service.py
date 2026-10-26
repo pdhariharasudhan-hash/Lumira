@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import hashlib
+import json
+from datetime import datetime, timezone
+from app.services.artifacts.artifact_manager_service import ArtifactManagerService
 from app.services.providers.provider_registry import ProviderRegistry
 from app.services.resources.resource_budget_service import ResourceBudgetService
 
@@ -10,8 +14,33 @@ class ImageUnderstandingService:
     MAX_IMAGE_BYTES = 10_000_000
     MAX_PROMPT_CHARS = 4_000
 
-    def __init__(self, provider=None) -> None:
+    def __init__(self, provider=None, artifacts: ArtifactManagerService | None = None) -> None:
         self.provider = provider if provider is not None else ProviderRegistry.get("image_understanding")
+        self.artifacts = artifacts
+
+    def _save_analysis_artifact(self, image_bytes: bytes, prompt: str, result: dict) -> dict:
+        """Persist a compact analysis report without storing the original image implicitly."""
+        manager = self.artifacts or ArtifactManagerService()
+        report = {
+            "schema_version": 1,
+            "kind": "image_analysis",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "model": result["model"],
+            "prompt": prompt.strip(),
+            "description": result["description"],
+            "image_sha256": hashlib.sha256(image_bytes).hexdigest(),
+        }
+        artifact = manager.create_artifact(
+            "reports",
+            json.dumps(report, ensure_ascii=False, indent=2),
+            source="image_understanding",
+            extension="json",
+        )
+        return {
+            "artifact_id": artifact["artifact_id"],
+            "artifact_type": artifact["type"],
+            "created_at": artifact["timestamp"],
+        }
 
     @staticmethod
     def _valid_image(data: bytes) -> bool:
@@ -21,7 +50,13 @@ class ImageUnderstandingService:
             or (data.startswith(b"RIFF") and data[8:12] == b"WEBP")
         )
 
-    def analyze(self, image_bytes: bytes, prompt: str = "Describe this image and extract any readable text.") -> dict:
+    def analyze(
+        self,
+        image_bytes: bytes,
+        prompt: str = "Describe this image and extract any readable text.",
+        *,
+        save_artifact: bool = False,
+    ) -> dict:
         if not isinstance(image_bytes, bytes) or not image_bytes or len(image_bytes) > self.MAX_IMAGE_BYTES:
             return {"success": False, "code": "invalid_image", "message": "Image is empty or exceeds the 10 MB limit."}
         if not self._valid_image(image_bytes):
@@ -51,4 +86,21 @@ class ImageUnderstandingService:
         description = result.get("description")
         if not isinstance(description, str) or not description.strip() or len(description) > 20_000:
             return {"success": False, "code": "invalid_provider_response", "message": "The provider returned an invalid analysis."}
-        return {"success": True, "description": description.strip(), "model": str(result.get("model", "configured provider"))[:100]}
+        response = {
+            "success": True,
+            "description": description.strip(),
+            "model": str(result.get("model", "configured provider"))[:100],
+        }
+        if save_artifact:
+            try:
+                response["artifact"] = self._save_analysis_artifact(
+                    image_bytes,
+                    prompt,
+                    response,
+                )
+                response["artifact_saved"] = True
+            except Exception:
+                # Keep the successful analysis available even if local persistence fails.
+                response["artifact_saved"] = False
+                response["artifact_warning"] = "Analysis succeeded, but its report could not be saved to the local artifact store."
+        return response

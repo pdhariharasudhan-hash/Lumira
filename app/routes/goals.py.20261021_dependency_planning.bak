@@ -1,0 +1,216 @@
+from typing import Literal
+
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel, Field, field_validator
+
+from app.services.memory.memory_service import MemoryService, MemoryValidationError
+from app.services.work_items.work_item_service import WorkItemService
+from app.services.planner.planner_service import PlannerService
+
+router = APIRouter()
+
+
+class GoalCreateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=500)
+    objective: str = Field(default="", max_length=2000)
+    priority: Literal["low", "normal", "high", "urgent"] = "normal"
+    project_id: str | None = Field(default=None, max_length=100)
+    parent_goal_id: str | None = Field(default=None, max_length=128)
+    blockers: list[str] = Field(default_factory=list, max_length=20)
+    deadline: str | None = Field(default=None, max_length=40)
+
+    @field_validator("title")
+    @classmethod
+    def normalize_title(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("title must not be empty")
+        return value
+
+
+class GoalUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, max_length=500)
+    objective: str | None = Field(default=None, max_length=2000)
+    priority: Literal["low", "normal", "high", "urgent"] | None = None
+    status: Literal["active", "paused", "completed", "blocked", "cancelled"] | None = None
+
+    @field_validator("title")
+    @classmethod
+    def normalize_optional_title(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            raise ValueError("title must not be empty")
+        return value
+    progress: float | None = None
+    milestones: list[dict] | None = Field(default=None, max_length=50)
+    dependencies: list[str] | None = Field(default=None, max_length=50)
+    blockers: list[str] | None = Field(default=None, max_length=20)
+    project_id: str | None = Field(default=None, max_length=100)
+    artifact_ids: list[str] | None = Field(default=None, max_length=50)
+    deadline: str | None = Field(default=None, max_length=40)
+
+
+class GoalDecomposeRequest(BaseModel):
+    objectives: list[str] = Field(min_length=1, max_length=20)
+
+    @field_validator("objectives")
+    @classmethod
+    def validate_objectives(cls, values: list[str]) -> list[str]:
+        cleaned = []
+        for value in values:
+            if not isinstance(value, str):
+                raise ValueError("each objective must be text")
+            value = value.strip()
+            if not value or len(value) > 500:
+                raise ValueError("each objective must contain 1 to 500 characters")
+            cleaned.append(value)
+        if len({value.casefold() for value in cleaned}) != len(cleaned):
+            raise ValueError("objectives must be unique")
+        return cleaned
+
+
+@router.get("/goals")
+def list_goals(
+    project_id: str | None = Query(default=None, max_length=100),
+    status: str | None = Query(default=None, max_length=30),
+    parent_goal_id: str | None = Query(default=None, max_length=128),
+):
+    try:
+        records = MemoryService().get_all().get("goals", [])
+    except MemoryValidationError as exc:
+        raise HTTPException(status_code=503, detail="Memory store is unavailable or incompatible") from exc
+    if project_id:
+        records = [record for record in records if record.get("project_id") == project_id]
+    if status:
+        records = [record for record in records if record.get("status") == status]
+    if parent_goal_id is not None:
+        records = [record for record in records if record.get("parent_goal_id") == parent_goal_id]
+    records.sort(key=lambda record: (record.get("updated_at", ""), record.get("goal_id", "")))
+    return {"goals": records}
+
+
+@router.post("/goals")
+def create_goal(request: GoalCreateRequest):
+    try:
+        return MemoryService().create_goal(**request.model_dump())
+    except MemoryValidationError as exc:
+        raise HTTPException(status_code=503, detail="Memory store is unavailable or incompatible") from exc
+
+
+@router.patch("/goals/{goal_id}")
+def update_goal(goal_id: str, request: GoalUpdateRequest):
+    updates = {key: value for key, value in request.model_dump(exclude_unset=True).items() if value is not None}
+    try:
+        return MemoryService().update_goal(goal_id, **updates)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="goal not found") from exc
+    except MemoryValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/goals/{goal_id}/decompose")
+def decompose_goal(goal_id: str, request: GoalDecomposeRequest):
+    """Create up to 20 persistent child objectives under a goal."""
+    try:
+        return MemoryService().decompose_goal(goal_id, request.objectives)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="goal not found") from exc
+    except MemoryValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/goals/{goal_id}/tree")
+def get_goal_tree(goal_id: str):
+    """Return a bounded goal/objective/work-item tree from existing persistent stores."""
+    try:
+        all_goals = MemoryService().get_all().get("goals", [])
+        workflows = WorkItemService().list_workflows(limit=200)
+    except (MemoryValidationError, ValueError) as exc:
+        raise HTTPException(status_code=503, detail="Goal or workflow storage is unavailable") from exc
+    by_id = {item.get("goal_id"): item for item in all_goals if isinstance(item, dict) and item.get("goal_id")}
+    root = by_id.get(goal_id)
+    if root is None:
+        raise HTTPException(status_code=404, detail="goal not found")
+    children_by_parent: dict[str, list[dict]] = {}
+    for item in all_goals:
+        parent_id = item.get("parent_goal_id")
+        if parent_id:
+            children_by_parent.setdefault(parent_id, []).append(item)
+    workflows_by_goal: dict[str, list[dict]] = {}
+    for workflow in workflows:
+        linked_goal = workflow.get("goal_id")
+        if linked_goal:
+            workflows_by_goal.setdefault(linked_goal, []).append(workflow)
+
+    visited: set[str] = set()
+    count = 0
+    def build(node: dict, depth: int) -> dict:
+        nonlocal count
+        node_id = node.get("goal_id")
+        count += 1
+        result = {key: value for key, value in node.items() if key != "history"}
+        result["history_count"] = len(node.get("history", [])) if isinstance(node.get("history"), list) else 0
+        result["tasks"] = workflows_by_goal.get(node_id, [])
+        result["objectives"] = []
+        if node_id in visited:
+            result["tree_warning"] = "cycle_detected"
+            return result
+        visited.add(node_id)
+        if depth < 10 and count < 100:
+            for child in children_by_parent.get(node_id, []):
+                if count >= 100:
+                    result["truncated"] = True
+                    break
+                result["objectives"].append(build(child, depth + 1))
+        elif children_by_parent.get(node_id):
+            result["truncated"] = True
+        visited.remove(node_id)
+        return result
+
+    return {"goal_tree": build(root, 0), "limits": {"max_depth": 10, "max_nodes": 100}}
+
+
+@router.post("/goals/{goal_id}/plan")
+def generate_goal_plan(goal_id: str, category: Literal["business", "operations"] = "operations"):
+    """Convert a saved goal into a bounded, persistent workflow using Lumira's existing planner."""
+    try:
+        goals = MemoryService().get_all().get("goals", [])
+        goal = next((item for item in goals if item.get("goal_id") == goal_id and not item.get("archived")), None)
+        if goal is None:
+            raise HTTPException(status_code=404, detail="goal not found")
+        if goal.get("status") in {"completed", "cancelled"}:
+            raise HTTPException(status_code=409, detail="completed or cancelled goals cannot be planned")
+        goal_text = " ".join(part for part in (goal.get("title", ""), goal.get("objective", "")) if part)
+        plan = PlannerService().create_plan(goal_text)
+        steps = plan.get("steps")
+        if not isinstance(steps, list) or not 1 <= len(steps) <= 20:
+            raise HTTPException(status_code=422, detail="planner did not return a bounded executable step list")
+        workflow = WorkItemService().create_workflow(
+            category=category,
+            title=f"Plan: {goal.get('title', 'Goal')}",
+            request=goal_text,
+            tasks=[str(step)[:500] for step in steps],
+            project_id=goal.get("project_id"),
+            goal_id=goal_id,
+        )
+        return {"plan": plan, "workflow": workflow}
+    except HTTPException:
+        raise
+    except (MemoryValidationError, WorkItemValidationError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/goals/{goal_id}/history")
+def get_goal_history(goal_id: str):
+    """Return the bounded change history for one persisted goal."""
+    try:
+        goals = MemoryService().get_all().get("goals", [])
+    except MemoryValidationError as exc:
+        raise HTTPException(status_code=503, detail="Memory store is unavailable or incompatible") from exc
+    goal = next((item for item in goals if item.get("goal_id") == goal_id and not item.get("archived")), None)
+    if goal is None:
+        raise HTTPException(status_code=404, detail="goal not found")
+    history = goal.get("history", [])
+    return {"goal_id": goal_id, "history": history[-50:] if isinstance(history, list) else []}
