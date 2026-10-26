@@ -185,7 +185,7 @@ export function ImageUnderstandingPanel() {
         <div className="entity-actions">
           <strong>Vision provider</strong>
           <span className="status-pill">
-            {providerStatusLoading ? "Checking…" : providerRegistered ? "Registered" : providerConfigured ? "Configured, not registered" : "Not configured"}
+            {providerStatusLoading ? "Checking…" : providerStatusError ? "Unknown" : providerRegistered ? "Registered" : providerConfigured ? "Configured, not registered" : "Not configured"}
           </span>
           <button className="secondary-action" type="button" disabled={providerStatusLoading} onClick={() => setProviderStatusRefresh((value) => value + 1)}>
             {providerStatusLoading ? "Refreshing…" : "Refresh status"}
