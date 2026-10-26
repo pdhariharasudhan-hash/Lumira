@@ -191,7 +191,7 @@ describe("Lumira workspace shell", () => {
 		render(<MainLayout />);
 		fireEvent.change(screen.getByRole("textbox", { name: "Global search" }), { target: { value: "launch" } });
 		fireEvent.click(screen.getByRole("button", { name: "Run global search" }));
-		expect(await screen.findByText(/Launch checklist/)).toBeTruthy();
+		expect(await screen.findByText("Launch checklist", { selector: "strong" })).toBeTruthy();
 		expect(fetchMock.mock.calls.some(([input]) => String(input) === "/search?q=launch")).toBe(true);
 
 		fireEvent.click(screen.getByRole("button", { name: "Create Goal" }));
