@@ -5,9 +5,9 @@
 | # | Feature | Implementation surface found | Current state / remaining gate |
 |---:|---|---|---|
 | 1 | `memory` | `MemoryService`, `/memory`, cognitive memory stores | Core persistence exists; runtime regression suite still needs a safe run. |
-| 2 | `voice_input` | Voice capture service and `/voice` routes | Recording/upload path exists; continuous wake-word capture needs optional Picovoice configuration and device testing. |
+| 2 | `voice_input` | Voice capture service and `/voice` routes | Recording/upload and saved-artifact processing exist; `/voice/retry-memory` now recovers memory persistence from saved audio/transcript/summary artifacts without recording or transcribing again. Continuous wake-word capture still needs optional Picovoice configuration and device testing. |
 | 3 | `voice_idea_capture` | Voice capture, transcript service, remote transcription provider, optional local faster-whisper provider | Provider-dependent, but can now run locally without a remote API after the optional dependency/model is installed and `LUMIRA_LOCAL_TRANSCRIPTION_ENABLED=1` is set. First-run model download and actual Tamil/English accuracy remain environment-dependent and unverified. |
-| 4 | `artifact_manager` | Artifact manager and `/artifacts` routes | Text/binary storage, bounded persistent relationships, incoming/outgoing relationship lookup, link/unlink endpoints, archive/restore/delete cleanup, and path-free metadata are implemented. Relationship regression tests are in CI; provider/file behavior still needs full verification. |
+| 4 | `artifact_manager` | Artifact manager and `/artifacts` routes | Text/binary storage, bounded persistent relationships, incoming/outgoing relationship lookup, link/unlink endpoints, archive/restore/delete cleanup, and path-free metadata are implemented. Relationship regression tests pass in CI; provider/file behavior still needs full verification. |
 | 5 | `image_generation` | Image generation service and OpenAI-compatible image provider | Provider-dependent; activation is blocked until image provider is registered. |
 | 6 | `unified_search` | Unified search service and `/search` routes | Project/memory/artifact/history search surfaces exist; artifact results now include bounded related-artifact metadata for graph navigation. Source coverage and runtime checks remain. |
 | 7 | `intent` | Intent classifier and `/intelligence/analyze` | Deterministic analysis path exists; semantic coverage remains limited and needs tests. |
@@ -108,3 +108,6 @@
 - Corrected durable task completion so repeating a completion update is idempotent while completed tasks still cannot be reopened.
 - Goal readiness now blocks duplicate execution when a linked workflow is already active.
 - Added a route-parameter regression test suite and GitHub Actions workflow. Current CI results must be checked against the latest branch commit; the full suite has recently narrowed to a small number of remaining failures, and no blanket “all features complete” claim is made.
+
+- Added `POST /voice/retry-memory` and a desktop retry action. It validates that saved transcript and optional summary artifacts belong to the supplied audio/transcript chain, attaches missing artifact IDs to an existing memory experience or creates an unverified experience, and preserves saved artifacts if memory persistence fails.
+- Current branch CI verified the full backend suite at **570 passed, 2 warnings** and the desktop build/tests passed. The newest voice-memory retry UI/API client changes are also covered by the latest successful checks.
