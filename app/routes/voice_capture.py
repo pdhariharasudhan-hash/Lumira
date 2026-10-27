@@ -140,6 +140,34 @@ def get_wake_word_listener_status():
     return _wake_word_listener.status()
 
 
+def _link_voice_artifacts(artifacts, audio_artifact_id: str, transcript_artifact_id: str, summary_artifact_id: str | None = None) -> list[dict]:
+    """Connect the stored audio, transcript, and optional summary without duplicating links."""
+    specifications = [
+        (audio_artifact_id, transcript_artifact_id, "transcribed_as"),
+    ]
+    if summary_artifact_id:
+        specifications.append((transcript_artifact_id, summary_artifact_id, "summarized_as"))
+    statuses = []
+    for source_id, target_id, relation in specifications:
+        try:
+            statuses.append({
+                **artifacts.link_artifacts(source_id, target_id, relation),
+                "relation": relation,
+                "source_artifact_id": source_id,
+                "target_artifact_id": target_id,
+            })
+        except (KeyError, ValueError):
+            # Artifact content remains useful even if the relationship index needs repair.
+            statuses.append({
+                "changed": False,
+                "relation": relation,
+                "source_artifact_id": source_id,
+                "target_artifact_id": target_id,
+                "state": "not_linked",
+            })
+    return statuses
+
+
 class VoiceProcessRequest(BaseModel):
     audio_artifact_id: str = Field(min_length=1, max_length=128)
     generate_summary: bool = True
@@ -213,6 +241,7 @@ def process_voice_capture(request: VoiceProcessRequest):
         return result
 
     result["transcript_artifact_id"] = transcript_id
+    result["artifact_relationships"] = _link_voice_artifacts(artifacts, request.audio_artifact_id, transcript_id)
     result["stage"] = "transcription_complete"
     if not request.generate_summary:
         result["memory"] = _persist_voice_capture_memory(request.audio_artifact_id, transcript_id, transcript)
@@ -232,6 +261,7 @@ def process_voice_capture(request: VoiceProcessRequest):
             result["message"] = "Summary generation reported success without a usable summary artifact identifier. The audio and transcript artifacts are preserved."
             return result
         result["summary_artifact_id"] = summary_id
+        result["artifact_relationships"] = _link_voice_artifacts(artifacts, request.audio_artifact_id, transcript_id, summary_id)
         result["success"] = True
         result["stage"] = "completed"
         result["message"] = "Audio, transcript, and summary artifacts are ready."
@@ -290,6 +320,9 @@ def retry_voice_summary(request: VoiceSummaryRetryRequest):
             "transcript_artifact_id": request.transcript_artifact_id,
             "message": "Summary generation reported success without a usable artifact ID. The transcript is preserved.",
         }
+    audio_id = transcript.get("source")
+    audio_record = artifacts.get_artifact(audio_id) if isinstance(audio_id, str) else None
+    relationships = _link_voice_artifacts(artifacts, audio_id, request.transcript_artifact_id, summary_id) if audio_record and audio_record.get("type") == "audio" else []
     try:
         memory_record = MemoryService().attach_artifacts_to_experience(request.transcript_artifact_id, [summary_id])
         memory_status = {"success": True, "state": "updated", "experience_id": memory_record.get("experience_id"), "message": "Summary artifact linked to the existing voice memory."}
@@ -302,6 +335,7 @@ def retry_voice_summary(request: VoiceSummaryRetryRequest):
         "state": "completed",
         "transcript_artifact_id": request.transcript_artifact_id,
         "summary_artifact_id": summary_id,
+        "artifact_relationships": relationships,
         "summary": result,
         "memory": memory_status,
         "message": "Summary created from the existing transcript.",
