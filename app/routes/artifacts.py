@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
+from typing import Annotated
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 import base64
@@ -82,10 +83,10 @@ def create_binary_artifact(request: BinaryArtifactCreateRequest):
 @router.get("/artifacts")
 def list_artifacts(
     artifact_type: str | None = None,
-    q: str | None = Query(default=None, max_length=500),
+    q: Annotated[str | None, Query(max_length=500)] = None,
     include_archived: bool = False,
-    limit: int = Query(default=100, ge=1, le=500),
-    offset: int = Query(default=0, ge=0, le=100000),
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    offset: Annotated[int, Query(ge=0, le=100000)] = 0,
 ):
     try:
         result = ArtifactLibraryQueryService(_manager()).list_artifacts(
