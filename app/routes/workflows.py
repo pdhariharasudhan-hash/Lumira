@@ -1,6 +1,7 @@
 import json
 
 from fastapi import APIRouter, HTTPException, Query
+from typing import Annotated
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.agents.agent_manager import AgentManager
@@ -46,12 +47,12 @@ def create_workflow(request: WorkflowCreateRequest):
 
 @router.get("/workflows")
 def list_workflows(
-    category: str | None = Query(default=None, pattern="^(business|operations)$"),
-    session_id: str | None = Query(default=None, max_length=100),
-    project_id: str | None = Query(default=None, max_length=100),
-    goal_id: str | None = Query(default=None, max_length=128),
-    status: str | None = Query(default=None, pattern="^(planned|in_progress|blocked|completed|failed)$"),
-    limit: int = Query(default=50, ge=0, le=200),
+    category: Annotated[str | None, Query(pattern="^(business|operations)$")] = None,
+    session_id: Annotated[str | None, Query(max_length=100)] = None,
+    project_id: Annotated[str | None, Query(max_length=100)] = None,
+    goal_id: Annotated[str | None, Query(max_length=128)] = None,
+    status: Annotated[str | None, Query(pattern="^(planned|in_progress|blocked|completed|failed)$")] = None,
+    limit: Annotated[int, Query(ge=0, le=200)] = 50,
 ):
     return {"workflows": WorkItemService().list_workflows(
         category=category, session_id=session_id, project_id=project_id,
