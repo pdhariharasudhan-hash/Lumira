@@ -1136,6 +1136,7 @@ function MainLayout() {
 					displayedText = `Audio saved. ${stringValue(transcription.message, "Transcription did not complete.")}`;
 				}
 				const memoryResult = object(pipeline.memory);
+				result = { ...result, memory: memoryResult };
 				if (memoryResult.success === true) displayedText += `${displayedText ? "\n\n" : ""}Memory: ${stringValue(memoryResult.message, "Voice idea saved to memory.")}`;
 				else if (memoryResult.code) displayedText += `${displayedText ? "\n\n" : ""}Memory not updated: ${stringValue(memoryResult.message, "Memory persistence did not complete.")}`;
 			} catch (error) {
