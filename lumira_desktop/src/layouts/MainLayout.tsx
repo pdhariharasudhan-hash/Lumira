@@ -1445,6 +1445,35 @@ async function runArtifactVoiceAction(artifactId: string, action: "process" | "t
 		} catch (error) { setActionNotice(formatError(error).message); }
 	}
 
+	async function retryVoiceMemoryForMessage(messageId: string) {
+		const message = messages.find((item) => item.id === messageId);
+		const previous = object(message?.response?.result);
+		const audioArtifactId = stringValue(object(previous.artifact).artifact_id);
+		const transcript = object(previous.transcript);
+		const transcriptArtifactId = stringValue(object(transcript.transcript_artifact).artifact_id, stringValue(previous.transcript_artifact_id));
+		const summary = object(previous.summary);
+		const summaryArtifactId = stringValue(object(summary.summary_artifact).artifact_id, stringValue(previous.summary_artifact_id));
+		if (!audioArtifactId || !transcriptArtifactId) return;
+		setActionNotice("Repairing voice memory links from saved artifacts…");
+		try {
+			const recovered = await api.retryVoiceMemory(audioArtifactId, transcriptArtifactId, summaryArtifactId || undefined);
+			setMessages((current) => current.map((item) => {
+				if (item.id !== messageId) return item;
+				const currentResult = object(item.response?.result);
+				return {
+					...item,
+					response: {
+						...(item.response ?? {}),
+						result: { ...currentResult, memory: object(recovered.memory), memory_retry: recovered, status: stringValue(recovered.state, "completed") },
+					},
+				};
+			}));
+			setActionNotice(stringValue(recovered.message, "Voice memory links recovered from saved artifacts."));
+		} catch (error) {
+			setActionNotice(formatError(error).message);
+		}
+	}
+
 	async function changeSession(sessionId: string) {
 		try {
 			let loaded = await api.getSession(sessionId) as SessionRecord;
@@ -1983,6 +2012,7 @@ async function runArtifactVoiceAction(artifactId: string, action: "process" | "t
 									{isProjectResult && <section className="project-result-card"><div><span className="eyebrow">PROJECT RESULT</span><h3>{projectName}</h3><p>{stringValue(metadata.description ?? metadata.idea ?? result.idea ?? result.request, "Project files were saved by Lumira.")}</p></div><dl><div><dt>Version</dt><dd>{stringValue(metadata.version, stringValue(result.version, "Latest"))}</dd></div><div><dt>Status</dt><dd>{stringValue(metadata.status, status)}</dd></div><div><dt>Created</dt><dd>{stringValue(metadata.created_at ?? result.created_at, "Recorded by the project service")}</dd></div></dl><div className="project-card-actions"><button type="button" onClick={() => openProjectFiles(projectName)}>View Files</button><button type="button" onClick={() => void projectAction(projectName, "run")}>Run Project</button><button type="button" onClick={() => void projectAction(projectName, "edit")}>Open in Editor</button><button type="button" onClick={() => void projectAction(projectName, "modify")}>Modify Project</button><button type="button" onClick={() => void projectAction(projectName, "frontend")}>Add Frontend</button><button type="button" onClick={() => void projectAction(projectName, "database")}>Add Database</button><button type="button" onClick={() => void projectAction(projectName, "deploy")}>Create Deployment Plan</button><button type="button" onClick={() => void projectAction(projectName, "docs")}>Show Documentation</button></div></section>}
 									{capability === "voice_capture" && stringValue(object(result.artifact).artifact_id) && object(result.transcript).success !== true && <button className="secondary-action" type="button" onClick={() => void retryVoiceTranscriptionForMessage(message.id, stringValue(object(result.artifact).artifact_id))}>Retry transcription from saved audio</button>}
 									{capability === "voice_capture" && stringValue(object(object(result.transcript).transcript_artifact).artifact_id) && <button className="secondary-action" type="button" onClick={() => void retryVoiceSummaryForMessage(message.id, stringValue(object(object(result.transcript).transcript_artifact).artifact_id))}>Retry summary from saved transcript</button>}
+									{capability === "voice_capture" && Object.keys(object(result.memory)).length > 0 && object(result.memory).success !== true && stringValue(object(result.artifact).artifact_id) && stringValue(object(object(result.transcript).transcript_artifact).artifact_id, stringValue(result.transcript_artifact_id)) && <button className="secondary-action" type="button" onClick={() => void retryVoiceMemoryForMessage(message.id)}>Retry voice memory links</button>}
 									<details className="result-details"><summary>Structured result</summary><pre>{JSON.stringify(safeResult, null, 2)}</pre></details>
 								</div>}
 							</article>;
