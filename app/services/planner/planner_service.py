@@ -50,6 +50,9 @@ class PlannerService:
     structured PlannerState.
     """
 
+    MAX_PLAN_STEPS = 12
+    MAX_STEP_LENGTH = 200
+
     def __init__(self) -> None:
 
         self.decomposer = GoalDecomposer()
@@ -167,11 +170,27 @@ class PlannerService:
                 "steps": [],
             }
 
+        # Plans are data, not trusted execution instructions. Normalize and cap
+        # registered steps so a malformed extension cannot create an unbounded plan.
+        safe_steps = [
+            step.strip()[: self.MAX_STEP_LENGTH]
+            for step in steps
+            if isinstance(step, str) and step.strip()
+        ][: self.MAX_PLAN_STEPS]
+        if not safe_steps:
+            return {
+                "success": False,
+                "error": "registered plan contains no valid steps",
+                "goal": normalized_goal,
+                "intent": intent,
+                "steps": [],
+            }
+
         return {
             "success": True,
             "goal": normalized_goal,
             "intent": intent,
-            "steps": list(steps),
+            "steps": safe_steps,
         }
 
     # ----------------------------------
@@ -283,42 +302,37 @@ class PlannerService:
         # Normal Planning Path
         # ----------------------------------
 
-        plan = self.create_plan(
-            decision.selected_option
-        )
-
-        state.execution_steps = list(
-            plan["steps"]
-        )
-
-        state.execution_order = list(
-            plan["steps"]
-        )
-
-        state.estimated_outputs = list(
-            reasoning.conclusions
-        )
-
-        state.milestones = [
-            "Planning Complete",
-            "Execution Ready",
-        ]
-
+        plan = self.create_plan(decision.selected_option)
         state.parallel_tasks = []
 
-        state.blocked_tasks = []
+        # A missing or malformed plan is a blocker, not an empty successful plan.
+        # Do not advertise readiness unless there are concrete bounded steps.
+        if plan.get("success") is not True or not plan.get("steps"):
+            reason = str(plan.get("error") or "Planner returned no executable steps")[:300]
+            state.execution_steps = []
+            state.execution_order = []
+            state.estimated_outputs = []
+            state.milestones = ["Planning Blocked"]
+            state.blocked_tasks = ["planner"]
+            state.completion_criteria = [
+                "Register or select a supported plan for this intent.",
+                "Re-run planning and verify that at least one bounded step exists.",
+            ]
+            state.dependencies = list(dict.fromkeys([*state.dependencies, reason]))[:50]
+            state.confidence = min(max(float(decision.confidence), 0.0), 0.25)
+            state.last_updated = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+            return state
 
+        steps = plan["steps"][: self.MAX_PLAN_STEPS]
+        state.execution_steps = list(steps)
+        state.execution_order = list(steps)
+        state.estimated_outputs = list(reasoning.conclusions[:50])
+        state.milestones = ["Planning Complete", "Execution Ready"]
+        state.blocked_tasks = []
         state.completion_criteria = [
             "All execution steps completed",
             "Verification successful",
         ]
-
-        state.confidence = (
-            decision.confidence
-        )
-
-        state.last_updated = (
-            datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
-        )
-
+        state.confidence = min(max(float(decision.confidence), 0.0), 1.0)
+        state.last_updated = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         return state
