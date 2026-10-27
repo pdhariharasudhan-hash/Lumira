@@ -7,9 +7,9 @@
 | 1 | `memory` | `MemoryService`, `/memory`, cognitive memory stores | Core persistence exists; runtime regression suite still needs a safe run. |
 | 2 | `voice_input` | Voice capture service and `/voice` routes | Recording/upload path exists; continuous wake-word capture needs optional Picovoice configuration and device testing. |
 | 3 | `voice_idea_capture` | Voice capture, transcript service, remote transcription provider, optional local faster-whisper provider | Provider-dependent, but can now run locally without a remote API after the optional dependency/model is installed and `LUMIRA_LOCAL_TRANSCRIPTION_ENABLED=1` is set. First-run model download and actual Tamil/English accuracy remain environment-dependent and unverified. |
-| 4 | `artifact_manager` | Artifact manager and `/artifacts` routes | Text/binary storage and indexing exist; verify delete/corruption/content boundary tests. |
+| 4 | `artifact_manager` | Artifact manager and `/artifacts` routes | Text/binary storage, bounded persistent relationships, incoming/outgoing relationship lookup, link/unlink endpoints, archive/restore/delete cleanup, and path-free metadata are implemented. Relationship regression tests are in CI; provider/file behavior still needs full verification. |
 | 5 | `image_generation` | Image generation service and OpenAI-compatible image provider | Provider-dependent; activation is blocked until image provider is registered. |
-| 6 | `unified_search` | Unified search service and `/search` routes | Project/memory/artifact/history search surfaces exist; source coverage and runtime checks remain. |
+| 6 | `unified_search` | Unified search service and `/search` routes | Project/memory/artifact/history search surfaces exist; artifact results now include bounded related-artifact metadata for graph navigation. Source coverage and runtime checks remain. |
 | 7 | `intent` | Intent classifier and `/intelligence/analyze` | Deterministic analysis path exists; semantic coverage remains limited and needs tests. |
 | 8 | `goals` | Memory-backed goal operations and `/goals` | CRUD/listing exists; verify persistence and validation tests. |
 | 9 | `planner` | `PlannerService`, `PlannerModule`, Brain pipeline | Brain-integrated planning exists; execution readiness depends on decision/constraint gates. |
@@ -97,3 +97,14 @@
 - Provider startup registration was extracted into a small function so configuration can be verified without launching a nested Python process or importing the entire FastAPI app twice. Existing opt-in flags and required keys/model-path checks are preserved.
 - The core state contract now checks the types of `current_stage`, `last_completed_stage`, `intent`, and `selected_capability`, rather than only checking that keys exist and `status` is recognized.
 - Latest read-only audit: 902 files inventoried, zero active integration findings, but `completion_ready=false` because fresh isolated behavioral/build/lint verification and the project's own OS-sandboxed terminal remain incomplete. Static verification is not a substitute for those gates.
+
+
+### Additional work in the current continuation
+
+- Added persistent artifact relationships with self-link, missing-target, archived-artifact, duplicate-link, invalid-relation, and maximum-link checks. Deleting an artifact removes inbound references so the index does not retain dangling edges.
+- Added `POST /artifacts/{artifact_id}/links`, `GET /artifacts/{artifact_id}/links`, and `DELETE /artifacts/{artifact_id}/links`. Link responses expose only safe artifact metadata, not local filesystem paths.
+- Connected artifact relationships to Unified Search results, so matching transcripts/reports can show their related audio, summaries, and source artifacts without copying linked content into the result.
+- Added desktop controls to create and remove artifact links directly from artifact details.
+- Corrected durable task completion so repeating a completion update is idempotent while completed tasks still cannot be reopened.
+- Goal readiness now blocks duplicate execution when a linked workflow is already active.
+- Added a route-parameter regression test suite and GitHub Actions workflow. Current CI results must be checked against the latest branch commit; the full suite has recently narrowed to a small number of remaining failures, and no blanket “all features complete” claim is made.
