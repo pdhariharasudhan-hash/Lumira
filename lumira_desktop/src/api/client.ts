@@ -235,18 +235,11 @@ export const api = {
 		request<JsonObject>("/memory/link", json("POST", { source_id, target_id, relation })),
 	archiveMemory: (collection: string, record_id: string) =>
 		request<JsonObject>("/memory/archive", json("POST", { collection, record_id })),
-	listArtifacts: (filters: { artifact_type?: string; q?: string; include_archived?: boolean; limit?: number; offset?: number } = {}) => {
-		const params = new URLSearchParams();
-		for (const [key, value] of Object.entries(filters)) if (value !== undefined && value !== "") params.set(key, String(value));
-		return request<JsonObject>(`/artifacts${params.size ? `?${params.toString()}` : ""}`);
-	},
-	getArtifact: (artifactId: string) => request<JsonObject>(`/artifacts/${encodeURIComponent(artifactId)}`),
 	getArtifactLinks: (artifactId: string) => request<JsonObject>(`/artifacts/${encodeURIComponent(artifactId)}/links`),
 	linkArtifacts: (sourceArtifactId: string, targetArtifactId: string, relation = "related_to") =>
 		request<JsonObject>(`/artifacts/${encodeURIComponent(sourceArtifactId)}/links`, json("POST", { target_artifact_id: targetArtifactId, relation })),
 	analyzeImageArtifact: (artifactId: string, prompt = "Describe this image and extract any readable text.", saveArtifact = true) =>
 		request<JsonObject>("/images/analyze-artifact", json("POST", { artifact_id: artifactId, prompt, save_artifact: saveArtifact })),
-	artifactStats: () => request<JsonObject>("/artifacts/stats"),
 	getOpenApi: () => request<JsonObject>("/openapi.json"),
 	listRuns: () => request<JsonObject>("/runs"),
 	getRun: (runId: string) => request<JsonObject>(`/runs/${encodeURIComponent(runId)}`),
