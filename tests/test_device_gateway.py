@@ -41,7 +41,6 @@ def test_device_commands_report_unavailable_until_transport_confirms_delivery(tm
         json={
             "device_id": "lamp-1",
             "device_type": "esp32",
-            "capabilities": ["set_led"],
             "permissions": ["commands.receive"],
             "connection": "wifi",
             "status": "registered",
