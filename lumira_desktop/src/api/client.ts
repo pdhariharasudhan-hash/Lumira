@@ -260,6 +260,8 @@ export const api = {
 		request<JsonObject>("/voice/playback", json("POST", { text, language })),
 	retryVoiceSummary: (transcript_artifact_id: string) =>
 		request<JsonObject>("/voice/retry-summary", json("POST", { transcript_artifact_id })),
+	retryVoiceMemory: (audio_artifact_id: string, transcript_artifact_id: string, summary_artifact_id?: string) =>
+		request<JsonObject>("/voice/retry-memory", json("POST", { audio_artifact_id, transcript_artifact_id, ...(summary_artifact_id ? { summary_artifact_id } : {}) })),
 	transcribeVoice: (artifact_id: string) => request<JsonObject>("/voice/transcript", json("POST", { artifact_id })),
 	summarizeVoice: (artifact_id: string) => request<JsonObject>("/voice/summary", json("POST", { artifact_id })),
 	saveVoiceResult: (sessionId: string, audio_artifact_id: string, transcript_artifact_id?: string, summary_artifact_id?: string) =>
