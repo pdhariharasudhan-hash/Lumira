@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
+from typing import Annotated
 
 from app.services.workflow_recovery.run_recovery_service import RunRecoveryService
 from app.agents.workflow_engine import WorkflowEngine
@@ -15,7 +16,7 @@ def _recovery_service_error(error: Exception) -> HTTPException:
 
 
 @router.get("/recovery/runs")
-def list_recovery_runs(limit: int = Query(default=50, ge=0, le=200)):
+def list_recovery_runs(limit: Annotated[int, Query(ge=0, le=200)] = 50):
     try:
         return {"runs": RunRecoveryService().list_runs(limit=limit)}
     except Exception as exc:
