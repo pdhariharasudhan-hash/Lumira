@@ -95,7 +95,7 @@ def test_memory_search_filters_matching_records_and_links_safe_artifact_metadata
         "txt",
     )
     service.memory.record_experience(
-        experience_type="voice_capture",
+        experience_type="workflow",
         summary="unique phrase memory recovery",
         outcome="The voice idea was saved.",
         artifact_ids=[artifact["artifact_id"]],
