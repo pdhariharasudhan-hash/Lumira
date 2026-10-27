@@ -160,6 +160,26 @@ def link_artifact(artifact_id: str, request: ArtifactLinkRequest):
     return {"success": True, "source_artifact_id": artifact_id, **result}
 
 
+@router.delete("/artifacts/{artifact_id}/links")
+def unlink_artifact(
+    artifact_id: str,
+    target_artifact_id: Annotated[str, Query(min_length=1, max_length=128)],
+    relation: Annotated[str, Query(pattern=r"^[a-z][a-z0-9_-]{0,39}$")] = "related_to",
+):
+    manager = _manager()
+    try:
+        result = manager.unlink_artifacts(
+            source_id=artifact_id,
+            target_id=target_artifact_id,
+            relation=relation,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="source or target artifact not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"success": True, "source_artifact_id": artifact_id, **result}
+
+
 @router.get("/artifacts/{artifact_id}/links")
 def get_artifact_links(artifact_id: str):
     manager = _manager()
