@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field, field_validator
@@ -115,11 +115,11 @@ class GoalDecomposeRequest(BaseModel):
 
 @router.get("/goals")
 def list_goals(
-    project_id: str | None = Query(default=None, max_length=100),
+    project_id: Annotated[str | None, Query(max_length=100)] = None,
     status: Literal["active", "paused", "completed", "blocked", "cancelled"] | None = None,
-    parent_goal_id: str | None = Query(default=None, max_length=128),
-    limit: int = Query(default=100, ge=1, le=200),
-    offset: int = Query(default=0, ge=0, le=100_000),
+    parent_goal_id: Annotated[str | None, Query(max_length=128)] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
+    offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
 ):
     try:
         records = MemoryService().get_all().get("goals", [])
@@ -228,7 +228,7 @@ def get_goal_tree(goal_id: str):
 def generate_goal_plan(
     goal_id: str,
     category: Literal["business", "operations"] = "operations",
-    session_id: str | None = Query(default=None, max_length=100),
+    session_id: Annotated[str | None, Query(max_length=100)] = None,
 ):
     """Convert a saved goal into a bounded, persistent workflow using Lumira's existing planner."""
     try:
@@ -497,7 +497,7 @@ class GoalDependencyRequest(BaseModel):
 
 @router.get("/goals/summary")
 def get_goals_summary(
-    project_id: str | None = Query(default=None, max_length=100),
+    project_id: Annotated[str | None, Query(max_length=100)] = None,
 ):
     """Return a compact, persistent-store-backed goal portfolio summary."""
     try:
@@ -550,7 +550,7 @@ def get_goals_summary(
 
 
 @router.get("/goals/{goal_id}/dependencies")
-def get_goal_dependencies(goal_id: str, max_depth: int = Query(default=10, ge=1, le=20)):
+def get_goal_dependencies(goal_id: str, max_depth: Annotated[int, Query(ge=1, le=20)] = 10):
     """Return a bounded dependency graph, including missing references and cycles."""
     try:
         goals = MemoryService().get_all().get("goals", [])
@@ -626,7 +626,7 @@ def add_goal_blocker(goal_id: str, request: GoalBlockerRequest):
 
 
 @router.delete("/goals/{goal_id}/blockers")
-def remove_goal_blocker(goal_id: str, blocker: str = Query(min_length=1, max_length=500)):
+def remove_goal_blocker(goal_id: str, blocker: Annotated[str, Query(min_length=1, max_length=500)]):
     """Remove an exact blocker string while preserving all other blocker state."""
     target = blocker.strip()
     if not target:
@@ -701,7 +701,7 @@ def add_goal_dependency(goal_id: str, request: GoalDependencyRequest):
 
 
 @router.delete("/goals/{goal_id}/dependencies")
-def remove_goal_dependency(goal_id: str, dependency_goal_id: str = Query(min_length=1, max_length=128)):
+def remove_goal_dependency(goal_id: str, dependency_goal_id: Annotated[str, Query(min_length=1, max_length=128)]):
     """Remove one dependency edge without changing the referenced goal."""
     dependency_goal_id = dependency_goal_id.strip()
     if not dependency_goal_id:
