@@ -41,6 +41,7 @@ from app.services.code.code_service import (
 from app.services.planner.planner_service import (
     PlannerService
 )
+from app.services.planner.plan_executor_v3 import PlanExecutorV3
 
 from app.services.growth.growth_capability_service import (
     GrowthCapabilityService
@@ -245,6 +246,13 @@ class CapabilityRouterService:
                 mode_state
             )
 
+        # Bounded end-to-end planning and code generation; generated code is not run.
+        if capability == "project_pipeline":
+            goal = payload.get(
+                "goal",
+                payload.get("request", payload.get("idea", payload.get("command", ""))),
+            )
+            return self._with_mode(PlanExecutorV3().execute(goal), mode_state)
 
         if capability == "activate_feature":
 
