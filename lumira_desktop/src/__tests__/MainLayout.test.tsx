@@ -388,7 +388,7 @@ describe("Lumira workspace shell", () => {
 		render(<MainLayout />);
 		fireEvent.click(screen.getByRole("button", { name: "Unified Search" }));
 		fireEvent.change(await screen.findByRole("textbox", { name: "Search Lumira" }), { target: { value: "transcript" } });
-		fireEvent.click(screen.getByRole("button", { name: "Search", exact: true }));
+		fireEvent.click(screen.getByRole("button", { name: /^Search$/ }));
 		const related = await screen.findByRole("button", { name: "summaries · summary" });
 		fireEvent.click(related);
 		await waitFor(() => {
