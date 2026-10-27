@@ -4,14 +4,18 @@ on:
   pull_request:
     paths:
       - "app/routes/**"
+      - "app/services/artifacts/**"
       - "tests/test_route_parameter_defaults.py"
+      - "tests/test_artifact_relationships.py"
       - "requirements.txt"
       - ".github/workflows/route-parameter-regression.yml"
   push:
     branches: [main]
     paths:
       - "app/routes/**"
+      - "app/services/artifacts/**"
       - "tests/test_route_parameter_defaults.py"
+      - "tests/test_artifact_relationships.py"
       - "requirements.txt"
       - ".github/workflows/route-parameter-regression.yml"
 
@@ -34,4 +38,4 @@ jobs:
       - name: Install backend dependencies
         run: python -m pip install -r requirements.txt
       - name: Verify route defaults and validation metadata
-        run: python -m pytest -q tests/test_route_parameter_defaults.py
+        run: python -m pytest -q tests/test_route_parameter_defaults.py tests/test_artifact_relationships.py
