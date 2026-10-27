@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
@@ -54,9 +54,9 @@ def register_device(request: DeviceRegisterRequest):
 
 @router.get("/devices")
 def list_devices(
-    status: str | None = Query(default=None, max_length=20),
-    device_type: str | None = Query(default=None, max_length=32),
-    limit: int = Query(default=100, ge=0, le=200),
+    status: Annotated[str | None, Query(max_length=20)] = None,
+    device_type: Annotated[str | None, Query(max_length=32)] = None,
+    limit: Annotated[int, Query(ge=0, le=200)] = 100,
 ):
     try:
         return {"devices": DeviceRegistryService().list_devices(status, device_type, limit)}
@@ -94,7 +94,7 @@ def receive_device_message(request: DeviceMessageRequest):
 
 
 @router.get("/devices/messages")
-def list_device_messages(limit: int = Query(default=50, ge=0, le=200)):
+def list_device_messages(limit: Annotated[int, Query(ge=0, le=200)] = 50):
     return {"messages": DeviceGatewayService().list_messages(limit)}
 
 
