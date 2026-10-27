@@ -6,7 +6,6 @@ on:
       - "app/routes/**"
       - "app/services/artifacts/**"
       - "tests/test_voice_interactions.py"
-      - "tests/test_voice_interactions.py"
       - "tests/test_route_parameter_defaults.py"
       - "tests/test_artifact_relationships.py"
       - "requirements.txt"
@@ -16,6 +15,7 @@ on:
     paths:
       - "app/routes/**"
       - "app/services/artifacts/**"
+      - "tests/test_voice_interactions.py"
       - "tests/test_route_parameter_defaults.py"
       - "tests/test_artifact_relationships.py"
       - "requirements.txt"
