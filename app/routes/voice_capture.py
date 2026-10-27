@@ -290,6 +290,8 @@ def retry_voice_memory(request: VoiceMemoryRetryRequest):
         raise HTTPException(status_code=404, detail="audio artifact not found")
     if not transcript or transcript.get("type") != "transcripts":
         raise HTTPException(status_code=404, detail="transcript artifact not found")
+    if audio.get("archived", False) or transcript.get("archived", False):
+        raise HTTPException(status_code=409, detail="archived voice artifacts cannot be used for memory recovery")
     if transcript.get("source") != request.audio_artifact_id:
         raise HTTPException(status_code=409, detail="transcript does not belong to the supplied audio artifact")
 
@@ -313,6 +315,8 @@ def retry_voice_memory(request: VoiceMemoryRetryRequest):
         summary_record = artifacts.get_artifact(request.summary_artifact_id)
         if not summary_record or summary_record.get("type") != "summaries":
             raise HTTPException(status_code=404, detail="summary artifact not found")
+        if summary_record.get("archived", False):
+            raise HTTPException(status_code=409, detail="archived summary artifacts cannot be used for memory recovery")
         if summary_record.get("source") != request.transcript_artifact_id:
             raise HTTPException(status_code=409, detail="summary does not belong to the supplied transcript")
         summary_path = artifacts.get_artifact_path(request.summary_artifact_id)
@@ -402,6 +406,9 @@ def retry_voice_summary(request: VoiceSummaryRetryRequest):
     transcript = artifacts.get_artifact(request.transcript_artifact_id)
     if not transcript or transcript.get("type") != "transcripts":
         raise HTTPException(status_code=404, detail="transcript artifact not found")
+
+    if transcript.get("archived", False):
+        raise HTTPException(status_code=409, detail="archived transcript artifacts cannot be summarized")
 
     transcript_path = artifacts.get_artifact_path(request.transcript_artifact_id)
     if transcript_path is None or not transcript_path.is_file():
