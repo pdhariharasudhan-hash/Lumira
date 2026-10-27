@@ -359,4 +359,42 @@ describe("Lumira workspace shell", () => {
 		expect(stoppedTrack).toHaveBeenCalledTimes(1);
 	});
 
+
+	it("opens linked artifacts directly from unified search results", async () => {
+		const fetchMock = mockFetch((input) => {
+			const path = String(input);
+			if (path.startsWith("/search?")) return jsonResponse({
+				query: "transcript",
+				results: {
+					artifacts: [{
+						artifact_id: "transcript-1",
+						type: "transcripts",
+						source: "voice capture",
+						title: "Saved transcript",
+						related_artifacts: [{
+							artifact_id: "summary",
+							type: "summaries",
+							relation: "summarized_as",
+							direction: "outgoing",
+						}],
+						relationship_count: 1,
+					}],
+				},
+			});
+			if (path === "/artifacts/summary") return jsonResponse({ artifact: { artifact_id: "summary", type: "summaries", source: "transcript-1" } });
+			if (path === "/artifacts/summary/links") return jsonResponse({ success: true, artifact_id: "summary", links: [] });
+			return defaultResponse(input);
+		});
+		render(<MainLayout />);
+		fireEvent.click(screen.getByRole("button", { name: "Unified Search" }));
+		fireEvent.change(await screen.findByRole("textbox", { name: "Search Lumira" }), { target: { value: "transcript" } });
+		fireEvent.click(screen.getByRole("button", { name: "Search", exact: true }));
+		const related = await screen.findByRole("button", { name: "summaries · summary" });
+		fireEvent.click(related);
+		await waitFor(() => {
+			expect(fetchMock.mock.calls.some(([input]) => String(input) === "/artifacts/summary")).toBe(true);
+			expect(fetchMock.mock.calls.some(([input]) => String(input) === "/artifacts/summary/links")).toBe(true);
+		});
+	});
+
 });
