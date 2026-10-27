@@ -235,3 +235,30 @@ def test_local_ollama_vision_takes_precedence_when_both_modes_are_enabled(monkey
         for name, provider in previous.items():
             if provider is not None:
                 ProviderRegistry.register(name, provider)
+
+
+
+def test_local_ollama_summary_registers_only_when_explicitly_enabled(monkeypatch):
+    previous = {name: ProviderRegistry.get(name) for name in PROVIDER_STATUS_NAMES}
+    local_provider = object()
+    try:
+        for key, value in PROVIDER_ENV.items():
+            monkeypatch.setenv(key, value)
+        monkeypatch.setenv("LUMIRA_OLLAMA_SUMMARY_ENABLED", "0")
+        monkeypatch.setattr(
+            "app.services.providers.startup_registration.OllamaSummaryProvider",
+            lambda: local_provider,
+        )
+        _clear_optional_providers()
+        register_configured_providers()
+        assert ProviderRegistry.get("summarization") is None
+
+        monkeypatch.setenv("LUMIRA_OLLAMA_SUMMARY_ENABLED", "1")
+        _clear_optional_providers()
+        register_configured_providers()
+        assert ProviderRegistry.get("summarization") is local_provider
+    finally:
+        _clear_optional_providers()
+        for name, provider in previous.items():
+            if provider is not None:
+                ProviderRegistry.register(name, provider)
