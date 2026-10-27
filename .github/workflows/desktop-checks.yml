@@ -1,0 +1,38 @@
+name: Lumira Desktop checks
+
+on:
+  pull_request:
+    paths:
+      - "lumira_desktop/**"
+      - ".github/workflows/desktop-checks.yml"
+  push:
+    branches: [main]
+    paths:
+      - "lumira_desktop/**"
+      - ".github/workflows/desktop-checks.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: lumira_desktop
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: lumira_desktop/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Build desktop interface
+        run: npm run build
+      - name: Run desktop tests
+        run: npm test
