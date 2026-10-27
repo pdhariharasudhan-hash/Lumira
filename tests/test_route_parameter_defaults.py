@@ -6,6 +6,7 @@ objects instead of the intended default.
 """
 import importlib
 import inspect
+from typing import get_type_hints
 
 import pytest
 from fastapi.params import Query
@@ -53,9 +54,10 @@ def test_query_constraints_remain_in_annotated_metadata(module_name, function_na
     module = importlib.import_module(module_name)
     function = getattr(module, function_name)
     signature = inspect.signature(function)
+    resolved_annotations = get_type_hints(function, include_extras=True)
 
     for parameter_name in expected_defaults:
-        annotation = signature.parameters[parameter_name].annotation
+        annotation = resolved_annotations[parameter_name]
         metadata = getattr(annotation, "__metadata__", ())
         assert any(isinstance(item, Query) for item in metadata), (
             f"{module_name}.{function_name}.{parameter_name} lost its FastAPI Query constraints"
