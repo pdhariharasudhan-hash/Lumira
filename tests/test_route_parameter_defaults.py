@@ -28,6 +28,21 @@ PARAMETERS = [
     ("app.routes.run", "list_runs", {"limit": 50}),
     ("app.routes.artifacts", "list_artifacts", {"q": None, "limit": 100, "offset": 0}),
     ("app.routes.search", "search", {"q": inspect.Parameter.empty}),
+    ("app.routes.devices", "list_device_messages", {"limit": 50}),
+    ("app.routes.goals", "get_goal_dependencies", {"max_depth": 10}),
+    ("app.routes.goals", "remove_goal_blocker", {"blocker": inspect.Parameter.empty}),
+    ("app.routes.goals", "remove_goal_dependency", {"dependency_goal_id": inspect.Parameter.empty}),
+    ("app.routes.goal_intelligence", "search_goals", {"q": inspect.Parameter.empty, "project_id": None, "limit": 30}),
+    ("app.routes.goal_intelligence", "get_goal_timeline", {"project_id": None, "days": 30, "limit": 100}),
+    ("app.routes.goal_intelligence", "get_goal_next_actions", {"project_id": None, "limit": 10}),
+    ("app.routes.goal_intelligence", "duplicate_goal", {"include_children": False}),
+    ("app.routes.goal_intelligence", "export_goals", {"project_id": None, "limit": 500}),
+    ("app.routes.project_insights", "project_manifest", {"version": None, "limit": 200}),
+    ("app.routes.project_insights", "compare_project_versions", {"left": inspect.Parameter.empty, "right": inspect.Parameter.empty}),
+    ("app.routes.project_insights", "project_security_review", {"version": None}),
+    ("app.routes.project_insights", "project_readiness_audit", {"version": None}),
+    ("app.routes.workflows", "list_workflows", {"category": None, "session_id": None, "project_id": None, "goal_id": None, "status": None, "limit": 50}),
+    ("app.routes.memory", "search_memory", {"q": inspect.Parameter.empty, "project_id": None, "goal_id": None, "limit": 20}),
 ]
 
 
