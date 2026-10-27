@@ -9,7 +9,7 @@
 | 3 | `voice_idea_capture` | Voice capture, transcript service, remote transcription provider, optional local faster-whisper provider | Provider-dependent, but can now run locally without a remote API after the optional dependency/model is installed and `LUMIRA_LOCAL_TRANSCRIPTION_ENABLED=1` is set. First-run model download and actual Tamil/English accuracy remain environment-dependent and unverified. |
 | 4 | `artifact_manager` | Artifact manager and `/artifacts` routes | Text/binary storage, bounded persistent relationships, incoming/outgoing relationship lookup, link/unlink endpoints, archive/restore/delete cleanup, and path-free metadata are implemented. Relationship regression tests pass in CI; provider/file behavior still needs full verification. |
 | 5 | `image_generation` | Image generation service and OpenAI-compatible image provider | Provider-dependent; activation is blocked until image provider is registered. |
-| 6 | `unified_search` | Unified search service and `/search` routes | Project/memory/artifact/history search surfaces exist; artifact results now include bounded related-artifact metadata for graph navigation. Source coverage and runtime checks remain. |
+| 6 | `unified_search` | Unified search service and `/search` routes | Project/memory/artifact/history search surfaces exist; memory search now filters matching records instead of returning entire matching categories, attaches safe related-artifact metadata, and the desktop renders grouped memory results with direct artifact navigation. Source coverage and runtime checks remain. |
 | 7 | `intent` | Intent classifier and `/intelligence/analyze` | Deterministic analysis path exists; semantic coverage remains limited and needs tests. |
 | 8 | `goals` | Memory-backed goal operations and `/goals` | CRUD/listing exists; verify persistence and validation tests. |
 | 9 | `planner` | `PlannerService`, `PlannerModule`, Brain pipeline | Brain-integrated planning exists; execution readiness depends on decision/constraint gates. |
@@ -111,3 +111,5 @@
 
 - Added `POST /voice/retry-memory` and a desktop retry action. It validates that saved transcript and optional summary artifacts belong to the supplied audio/transcript chain, attaches missing artifact IDs to an existing memory experience or creates an unverified experience, and preserves saved artifacts if memory persistence fails. Added a desktop regression test for recovering from a failed memory write.
 - Current branch CI verified the full backend suite at **570 passed, 2 warnings** and the desktop build/tests passed. The latest successful checks include voice-memory recovery and artifact-graph navigation in the desktop tests.
+
+- Verified after the memory-search integration: backend suite **572 passed, 2 warnings**; focused route/artifact/voice/image/search regression checks passed; desktop build and tests passed, including memory-result rendering and related-artifact navigation.
