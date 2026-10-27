@@ -38,6 +38,8 @@ class FakeAgents:
 def test_agent_dispatch_passes_through_main_brain_before_dispatch(monkeypatch):
     from app.services.resources.resource_budget_service import ResourceBudgetService
     monkeypatch.setattr(ResourceBudgetService, "snapshot", lambda self: {"resource_pressure": "normal"})
+    from threading import Lock
+    monkeypatch.setattr(BrainAgentOrchestrator, "_dispatch_lock", Lock())
     brain = FakeBrain()
     agents = FakeAgents()
     agents.dispatch = lambda task: {"success": True, "state": "started", "agent": "planner_agent", "result": {"status": "started"}}
