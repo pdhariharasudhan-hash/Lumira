@@ -9,7 +9,7 @@ on:
       - "tests/test_image_understanding.py"
       - "tests/test_voice_interactions.py"
       - "tests/test_route_parameter_defaults.py"
-      - "tests/test_artifact_relationships.py"
+      - "tests/**"
       - "requirements.txt"
       - ".github/workflows/route-parameter-regression.yml"
       - "lumira_desktop/**"
@@ -25,7 +25,7 @@ on:
       - ".github/workflows/desktop-checks.yml"
       - "tests/test_voice_interactions.py"
       - "tests/test_route_parameter_defaults.py"
-      - "tests/test_artifact_relationships.py"
+      - "tests/**"
       - "requirements.txt"
       - ".github/workflows/route-parameter-regression.yml"
 
