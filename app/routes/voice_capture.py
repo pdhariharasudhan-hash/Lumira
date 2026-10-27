@@ -272,6 +272,123 @@ def process_voice_capture(request: VoiceProcessRequest):
 
 
 
+class VoiceMemoryRetryRequest(BaseModel):
+    audio_artifact_id: str = Field(min_length=1, max_length=128)
+    transcript_artifact_id: str = Field(min_length=1, max_length=128)
+    summary_artifact_id: str | None = Field(default=None, max_length=128)
+
+
+@router.post("/voice/retry-memory")
+def retry_voice_memory(request: VoiceMemoryRetryRequest):
+    """Recover memory persistence from saved artifacts without re-recording or re-transcribing."""
+    from app.services.artifacts.artifact_manager_service import ArtifactManagerService
+
+    artifacts = ArtifactManagerService()
+    audio = artifacts.get_artifact(request.audio_artifact_id)
+    transcript = artifacts.get_artifact(request.transcript_artifact_id)
+    if not audio or audio.get("type") != "audio":
+        raise HTTPException(status_code=404, detail="audio artifact not found")
+    if not transcript or transcript.get("type") != "transcripts":
+        raise HTTPException(status_code=404, detail="transcript artifact not found")
+    if transcript.get("source") != request.audio_artifact_id:
+        raise HTTPException(status_code=409, detail="transcript does not belong to the supplied audio artifact")
+
+    transcript_path = artifacts.get_artifact_path(request.transcript_artifact_id)
+    if transcript_path is None or not transcript_path.is_file():
+        raise HTTPException(status_code=404, detail="transcript content not found")
+    try:
+        if transcript_path.stat().st_size > artifacts.MAX_CONTENT_LENGTH:
+            raise HTTPException(status_code=413, detail="transcript exceeds the processing limit")
+        transcript_text = transcript_path.read_text(encoding="utf-8").strip()
+    except HTTPException:
+        raise
+    except (OSError, UnicodeError) as error:
+        raise HTTPException(status_code=422, detail="transcript content could not be read") from error
+    if not transcript_text:
+        raise HTTPException(status_code=422, detail="transcript is empty")
+
+    summary = None
+    summary_text = ""
+    if request.summary_artifact_id:
+        summary_record = artifacts.get_artifact(request.summary_artifact_id)
+        if not summary_record or summary_record.get("type") != "summaries":
+            raise HTTPException(status_code=404, detail="summary artifact not found")
+        if summary_record.get("source") != request.transcript_artifact_id:
+            raise HTTPException(status_code=409, detail="summary does not belong to the supplied transcript")
+        summary_path = artifacts.get_artifact_path(request.summary_artifact_id)
+        if summary_path is None or not summary_path.is_file():
+            raise HTTPException(status_code=404, detail="summary content not found")
+        try:
+            if summary_path.stat().st_size > artifacts.MAX_CONTENT_LENGTH:
+                raise HTTPException(status_code=413, detail="summary exceeds the processing limit")
+            summary_text = summary_path.read_text(encoding="utf-8").strip()
+        except HTTPException:
+            raise
+        except (OSError, UnicodeError) as error:
+            raise HTTPException(status_code=422, detail="summary content could not be read") from error
+        if not summary_text:
+            raise HTTPException(status_code=422, detail="summary is empty")
+        summary = {
+            "summary_text": summary_text,
+            "summary_artifact": {"artifact_id": request.summary_artifact_id},
+        }
+
+    try:
+        memory = MemoryService()
+        existing = memory.get_all()
+        experiences = existing.get("experiences", []) if isinstance(existing, dict) else []
+        found = any(
+            isinstance(item, dict)
+            and isinstance(item.get("artifact_ids"), list)
+            and request.audio_artifact_id in item["artifact_ids"]
+            for item in experiences if isinstance(experiences, list)
+        )
+        if found:
+            additions = [request.transcript_artifact_id]
+            if request.summary_artifact_id:
+                additions.append(request.summary_artifact_id)
+            record = memory.attach_artifacts_to_experience(request.audio_artifact_id, additions)
+            memory_result = {
+                "success": True,
+                "state": "updated",
+                "experience_id": record.get("experience_id"),
+                "message": "Saved voice artifacts were attached to the existing memory experience.",
+            }
+        else:
+            memory_result = _persist_voice_capture_memory(
+                request.audio_artifact_id,
+                request.transcript_artifact_id,
+                {"transcript_text": transcript_text},
+                summary,
+            )
+    except Exception:
+        memory_result = {
+            "success": False,
+            "code": "memory_persistence_failed",
+            "message": "The saved voice artifacts remain available, but memory persistence could not be recovered.",
+        }
+
+    if memory_result.get("success") is not True:
+        raise HTTPException(status_code=503, detail=memory_result)
+
+    relationships = _link_voice_artifacts(
+        artifacts,
+        request.audio_artifact_id,
+        request.transcript_artifact_id,
+        request.summary_artifact_id,
+    )
+    return {
+        "success": True,
+        "state": "completed",
+        "audio_artifact_id": request.audio_artifact_id,
+        "transcript_artifact_id": request.transcript_artifact_id,
+        "summary_artifact_id": request.summary_artifact_id,
+        "artifact_relationships": relationships,
+        "memory": memory_result,
+        "message": "Saved voice artifacts are linked to Lumira memory.",
+    }
+
+
 class VoiceSummaryRetryRequest(BaseModel):
     transcript_artifact_id: str = Field(min_length=1, max_length=128)
 
