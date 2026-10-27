@@ -238,6 +238,10 @@ export const api = {
 	getArtifactLinks: (artifactId: string) => request<JsonObject>(`/artifacts/${encodeURIComponent(artifactId)}/links`),
 	linkArtifacts: (sourceArtifactId: string, targetArtifactId: string, relation = "related_to") =>
 		request<JsonObject>(`/artifacts/${encodeURIComponent(sourceArtifactId)}/links`, json("POST", { target_artifact_id: targetArtifactId, relation })),
+	unlinkArtifacts: (sourceArtifactId: string, targetArtifactId: string, relation = "related_to") => {
+		const params = new URLSearchParams({ target_artifact_id: targetArtifactId, relation });
+		return request<JsonObject>(`/artifacts/${encodeURIComponent(sourceArtifactId)}/links?${params.toString()}`, { method: "DELETE" });
+	},
 	analyzeImageArtifact: (artifactId: string, prompt = "Describe this image and extract any readable text.", saveArtifact = true) =>
 		request<JsonObject>("/images/analyze-artifact", json("POST", { artifact_id: artifactId, prompt, save_artifact: saveArtifact })),
 	getOpenApi: () => request<JsonObject>("/openapi.json"),
