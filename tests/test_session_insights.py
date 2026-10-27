@@ -57,7 +57,7 @@ def test_summary_counts_statuses_and_recovery_snapshots(fake_data):
 
 
 def test_search_returns_metadata_not_full_message_bodies(fake_data):
-    result = route.search_sessions(q="BUILD LUMIRA")
+    result = route.search_sessions(q="active-session")
     assert result["total"] == 1
     assert result["sessions"][0]["session_id"] == "active-session"
     assert "recent_messages" not in result["sessions"][0]
