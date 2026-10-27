@@ -187,13 +187,49 @@ class UnifiedSearchService:
         return results
 
     def search_memory(self, query: str) -> dict:
+        """Search matching memory records and expose safe links to their artifacts."""
         if not self._terms(query):
             return {}
         memory = self.memory.get_all()
-        return {
-            key: value for key, value in memory.items()
-            if self._matches(json.dumps(value, ensure_ascii=False), query)
-        }
+        if not isinstance(memory, dict):
+            return {}
+
+        results = {}
+        for key, value in memory.items():
+            if isinstance(value, list):
+                matches = []
+                for record in value[:1000]:
+                    if not self._matches(json.dumps(record, ensure_ascii=False), query):
+                        continue
+                    if not isinstance(record, dict):
+                        matches.append(record)
+                        continue
+                    enriched = dict(record)
+                    artifact_ids = record.get("artifact_ids", [])
+                    if isinstance(artifact_ids, list):
+                        related = []
+                        for artifact_id in artifact_ids[:50]:
+                            if not isinstance(artifact_id, str):
+                                continue
+                            try:
+                                artifact = self.artifacts.get_artifact(artifact_id)
+                            except (ValueError, KeyError, OSError):
+                                artifact = None
+                            if not isinstance(artifact, dict):
+                                continue
+                            related.append({
+                                name: artifact[name]
+                                for name in ("artifact_id", "type", "source", "timestamp", "archived")
+                                if name in artifact
+                            })
+                        if related:
+                            enriched["related_artifacts"] = related
+                    matches.append(enriched)
+                if matches:
+                    results[key] = matches
+            elif self._matches(json.dumps(value, ensure_ascii=False), query):
+                results[key] = value
+        return results
 
     def search_pipeline_history(self, query: str) -> list[dict]:
         return self._search_records(self.pipeline_history.get_history(), query)
