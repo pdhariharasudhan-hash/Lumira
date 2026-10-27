@@ -150,3 +150,40 @@ def test_unified_search_exposes_related_artifact_metadata_without_paths(manager)
     assert related_ids == {audio["artifact_id"], summary["artifact_id"]}
     assert all("file" not in item for item in result["related_artifacts"])
     assert "file" not in result
+
+
+
+def test_artifact_relationship_can_be_removed_without_deleting_content(manager):
+    source = create_report(manager, "source")
+    target = create_report(manager, "target")
+    manager.link_artifacts(source["artifact_id"], target["artifact_id"], "derived_from")
+
+    first = manager.unlink_artifacts(source["artifact_id"], target["artifact_id"], "derived_from")
+    second = manager.unlink_artifacts(source["artifact_id"], target["artifact_id"], "derived_from")
+
+    assert first["changed"] is True
+    assert second["changed"] is False
+    assert manager.get_artifact_links(source["artifact_id"])["links"] == []
+    assert manager.get_artifact(source["artifact_id"]) is not None
+    assert manager.get_artifact(target["artifact_id"]) is not None
+
+
+def test_artifact_relationship_removal_api_is_idempotent(manager, monkeypatch):
+    source = create_report(manager, "source")
+    target = create_report(manager, "target")
+    manager.link_artifacts(source["artifact_id"], target["artifact_id"], "derived_from")
+    monkeypatch.setattr(route, "_manager", lambda: manager)
+
+    response = route.unlink_artifact(
+        source["artifact_id"],
+        target_artifact_id=target["artifact_id"],
+        relation="derived_from",
+    )
+    repeated = route.unlink_artifact(
+        source["artifact_id"],
+        target_artifact_id=target["artifact_id"],
+        relation="derived_from",
+    )
+    assert response["success"] is True
+    assert response["changed"] is True
+    assert repeated["changed"] is False
