@@ -344,6 +344,7 @@ describe("Lumira workspace shell", () => {
 		});
 		render(<MainLayout />);
 		fireEvent.click(await screen.findByRole("button", { name: "Start microphone recording" }));
+		expect(await screen.findByRole("status")).toBeTruthy();
 		fireEvent.click(screen.getByRole("button", { name: "Stop microphone recording" }));
 		const retry = await screen.findByRole("button", { name: "Retry voice memory links" });
 		fireEvent.click(retry);
