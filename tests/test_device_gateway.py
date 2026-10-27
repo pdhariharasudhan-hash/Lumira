@@ -36,6 +36,28 @@ def test_device_commands_report_unavailable_until_transport_confirms_delivery(tm
     monkeypatch.chdir(tmp_path)
     client = TestClient(app)
     request = {"device_type": "esp32", "action": "set_led", "payload": {"enabled": True}}
+    registered = client.post(
+        "/devices/register",
+        json={
+            "device_id": "lamp-1",
+            "device_type": "esp32",
+            "capabilities": ["set_led"],
+            "permissions": ["commands.receive"],
+            "connection": "wifi",
+            "status": "online",
+        },
+    )
+    assert registered.status_code == 200
+    heartbeat = client.post(
+        "/devices/messages",
+        json={
+            "device_id": "lamp-1",
+            "device_type": "esp32",
+            "message_type": "heartbeat",
+            "payload": {"online": True},
+        },
+    )
+    assert heartbeat.status_code == 202
 
     unavailable = client.post("/devices/lamp-1/commands", json=request)
     assert unavailable.status_code == 501
