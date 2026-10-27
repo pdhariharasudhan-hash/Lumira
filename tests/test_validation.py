@@ -216,7 +216,7 @@ def test_voice_upload_persists_audio_and_reports_missing_provider(tmp_path, monk
         "/voice/transcript",
         json={"artifact_id": artifact["artifact_id"]},
     )
-    assert transcript.status_code == 501
+    assert transcript.status_code == 503
     assert transcript.json()["detail"]["code"] == "provider_unavailable"
 
 
@@ -403,13 +403,18 @@ def test_session_lifecycle_api_and_ambiguous_reference(tmp_path, monkeypatch):
 def test_goal_api_creates_lists_and_updates_durable_goal(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     client = TestClient(app)
+    root = client.post(
+        "/goals",
+        json={"title": "Portfolio root", "objective": "Parent goal for project work"},
+    )
+    assert root.status_code == 200
     created = client.post(
         "/goals",
         json={
             "title": "Expense API",
             "objective": "Ship JWT-secured expense management",
             "project_id": "expense_api",
-            "parent_goal_id": "portfolio-root",
+            "parent_goal_id": root.json()["goal_id"],
             "priority": "high",
         },
     )
@@ -418,13 +423,13 @@ def test_goal_api_creates_lists_and_updates_durable_goal(tmp_path, monkeypatch):
 
     updated = client.patch(
         f"/goals/{goal_id}",
-        json={"status": "in_progress", "progress": 0.4, "milestones": [{"title": "Authentication", "complete": True}]},
+        json={"status": "active", "progress": 40, "milestones": [{"title": "Authentication", "complete": True}]},
     )
     assert updated.status_code == 200
-    assert updated.json()["status"] == "in_progress"
-    assert updated.json()["progress"] == 0.4
+    assert updated.json()["status"] == "active"
+    assert updated.json()["progress"] == 40
 
-    listing = client.get("/goals", params={"project_id": "expense_api", "status": "in_progress"})
+    listing = client.get("/goals", params={"project_id": "expense_api", "status": "active"})
     assert listing.status_code == 200
     assert [goal["goal_id"] for goal in listing.json()["goals"]] == [goal_id]
 
