@@ -40,6 +40,7 @@ def test_agent_dispatch_passes_through_main_brain_before_dispatch(monkeypatch):
     monkeypatch.setattr(ResourceBudgetService, "snapshot", lambda self: {"resource_pressure": "normal"})
     brain = FakeBrain()
     agents = FakeAgents()
+    agents.dispatch = lambda task: {"success": True, "state": "started", "agent": "planner_agent", "result": {"status": "started"}}
 
     result = BrainAgentOrchestrator(brain, agents).execute("Plan my project")
 
