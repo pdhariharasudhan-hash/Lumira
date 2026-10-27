@@ -21,6 +21,11 @@ class ArtifactCreateRequest(BaseModel):
     extension: str = Field(default="txt", pattern=r"^[A-Za-z0-9]{1,12}$")
 
 
+class ArtifactLinkRequest(BaseModel):
+    target_artifact_id: str = Field(min_length=1, max_length=128)
+    relation: str = Field(default="related_to", pattern=r"^[a-z][a-z0-9_-]{0,39}$")
+
+
 class BinaryArtifactCreateRequest(BaseModel):
     type: str
     content_base64: str = Field(min_length=4, max_length=33_333_336)
@@ -137,6 +142,30 @@ def get_artifact(artifact_id: str):
     # Expose availability, never the local filesystem path itself.
     public_artifact["content_available"] = content_path is not None and content_path.is_file()
     return {"success": True, "artifact": public_artifact}
+
+
+@router.post("/artifacts/{artifact_id}/links", status_code=201)
+def link_artifact(artifact_id: str, request: ArtifactLinkRequest):
+    manager = _manager()
+    try:
+        result = manager.link_artifacts(
+            source_id=artifact_id,
+            target_id=request.target_artifact_id,
+            relation=request.relation,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="source or target artifact not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"success": True, "source_artifact_id": artifact_id, **result}
+
+
+@router.get("/artifacts/{artifact_id}/links")
+def get_artifact_links(artifact_id: str):
+    manager = _manager()
+    if manager.get_artifact(artifact_id) is None:
+        raise HTTPException(status_code=404, detail="artifact not found")
+    return {"success": True, **manager.get_artifact_links(artifact_id)}
 
 
 @router.post("/artifacts/{artifact_id}/archive")
