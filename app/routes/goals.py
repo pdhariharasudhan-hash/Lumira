@@ -449,6 +449,8 @@ def get_goal_readiness(goal_id: str):
         execution_blockers.append(f"Goal status is {status}, not active.")
     if unmet_dependencies:
         execution_blockers.append("One or more goal dependencies are incomplete or missing.")
+    if active_workflows:
+        execution_blockers.append("A linked workflow is already active; resume or resolve it before starting duplicate work.")
     if deadline_state == "invalid":
         execution_blockers.append("The stored deadline is not a valid ISO 8601 date or datetime.")
 
