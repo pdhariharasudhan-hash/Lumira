@@ -42,7 +42,7 @@ def _goal(**overrides):
 
 def test_goal_readiness_reports_unmet_dependency_and_active_workflow(monkeypatch):
     goals = [
-        _goal(),
+        _goal(dependencies=["goal-2"]),
         _goal(goal_id="goal-2", title="Prerequisite", status="blocked"),
     ]
     workflows = [{
