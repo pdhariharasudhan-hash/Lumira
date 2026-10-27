@@ -387,6 +387,46 @@ class ArtifactManagerService:
         self.store.update(add_link, {"artifacts": []})
         return result
 
+    def unlink_artifacts(self, source_id: str, target_id: str, relation: str = "related_to") -> dict:
+        """Remove one relationship without deleting either artifact."""
+        if not isinstance(source_id, str) or not source_id or len(source_id) > 128:
+            raise ValueError("Source artifact identifier is invalid")
+        if not isinstance(target_id, str) or not target_id or len(target_id) > 128:
+            raise ValueError("Target artifact identifier is invalid")
+        if not isinstance(relation, str) or not re.fullmatch(r"[a-z][a-z0-9_-]{0,39}", relation):
+            raise ValueError("Relation must be a lowercase identifier of at most 40 characters")
+
+        result = {"changed": False, "removed": None}
+
+        def remove_link(index):
+            self._validate_index(index)
+            artifacts = index["artifacts"]
+            source = next((item for item in artifacts if item["artifact_id"] == source_id), None)
+            target = next((item for item in artifacts if item["artifact_id"] == target_id), None)
+            if source is None or target is None:
+                raise KeyError("Source or target artifact not found")
+            links = source.get("links", [])
+            kept = [
+                link for link in links
+                if not (link.get("artifact_id") == target_id and link.get("relation") == relation)
+            ]
+            if len(kept) == len(links):
+                return False
+            removed = next(
+                link for link in links
+                if link.get("artifact_id") == target_id and link.get("relation") == relation
+            )
+            result["removed"] = dict(removed)
+            result["changed"] = True
+            if kept:
+                source["links"] = kept
+            else:
+                source.pop("links", None)
+            return True
+
+        self.store.update(remove_link, {"artifacts": []})
+        return result
+
     def get_artifact_links(self, artifact_id: str) -> dict:
         """Return outgoing and incoming links without exposing local file paths."""
         index = self._load_index()
