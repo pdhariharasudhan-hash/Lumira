@@ -184,3 +184,54 @@ def test_external_provider_constructors_reject_malformed_ports():
     for factory in factories:
         with pytest.raises(ValueError):
             factory()
+
+
+
+def test_local_transcription_takes_precedence_when_both_modes_are_enabled(monkeypatch):
+    previous = {name: ProviderRegistry.get(name) for name in PROVIDER_STATUS_NAMES}
+    local_provider = object()
+    try:
+        for key, value in PROVIDER_ENV.items():
+            monkeypatch.setenv(key, value)
+        monkeypatch.setenv("LUMIRA_TRANSCRIPTION_ENABLED", "1")
+        monkeypatch.setenv("LUMIRA_TRANSCRIPTION_API_KEY", "test-only")
+        monkeypatch.setenv("LUMIRA_LOCAL_TRANSCRIPTION_ENABLED", "1")
+        monkeypatch.setattr(
+            "app.services.providers.startup_registration.FasterWhisperTranscriptionProvider",
+            lambda: local_provider,
+        )
+
+        _clear_optional_providers()
+        register_configured_providers()
+
+        assert ProviderRegistry.get("transcription") is local_provider
+    finally:
+        _clear_optional_providers()
+        for name, provider in previous.items():
+            if provider is not None:
+                ProviderRegistry.register(name, provider)
+
+
+def test_local_ollama_vision_takes_precedence_when_both_modes_are_enabled(monkeypatch):
+    previous = {name: ProviderRegistry.get(name) for name in PROVIDER_STATUS_NAMES}
+    local_provider = object()
+    try:
+        for key, value in PROVIDER_ENV.items():
+            monkeypatch.setenv(key, value)
+        monkeypatch.setenv("LUMIRA_VISION_ENABLED", "1")
+        monkeypatch.setenv("LUMIRA_VISION_API_KEY", "test-only")
+        monkeypatch.setenv("LUMIRA_OLLAMA_VISION_ENABLED", "1")
+        monkeypatch.setattr(
+            "app.services.providers.startup_registration.OllamaVisionProvider",
+            lambda: local_provider,
+        )
+
+        _clear_optional_providers()
+        register_configured_providers()
+
+        assert ProviderRegistry.get("image_understanding") is local_provider
+    finally:
+        _clear_optional_providers()
+        for name, provider in previous.items():
+            if provider is not None:
+                ProviderRegistry.register(name, provider)
