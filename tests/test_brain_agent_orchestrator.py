@@ -35,7 +35,9 @@ class FakeAgents:
         return {"success": True, "state": "completed", "agent": agent_name, "result": {"status": "completed"}}
 
 
-def test_agent_dispatch_passes_through_main_brain_before_dispatch():
+def test_agent_dispatch_passes_through_main_brain_before_dispatch(monkeypatch):
+    from app.services.resources.resource_budget_service import ResourceBudgetService
+    monkeypatch.setattr(ResourceBudgetService, "snapshot", lambda self: {"resource_pressure": "normal"})
     brain = FakeBrain()
     agents = FakeAgents()
 
