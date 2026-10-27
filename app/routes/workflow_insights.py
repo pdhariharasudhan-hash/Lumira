@@ -1,6 +1,6 @@
 from copy import deepcopy
 from datetime import UTC, datetime, timedelta
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field, ConfigDict
@@ -44,7 +44,7 @@ def _parse_time(value):
 
 @router.get("/workflows/summary")
 def workflow_summary(
-    project_id: str | None = Query(default=None, max_length=100),
+    project_id: Annotated[str | None, Query(max_length=100)] = None,
     category: Literal["business", "operations"] | None = None,
 ):
     workflows = _workflows(project_id=project_id, category=category, limit=200)
@@ -86,8 +86,8 @@ def workflow_summary(
 
 @router.get("/workflows/attention")
 def workflow_attention(
-    project_id: str | None = Query(default=None, max_length=100),
-    limit: int = Query(default=20, ge=1, le=100),
+    project_id: Annotated[str | None, Query(max_length=100)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ):
     now = datetime.now(UTC)
     cutoff = now - timedelta(days=7)
@@ -114,9 +114,9 @@ def workflow_attention(
 
 @router.get("/workflows/timeline")
 def workflow_timeline(
-    days: int = Query(default=30, ge=1, le=365),
-    project_id: str | None = Query(default=None, max_length=100),
-    limit: int = Query(default=100, ge=1, le=500),
+    days: Annotated[int, Query(ge=1, le=365)] = 30,
+    project_id: Annotated[str | None, Query(max_length=100)] = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
 ):
     cutoff = datetime.now(UTC) - timedelta(days=days)
     events = []
@@ -141,11 +141,11 @@ def workflow_timeline(
 
 @router.get("/workflows/search")
 def search_workflows(
-    q: str = Query(min_length=1, max_length=200),
+    q: Annotated[str, Query(min_length=1, max_length=200)],
     status: Literal["planned", "in_progress", "blocked", "completed", "failed"] | None = None,
-    project_id: str | None = Query(default=None, max_length=100),
+    project_id: Annotated[str | None, Query(max_length=100)] = None,
     category: Literal["business", "operations"] | None = None,
-    limit: int = Query(default=30, ge=1, le=100),
+    limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ):
     query = q.strip().casefold()
     if not query:
@@ -164,10 +164,10 @@ def search_workflows(
 
 @router.get("/workflows/export")
 def export_workflows(
-    project_id: str | None = Query(default=None, max_length=100),
+    project_id: Annotated[str | None, Query(max_length=100)] = None,
     category: Literal["business", "operations"] | None = None,
     status: Literal["planned", "in_progress", "blocked", "completed", "failed"] | None = None,
-    limit: int = Query(default=100, ge=1, le=200),
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
 ):
     workflows = _workflows(project_id=project_id, category=category, limit=200)
     if status:
@@ -307,7 +307,7 @@ def ready_workflow_tasks(workflow_id: str):
 
 
 @router.get("/workflows/{workflow_id}/health")
-def workflow_health(workflow_id: str, stale_days: int = Query(default=7, ge=1, le=365)):
+def workflow_health(workflow_id: str, stale_days: Annotated[int, Query(ge=1, le=365)] = 7):
     workflow = _workflow_or_404(_service(), workflow_id)
     now = datetime.now(UTC)
     updated = _parse_time(workflow.get("updated_at"))
