@@ -103,11 +103,11 @@
 
 - Added persistent artifact relationships with self-link, missing-target, archived-artifact, duplicate-link, invalid-relation, and maximum-link checks. Deleting an artifact removes inbound references so the index does not retain dangling edges.
 - Added `POST /artifacts/{artifact_id}/links`, `GET /artifacts/{artifact_id}/links`, and `DELETE /artifacts/{artifact_id}/links`. Link responses expose only safe artifact metadata, not local filesystem paths.
-- Connected artifact relationships to Unified Search results, so matching transcripts/reports can show their related audio, summaries, and source artifacts without copying linked content into the result.
+- Connected artifact relationships to Unified Search results and added direct “open related artifact” controls, so matching transcripts/reports can navigate to related audio, summaries, and source artifacts without copying linked content into the result.
 - Added desktop controls to create and remove artifact links directly from artifact details.
 - Corrected durable task completion so repeating a completion update is idempotent while completed tasks still cannot be reopened.
 - Goal readiness now blocks duplicate execution when a linked workflow is already active.
 - Added a route-parameter regression test suite and GitHub Actions workflow. Current CI results must be checked against the latest branch commit; the full suite has recently narrowed to a small number of remaining failures, and no blanket “all features complete” claim is made.
 
-- Added `POST /voice/retry-memory` and a desktop retry action. It validates that saved transcript and optional summary artifacts belong to the supplied audio/transcript chain, attaches missing artifact IDs to an existing memory experience or creates an unverified experience, and preserves saved artifacts if memory persistence fails.
-- Current branch CI verified the full backend suite at **570 passed, 2 warnings** and the desktop build/tests passed. The newest voice-memory retry UI/API client changes are also covered by the latest successful checks.
+- Added `POST /voice/retry-memory` and a desktop retry action. It validates that saved transcript and optional summary artifacts belong to the supplied audio/transcript chain, attaches missing artifact IDs to an existing memory experience or creates an unverified experience, and preserves saved artifacts if memory persistence fails. Added a desktop regression test for recovering from a failed memory write.
+- Current branch CI verified the full backend suite at **570 passed, 2 warnings** and the desktop build/tests passed. The latest successful checks include voice-memory recovery and artifact-graph navigation in the desktop tests.
