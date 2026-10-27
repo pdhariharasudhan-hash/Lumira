@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
+from typing import Annotated
 from pydantic import BaseModel, Field
 
 from app.services.sessions.session_manager_service import SessionManagerService
@@ -37,7 +38,7 @@ def create_session(request: SessionCreateRequest):
 
 
 @router.get("/sessions")
-def list_sessions(limit: int = Query(default=50, ge=0, le=200)):
+def list_sessions(limit: Annotated[int, Query(ge=0, le=200)] = 50):
     try:
         return {"sessions": SessionManagerService().list_sessions(limit)}
     except Exception as exc:
