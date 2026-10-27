@@ -190,3 +190,38 @@ def test_image_analysis_route_reports_resource_pressure_as_temporary_unavailable
         assert exc.headers["Retry-After"] == "30"
     else:
         raise AssertionError("resource-pressure deferral must be a temporary unavailable response")
+
+
+def test_image_analysis_can_use_saved_image_artifact(monkeypatch, tmp_path):
+    image_path = tmp_path / "stored.png"
+    image_path.write_bytes(PNG_HEADER)
+    class FakeArtifacts:
+        def get_artifact(self, artifact_id):
+            return {"artifact_id": artifact_id, "type": "images", "archived": False} if artifact_id == "image-1" else None
+        def get_artifact_path(self, artifact_id):
+            return image_path if artifact_id == "image-1" else None
+    class FakeService:
+        MAX_IMAGE_BYTES = 10_000_000
+        def analyze(self, image_bytes, prompt, *, save_artifact=False):
+            assert image_bytes == PNG_HEADER
+            assert prompt == "Read the circuit labels"
+            assert save_artifact is True
+            return {"success": True, "description": "A labeled circuit", "artifact_saved": True}
+    monkeypatch.setattr("app.services.artifacts.artifact_manager_service.ArtifactManagerService", FakeArtifacts)
+    monkeypatch.setattr(route, "ImageUnderstandingService", FakeService)
+    result = route.analyze_image_artifact(route.ImageArtifactAnalysisRequest(artifact_id="image-1", prompt="Read the circuit labels"))
+    assert result["source_artifact_id"] == "image-1"
+    assert result["description"] == "A labeled circuit"
+
+
+def test_image_analysis_rejects_non_image_artifact(monkeypatch):
+    class FakeArtifacts:
+        def get_artifact(self, artifact_id):
+            return {"artifact_id": artifact_id, "type": "reports", "archived": False}
+    monkeypatch.setattr("app.services.artifacts.artifact_manager_service.ArtifactManagerService", FakeArtifacts)
+    try:
+        route.analyze_image_artifact(route.ImageArtifactAnalysisRequest(artifact_id="report-1"))
+    except HTTPException as exc:
+        assert exc.status_code == 422
+    else:
+        raise AssertionError("non-image artifact must be rejected")
