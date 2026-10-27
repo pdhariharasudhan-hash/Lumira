@@ -341,7 +341,7 @@ def retry_voice_memory(request: VoiceMemoryRetryRequest):
             isinstance(item, dict)
             and isinstance(item.get("artifact_ids"), list)
             and request.audio_artifact_id in item["artifact_ids"]
-            for item in experiences if isinstance(experiences, list)
+            for item in (experiences if isinstance(experiences, list) else [])
         )
         if found:
             additions = [request.transcript_artifact_id]
