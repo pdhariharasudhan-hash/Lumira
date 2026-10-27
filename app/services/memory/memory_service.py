@@ -724,6 +724,27 @@ class MemoryService:
             artifact_ids=artifact_ids, verified=verified is True,
         ))
 
+    def attach_artifacts_to_experience(self, source_artifact_id: str, artifact_ids: list[str]) -> dict:
+        """Idempotently attach newly created artifacts to an existing memory experience."""
+        source_id = self._bounded_text(source_artifact_id, "source_artifact_id", 128)
+        additions = self._bounded_string_list(artifact_ids, "artifact_ids", 50, 128)
+        now = datetime.now(UTC).isoformat()
+
+        def attach(memory):
+            experiences = memory.get("experiences", []) if isinstance(memory, dict) else []
+            for record in experiences if isinstance(experiences, list) else []:
+                current_ids = record.get("artifact_ids", []) if isinstance(record, dict) else []
+                if isinstance(record, dict) and isinstance(current_ids, list) and source_id in current_ids:
+                    record["artifact_ids"] = list(dict.fromkeys([*current_ids, *additions]))
+                    record["updated_at"] = now
+                    return dict(record)
+            raise KeyError("voice memory experience not found")
+
+        try:
+            return self.cognitive_store.update(attach, self._default_cognitive_memory())
+        except PersistenceIntegrityError as exc:
+            raise MemoryValidationError(str(exc)) from exc
+
     def verify_experience(self, experience_id: str) -> dict:
         """Explicitly verify a persisted experience, then consolidate eligible learning."""
         experience_id = self._bounded_text(experience_id, "experience_id", 128)

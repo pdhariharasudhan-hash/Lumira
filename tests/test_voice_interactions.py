@@ -17,9 +17,9 @@ def test_voice_activation_and_playback_have_truthful_provider_boundaries(tmp_pat
 
     activation = client.post("/voice/activation", json={"artifact_id": audio_id})
     playback = client.post("/voice/playback", json={"text": "வணக்கம் Lumira", "language": "ta-en"})
-    assert activation.status_code == 501
+    assert activation.status_code == 503
     assert activation.json()["detail"]["code"] == "provider_unavailable"
-    assert playback.status_code == 501
+    assert playback.status_code == 503
     assert playback.json()["detail"]["code"] == "provider_unavailable"
 
     class WakeWord:
@@ -172,3 +172,103 @@ def test_voice_result_persists_provider_unavailability_when_only_audio_exists(tm
     assert response.status_code == 200
     message = SessionManagerService().get_session(session["session_id"])["recent_messages"][-1]
     assert "Transcription unavailable or not configured." in message["content"]
+
+
+def test_voice_process_preserves_audio_and_transcript_when_summary_provider_fails(tmp_path, monkeypatch):
+    from app.routes import voice_capture
+
+    monkeypatch.chdir(tmp_path)
+    client = TestClient(app)
+    artifacts = ArtifactManagerService()
+    audio = artifacts.create_binary_artifact("audio", b"RIFF\x00\x00\x00\x00WAVE", "voice_capture", "wav")
+
+    class Transcription:
+        def generate_transcript(self, artifact_id):
+            assert artifact_id == audio["artifact_id"]
+            transcript = artifacts.create_artifact("transcripts", "வணக்கம் Lumira, capture the idea", artifact_id, "txt")
+            return {"success": True, "transcript_text": "வணக்கம் Lumira, capture the idea", "language": "ta-en", "transcript_artifact": transcript}
+
+    class SummaryFailure:
+        def generate_summary(self, artifact_id):
+            assert artifacts.get_artifact(artifact_id)["type"] == "transcripts"
+            return {"success": False, "code": "provider_unavailable", "message": "Summary provider is not configured."}
+
+    monkeypatch.setattr(voice_capture, "TranscriptService", Transcription)
+    monkeypatch.setattr(voice_capture, "SummaryService", SummaryFailure)
+    response = client.post("/voice/process", json={"audio_artifact_id": audio["artifact_id"], "generate_summary": True})
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["success"] is False
+    assert body["stage"] == "summary"
+    assert artifacts.get_artifact(audio["artifact_id"])["type"] == "audio"
+    assert artifacts.get_artifact(body["transcript_artifact_id"])["type"] == "transcripts"
+    assert "preserved" in body["message"]
+    assert body["memory"]["success"] is True
+    assert body["memory"]["state"] == "saved"
+    from app.services.memory.memory_service import MemoryService
+    memories = MemoryService().get_all()["experiences"]
+    saved = next(item for item in memories if audio["artifact_id"] in item.get("artifact_ids", []))
+    assert body["transcript_artifact_id"] in saved["artifact_ids"]
+    assert saved["verified"] is False
+
+
+def test_voice_process_can_finish_with_audio_and_transcript_without_summary(tmp_path, monkeypatch):
+    from app.routes import voice_capture
+
+    monkeypatch.chdir(tmp_path)
+    client = TestClient(app)
+    artifacts = ArtifactManagerService()
+    audio = artifacts.create_binary_artifact("audio", b"RIFF\x00\x00\x00\x00WAVE", "voice_capture", "wav")
+
+    class Transcription:
+        def generate_transcript(self, artifact_id):
+            transcript = artifacts.create_artifact("transcripts", "A saved idea", artifact_id, "txt")
+            return {"success": True, "transcript_text": "A saved idea", "transcript_artifact": transcript}
+
+    class UnexpectedSummary:
+        def generate_summary(self, artifact_id):
+            raise AssertionError("summary must not run when disabled")
+
+    monkeypatch.setattr(voice_capture, "TranscriptService", Transcription)
+    monkeypatch.setattr(voice_capture, "SummaryService", UnexpectedSummary)
+    response = client.post("/voice/process", json={"audio_artifact_id": audio["artifact_id"], "generate_summary": False})
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["success"] is True
+    assert body["stage"] == "completed"
+    assert body["audio_artifact_id"] == audio["artifact_id"]
+    assert artifacts.get_artifact(body["transcript_artifact_id"])["type"] == "transcripts"
+    assert body["memory"]["success"] is True
+    assert body["memory"]["state"] == "saved"
+
+
+def test_retry_summary_attaches_summary_artifact_to_existing_voice_memory(tmp_path, monkeypatch):
+    from app.routes import voice_capture
+    from app.services.memory.memory_service import MemoryService
+
+    monkeypatch.chdir(tmp_path)
+    client = TestClient(app)
+    artifacts = ArtifactManagerService()
+    audio = artifacts.create_binary_artifact("audio", b"RIFF\x00\x00\x00\x00WAVE", "voice_capture", "wav")
+    transcript = artifacts.create_artifact("transcripts", "A captured idea", audio["artifact_id"], "txt")
+    experience = MemoryService().record_experience(
+        experience_type="workflow", summary="A captured idea", outcome="Voice capture saved.",
+        artifact_ids=[audio["artifact_id"], transcript["artifact_id"]], verified=False,
+    )
+
+    class Summary:
+        def generate_summary(self, transcript_id):
+            summary = artifacts.create_artifact("summaries", "The idea summary", transcript_id, "txt")
+            return {"success": True, "summary_text": "The idea summary", "summary_artifact": summary}
+
+    monkeypatch.setattr(voice_capture, "SummaryService", Summary)
+    response = client.post("/voice/retry-summary", json={"transcript_artifact_id": transcript["artifact_id"]})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["memory"]["state"] == "updated"
+    memory_record = next(item for item in MemoryService().get_all()["experiences"] if item["experience_id"] == experience["experience_id"])
+    assert body["summary_artifact_id"] in memory_record["artifact_ids"]

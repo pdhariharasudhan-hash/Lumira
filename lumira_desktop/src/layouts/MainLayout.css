@@ -580,3 +580,19 @@
   cursor: not-allowed;
   opacity: 0.6;
 }
+
+/* Voice capture states stay visible and accessible without changing the workspace layout. */
+.composer-tool.recording-active {
+	color: var(--color-danger, #c62828);
+	border-color: currentColor;
+	font-weight: 800;
+}
+.voice-recording-status,
+.voice-recording-error {
+	margin: 0.35rem 0;
+	padding: 0.5rem 0.75rem;
+	border-radius: 0.5rem;
+	font-size: 0.875rem;
+}
+.voice-recording-status { background: var(--surface-subtle, rgba(100, 116, 139, 0.12)); }
+.voice-recording-error { color: var(--color-danger, #c62828); background: var(--surface-subtle, rgba(198, 40, 40, 0.08)); }

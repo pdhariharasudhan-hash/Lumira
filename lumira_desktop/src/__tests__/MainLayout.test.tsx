@@ -257,4 +257,52 @@ describe("Lumira workspace shell", () => {
 		fireEvent.click(screen.getByRole("button", { name: /Runs & Logs/ }));
 		expect(screen.getByText("No workflow runs are recorded.")).toBeTruthy();
 	});
+
+	it("records microphone audio and sends it through the saved voice pipeline", async () => {
+		setSessionId("session-12345678");
+		const stoppedTrack = vi.fn();
+		vi.stubGlobal("navigator", { mediaDevices: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: stoppedTrack }] }) } });
+		class FakeMediaRecorder {
+			static isTypeSupported() { return true; }
+			mimeType: string;
+			state = "inactive";
+			listeners: Record<string, Array<(event: Event | { data: Blob }) => void>> = {};
+			constructor(_stream: MediaStream, options?: MediaRecorderOptions) { this.mimeType = options?.mimeType ?? "audio/webm"; }
+			addEventListener(type: string, callback: (event: Event | { data: Blob }) => void) { (this.listeners[type] ??= []).push(callback); }
+			start() { this.state = "recording"; }
+			stop() {
+				this.state = "inactive";
+				for (const callback of this.listeners.dataavailable ?? []) callback({ data: new Blob(["audio-data"], { type: this.mimeType }) });
+				for (const callback of this.listeners.stop ?? []) callback(new Event("stop"));
+			}
+		}
+		vi.stubGlobal("MediaRecorder", FakeMediaRecorder);
+		const fetchMock = mockFetch((input) => {
+			const path = String(input);
+			if (path === "/sessions/session-12345678") return jsonResponse(activeSession());
+			if (path === "/voice/upload") return jsonResponse({ success: true, data: { artifact: { artifact_id: "audio-1", type: "audio" } } });
+			if (path === "/voice/process") return jsonResponse({
+				success: true, stage: "completed", audio_artifact_id: "audio-1", transcript_artifact_id: "transcript-1", summary_artifact_id: "summary-1",
+				transcription: { success: true, transcript_text: "வணக்கம் Lumira, save this idea", transcript_artifact: { artifact_id: "transcript-1" } },
+				summary: { success: true, summary_text: "A voice idea was captured.", summary_artifact: { artifact_id: "summary-1" } },
+				memory: { success: true, state: "saved", message: "Voice idea saved to memory and linked to its artifacts." },
+			});
+			if (path === "/sessions/session-12345678/voice-result") return jsonResponse({ success: true, linked_artifact_ids: ["audio-1", "transcript-1", "summary-1"] });
+			return defaultResponse(input);
+		});
+		render(<MainLayout />);
+		fireEvent.click(await screen.findByRole("button", { name: "Start microphone recording" }));
+		expect(await screen.findByRole("status")).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: "Stop microphone recording" }));
+		expect(await screen.findByText(/வணக்கம் Lumira, save this idea/, { selector: ".assistant-message" })).toBeTruthy();
+		expect(await screen.findByText(/A voice idea was captured\./, { selector: ".assistant-message" })).toBeTruthy();
+		expect(await screen.findByText(/Voice idea saved to memory and linked to its artifacts/, { selector: ".assistant-message" })).toBeTruthy();
+		expect(stoppedTrack).toHaveBeenCalledTimes(1);
+		const uploadCall = fetchMock.mock.calls.find(([input]) => String(input) === "/voice/upload");
+		expect(uploadCall?.[1]?.method).toBe("POST");
+		expect(uploadCall?.[1]?.body).toBeInstanceOf(FormData);
+		expect(fetchMock.mock.calls.some(([input]) => String(input) === "/voice/process")).toBe(true);
+		expect(fetchMock.mock.calls.some(([input]) => String(input) === "/sessions/session-12345678/voice-result")).toBe(true);
+	});
+
 });

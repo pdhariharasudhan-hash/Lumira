@@ -119,6 +119,10 @@ function MainLayout() {
 	const promptInputRef = useRef<HTMLTextAreaElement>(null);
 	const searchInputRef = useRef<HTMLInputElement>(null);
 	const voiceFileRef = useRef<HTMLInputElement>(null);
+	const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+	const mediaStreamRef = useRef<MediaStream | null>(null);
+	const voiceChunksRef = useRef<Blob[]>([]);
+	const voiceUnmountingRef = useRef(false);
 	const attachmentFileRef = useRef<HTMLInputElement>(null);
 	const [prompt, setPrompt] = useState("");
 	const [workflow, setWorkflow] = useState<"brain" | "project">("brain");
@@ -214,6 +218,8 @@ function MainLayout() {
 	const [apiPaths, setApiPaths] = useState<string[]>([]);
 	const [quickToolsOpen, setQuickToolsOpen] = useState(false);
 	const [voiceBusy, setVoiceBusy] = useState(false);
+	const [voiceRecording, setVoiceRecording] = useState(false);
+	const [voiceRecordingError, setVoiceRecordingError] = useState("");
 	const [wakeWordStatus, setWakeWordStatus] = useState<JsonObject>({ state: "stopped", listening: false, activated: false });
 	const [wakeWordBusy, setWakeWordBusy] = useState(false);
 	const [terminalCommands, setTerminalCommands] = useState<JsonObject>({});
@@ -1017,6 +1023,70 @@ function MainLayout() {
 		}
 	}
 
+	async function startVoiceRecording() {
+		if (voiceBusy || voiceRecording) return;
+		setVoiceRecordingError("");
+		if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+			setVoiceRecordingError("Microphone recording is not supported in this browser. Attach an audio file instead.");
+			return;
+		}
+		try {
+			const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+			mediaStreamRef.current = stream;
+			const mimeType = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus", "audio/ogg"].find((candidate) => MediaRecorder.isTypeSupported(candidate));
+			const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+			voiceChunksRef.current = [];
+			mediaRecorderRef.current = recorder;
+			recorder.addEventListener("dataavailable", (event: BlobEvent) => {
+				if (event.data.size > 0) voiceChunksRef.current.push(event.data);
+			});
+			recorder.addEventListener("stop", () => {
+				const recordedType = recorder.mimeType || mimeType || "audio/webm";
+				const extension = recordedType.includes("mp4") ? "m4a" : recordedType.includes("ogg") ? "ogg" : "webm";
+				const blob = new Blob(voiceChunksRef.current, { type: recordedType });
+				voiceChunksRef.current = [];
+				mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+				mediaStreamRef.current = null;
+				mediaRecorderRef.current = null;
+				setVoiceRecording(false);
+				if (blob.size === 0) {
+					setVoiceRecordingError("No audio was captured. Check microphone permission and try again.");
+					return;
+				}
+				const file = new File([blob], `lumira-voice-${Date.now()}.${extension}`, { type: recordedType });
+				void uploadVoice(file);
+			});
+			recorder.addEventListener("error", () => {
+				setVoiceRecordingError("Microphone recording failed. You can retry or attach an audio file.");
+				setVoiceRecording(false);
+				mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+				mediaStreamRef.current = null;
+				mediaRecorderRef.current = null;
+			});
+			recorder.start(500);
+			setVoiceRecording(true);
+		} catch (error) {
+			mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+			mediaStreamRef.current = null;
+			setVoiceRecordingError(error instanceof Error && error.name === "NotAllowedError"
+				? "Microphone permission was denied. Allow microphone access or attach an audio file."
+				: formatError(error).message);
+		}
+	}
+
+	function stopVoiceRecording() {
+		const recorder = mediaRecorderRef.current;
+		if (recorder && recorder.state !== "inactive") recorder.stop();
+	}
+
+	useEffect(() => () => {
+		voiceUnmountingRef.current = true;
+		const recorder = mediaRecorderRef.current;
+		if (recorder && recorder.state !== "inactive") recorder.stop();
+		mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+		mediaStreamRef.current = null;
+	}, []);
+
 	async function uploadVoice(file?: File) {
 		if (!file || voiceBusy) return;
 		setVoiceBusy(true);
@@ -1060,6 +1130,9 @@ function MainLayout() {
 				} else {
 					displayedText = `Audio saved. ${stringValue(transcription.message, "Transcription did not complete.")}`;
 				}
+				const memoryResult = object(pipeline.memory);
+				if (memoryResult.success === true) displayedText += `${displayedText ? "\n\n" : ""}Memory: ${stringValue(memoryResult.message, "Voice idea saved to memory.")}`;
+				else if (memoryResult.code) displayedText += `${displayedText ? "\n\n" : ""}Memory not updated: ${stringValue(memoryResult.message, "Memory persistence did not complete.")}`;
 			} catch (error) {
 				result = { ...result, transcription: formatError(error).response.result };
 				displayedText = `Audio saved. Transcription unavailable: ${formatError(error).message}`;
@@ -1851,7 +1924,7 @@ async function runArtifactVoiceAction(artifactId: string, action: "process" | "t
 					</div>
 					<div className="topbar-project"><strong>{currentProject ?? "Personal workspace"}</strong><span>{session?.status ?? "Ready"}</span></div>
 					<form className="top-search" onSubmit={(event) => { event.preventDefault(); void runSearch(); }}><FiSearch aria-hidden="true" /><input aria-label="Global search" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} onFocus={() => undefined} placeholder="Search…  Ctrl K" /><button type="submit" aria-label="Run global search" disabled={!searchQuery.trim()}><FiArrowUp /></button></form>
-					<div className="quick-actions"><button type="button" onClick={startNewProject}>New Project</button><button type="button" onClick={startGeneration}>Generate</button><button type="button" onClick={() => voiceFileRef.current?.click()} disabled={voiceBusy}>{voiceBusy ? "Saving voice…" : "Capture Voice"}</button><button type="button" onClick={() => void toggleWakeWordListener()} disabled={wakeWordBusy || wakeWordStatus.state === "starting" || wakeWordStatus.state === "stopping"}>{wakeWordBusy ? "Please wait…" : wakeWordStatus.listening === true ? "Stop Wake Word" : "Start Wake Word"}</button><button type="button" onClick={() => navigate("goals")}>Create Goal</button></div>
+					<div className="quick-actions"><button type="button" onClick={startNewProject}>New Project</button><button type="button" onClick={startGeneration}>Generate</button><button type="button" onClick={() => voiceRecording ? stopVoiceRecording() : void startVoiceRecording()} disabled={voiceBusy}>{voiceBusy ? "Processing voice…" : voiceRecording ? "Stop & Process Recording" : "Record Voice"}</button><button type="button" onClick={() => void toggleWakeWordListener()} disabled={wakeWordBusy || wakeWordStatus.state === "starting" || wakeWordStatus.state === "stopping"}>{wakeWordBusy ? "Please wait…" : wakeWordStatus.listening === true ? "Stop Wake Word" : "Start Wake Word"}</button><button type="button" onClick={() => navigate("goals")}>Create Goal</button></div>
 					<div className="topbar-tools"><ResourceStatus /><span className={`core-status ${connectionStatus}`}><i />{connectionStatus === "online" ? "CORE READY" : connectionStatus === "checking" ? "CONNECTING" : "OFFLINE"}</span><button className="icon-button" type="button" aria-label={focusMode ? "Exit focus mode" : "Enter focus mode"} title="Focus mode (Ctrl/Cmd+Shift+F)" onClick={() => setFocusMode(!focusMode)}><FiCrosshair /></button><button className="icon-button" type="button" aria-label={topBarCompact ? "Expand top bar" : "Compact top bar"} title="Toggle compact top bar" onClick={() => setTopBarCompact(!topBarCompact)}><FiSliders /></button><button className="icon-button settings-shortcut" type="button" aria-label="Open settings" onClick={() => navigate("settings")}><FiSettings /></button></div>
 				</header>
 				<div className="center-titlebar"><div><span className="eyebrow">{PAGE_TITLES[activePage].toUpperCase()}</span><h1>{currentTitle}</h1></div><div className="center-status">{currentProject && selectedVersion ? `${selectedVersion} · ` : ""}{titleForMode(activeMode)}</div><button className="icon-button panel-restore" type="button" aria-label="Toggle chat sidebar" title="Toggle chats (Ctrl/Cmd+Shift+B)" onClick={() => setChatMode(cyclePanel(chatMode))}><FiMenu /></button><button className="icon-button panel-restore" type="button" aria-label="Toggle development panel" title="Toggle developer panel (Ctrl/Cmd+J)" onClick={() => setRightMode(cyclePanel(rightMode))}><FiCode /></button></div>
@@ -1892,10 +1965,12 @@ async function runArtifactVoiceAction(artifactId: string, action: "process" | "t
 						<form className="composer" onSubmit={(event) => void submitPrompt(event)}>
 							<button className="composer-tool" type="button" aria-label="Open tools" aria-expanded={quickToolsOpen} onClick={() => setQuickToolsOpen(!quickToolsOpen)}><FiSliders /></button>
 						<label className="composer-tool file-attach" title="Attach an audio recording"><FiPaperclip /><input ref={attachmentFileRef} type="file" accept="audio/wav,audio/mpeg,audio/mp4,audio/ogg,audio/webm,.wav,.mp3,.m4a,.ogg,.webm" aria-label="Attach audio recording" onChange={(event) => void uploadVoice(event.target.files?.[0])} /></label>
+						<button className={`composer-tool ${voiceRecording ? "recording-active" : ""}`} type="button" aria-label={voiceRecording ? "Stop microphone recording" : "Start microphone recording"} title={voiceRecording ? "Stop and process recording" : "Record from microphone"} disabled={voiceBusy} onClick={() => voiceRecording ? stopVoiceRecording() : void startVoiceRecording()}>{voiceRecording ? "■" : "●"}</button>
 							<textarea ref={promptInputRef} aria-label="Describe what you want to work on" placeholder={workflow === "project" ? "Describe the project to generate…" : "Message Lumira…"} value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={onPromptKeyDown} rows={inputMode === "compact" ? 1 : 2} disabled={isRestoringSession} />
 							<label className="composer-mode"><span className="sr-only">Select Lumira mode</span><select aria-label="Composer mode" value={activeMode} onChange={(event) => void activateMode(event.target.value as LumiraMode)}><option value="auto">Auto</option><option value="personal">Personal</option><option value="builder">Builder</option><option value="growth">Growth</option><option value="business">Business</option><option value="creator">Creator</option><option value="generator">Generator</option><option value="research">Research</option><option value="assistant">Assistant</option><option value="operations">Operations</option></select></label>
 							<button className="send-button" type="submit" disabled={!prompt.trim() || isSending || isRestoringSession} aria-label="Send request" title="Send request"><FiArrowUp /></button>
 						</form>
+						{voiceRecording && <p className="voice-recording-status" role="status">Recording from your microphone. Select the stop button to save the audio and start transcription.</p>}{voiceRecordingError && <p className="voice-recording-error" role="alert">{voiceRecordingError}</p>}
 						<div className="composer-footer"><span>{wakeWordStatus.activated === true ? "Wake word detected: Lumira" : wakeWordStatus.listening === true ? "Wake-word listener is active; commands are not auto-executed." : isRestoringSession ? "Restoring saved session…" : activeMode === "auto" ? "Auto Category routes your request through Lumira's capability architecture." : `${titleForMode(activeMode)} routes through your active Lumira session.`}</span><div><button type="button" onClick={() => setInputMode(inputMode === "compact" ? "full" : "compact")} aria-label={inputMode === "compact" ? "Expand assistant input" : "Compact assistant input"}>{inputMode === "compact" ? "Expand input" : "Compact input"}</button><button type="button" onClick={() => setInputMode("hidden")}>Hide input</button></div></div>
 					</div>}
 				</>}

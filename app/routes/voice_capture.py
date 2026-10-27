@@ -11,6 +11,7 @@ from app.services.voice.voice_capture_service import (
 )
 from app.services.voice.transcript_service import TranscriptService
 from app.services.response.summary_service import SummaryService
+from app.services.memory.memory_service import MemoryService
 from app.services.voice.wake_word_listener_service import WakeWordListenerService
 
 router = APIRouter()
@@ -144,6 +145,44 @@ class VoiceProcessRequest(BaseModel):
     generate_summary: bool = True
 
 
+def _persist_voice_capture_memory(audio_artifact_id: str, transcript_artifact_id: str, transcription: dict, summary: dict | None = None) -> dict:
+    """Persist a voice idea as an unverified memory experience without breaking artifact capture."""
+    try:
+        memory = MemoryService()
+        existing = memory.get_all()
+        experiences = existing.get("experiences", []) if isinstance(existing, dict) else []
+        for item in experiences if isinstance(experiences, list) else []:
+            ids = item.get("artifact_ids", []) if isinstance(item, dict) else []
+            if isinstance(item, dict) and isinstance(ids, list) and audio_artifact_id in ids:
+                return {"success": True, "state": "already_exists", "experience_id": item.get("experience_id"), "message": "This voice capture is already linked to memory."}
+
+        transcript_text = transcription.get("transcript_text", "")
+        transcript_text = transcript_text.strip() if isinstance(transcript_text, str) else ""
+        summary_text = summary.get("summary_text", "") if isinstance(summary, dict) else ""
+        summary_text = summary_text.strip() if isinstance(summary_text, str) else ""
+        memory_summary = (summary_text or transcript_text).strip()
+        if not memory_summary:
+            return {"success": False, "code": "memory_content_unavailable", "message": "Voice artifacts were saved, but no text was available to store in memory."}
+
+        artifact_ids = [audio_artifact_id, transcript_artifact_id]
+        summary_record = summary.get("summary_artifact") if isinstance(summary, dict) else None
+        summary_id = summary_record.get("artifact_id") if isinstance(summary_record, dict) else None
+        if isinstance(summary_id, str) and summary_id.strip():
+            artifact_ids.append(summary_id)
+        record = memory.record_experience(
+            experience_type="workflow",
+            summary=memory_summary[:4000],
+            outcome="Voice capture transcribed and stored. Summary: " + ("available" if summary_text else "not available"),
+            artifact_ids=artifact_ids,
+            lessons=[],
+            verified=False,
+        )
+        return {"success": True, "state": "saved", "experience_id": record.get("experience_id"), "message": "Voice idea saved to memory and linked to its artifacts."}
+    except Exception:
+        # Memory is a downstream sink; never discard the already-saved audio/transcript.
+        return {"success": False, "code": "memory_persistence_failed", "message": "Voice artifacts are preserved, but memory persistence did not complete. Retry from the saved artifacts."}
+
+
 @router.post("/voice/process")
 def process_voice_capture(request: VoiceProcessRequest):
     """Run the stored-audio -> transcript -> optional summary artifact workflow."""
@@ -176,6 +215,7 @@ def process_voice_capture(request: VoiceProcessRequest):
     result["transcript_artifact_id"] = transcript_id
     result["stage"] = "transcription_complete"
     if not request.generate_summary:
+        result["memory"] = _persist_voice_capture_memory(request.audio_artifact_id, transcript_id, transcript)
         result["success"] = True
         result["stage"] = "completed"
         result["message"] = "Audio and transcript artifacts are ready."
@@ -183,6 +223,7 @@ def process_voice_capture(request: VoiceProcessRequest):
 
     summary = SummaryService().generate_summary(transcript_id)
     result["summary"] = summary
+    result["memory"] = _persist_voice_capture_memory(request.audio_artifact_id, transcript_id, transcript, summary)
     if summary.get("success"):
         summary_record = summary.get("summary_artifact")
         summary_id = summary_record.get("artifact_id") if isinstance(summary_record, dict) else None
@@ -249,12 +290,20 @@ def retry_voice_summary(request: VoiceSummaryRetryRequest):
             "transcript_artifact_id": request.transcript_artifact_id,
             "message": "Summary generation reported success without a usable artifact ID. The transcript is preserved.",
         }
+    try:
+        memory_record = MemoryService().attach_artifacts_to_experience(request.transcript_artifact_id, [summary_id])
+        memory_status = {"success": True, "state": "updated", "experience_id": memory_record.get("experience_id"), "message": "Summary artifact linked to the existing voice memory."}
+    except KeyError:
+        memory_status = {"success": True, "state": "not_linked", "message": "Summary created. No existing voice memory record matched this transcript."}
+    except Exception:
+        memory_status = {"success": False, "code": "memory_update_failed", "message": "Summary was saved, but the existing memory record could not be updated."}
     return {
         "success": True,
         "state": "completed",
         "transcript_artifact_id": request.transcript_artifact_id,
         "summary_artifact_id": summary_id,
         "summary": result,
+        "memory": memory_status,
         "message": "Summary created from the existing transcript.",
     }
 
