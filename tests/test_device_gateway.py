@@ -44,7 +44,7 @@ def test_device_commands_report_unavailable_until_transport_confirms_delivery(tm
             "capabilities": ["set_led"],
             "permissions": ["commands.receive"],
             "connection": "wifi",
-            "status": "online",
+            "status": "registered",
         },
     )
     assert registered.status_code == 200
