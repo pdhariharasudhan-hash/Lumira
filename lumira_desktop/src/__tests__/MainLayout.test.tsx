@@ -389,7 +389,8 @@ describe("Lumira workspace shell", () => {
 		render(<MainLayout />);
 		fireEvent.click(screen.getByRole("button", { name: "Unified Search" }));
 		fireEvent.change(await screen.findByRole("textbox", { name: "Search Lumira" }), { target: { value: "transcript" } });
-		fireEvent.click(screen.getByRole("button", { name: /^Search$/ }));
+		fireEvent.submit(screen.getByRole("textbox", { name: "Search Lumira" }).closest("form") as HTMLFormElement);
+		await waitFor(() => expect(fetchMock.mock.calls.some(([input]) => String(input).startsWith("/search?"))).toBe(true));
 		expect(await screen.findByText("Voice memory entry", { selector: "strong" })).toBeTruthy();
 		const related = await screen.findByRole("button", { name: "summaries · summary" });
 		fireEvent.click(related);
