@@ -114,3 +114,39 @@ def test_artifact_relationship_api_exposes_links_without_file_paths(manager, mon
     with pytest.raises(HTTPException) as error:
         route.get_artifact_links("not-found")
     assert error.value.status_code == 404
+
+
+
+def test_unified_search_exposes_related_artifact_metadata_without_paths(manager):
+    from app.services.search.unified_search_service import UnifiedSearchService
+
+    audio = manager.create_binary_artifact(
+        "audio", b"RIFF\x00\x00\x00\x00WAVE", "voice_capture", "wav"
+    )
+    transcript = manager.create_artifact(
+        "transcripts",
+        "unique phrase for artifact graph navigation",
+        audio["artifact_id"],
+        "txt",
+    )
+    summary = manager.create_artifact(
+        "summaries",
+        "compact summary from transcript",
+        transcript["artifact_id"],
+        "txt",
+    )
+    manager.link_artifacts(audio["artifact_id"], transcript["artifact_id"], "transcribed_as")
+    manager.link_artifacts(transcript["artifact_id"], summary["artifact_id"], "summarized_as")
+
+    service = UnifiedSearchService.__new__(UnifiedSearchService)
+    service.artifacts = manager
+    results = service.search_artifacts("unique phrase for artifact graph navigation")
+
+    assert len(results) == 1
+    result = results[0]
+    assert result["artifact_id"] == transcript["artifact_id"]
+    assert result["relationship_count"] == 2
+    related_ids = {item["artifact_id"] for item in result["related_artifacts"]}
+    assert related_ids == {audio["artifact_id"], summary["artifact_id"]}
+    assert all("file" not in item for item in result["related_artifacts"])
+    assert "file" not in result
