@@ -1,0 +1,37 @@
+name: Route parameter regression tests
+
+on:
+  pull_request:
+    paths:
+      - "app/routes/**"
+      - "tests/test_route_parameter_defaults.py"
+      - "requirements.txt"
+      - ".github/workflows/route-parameter-regression.yml"
+  push:
+    branches: [main]
+    paths:
+      - "app/routes/**"
+      - "tests/test_route_parameter_defaults.py"
+      - "requirements.txt"
+      - ".github/workflows/route-parameter-regression.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  route-parameter-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install backend dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Verify route defaults and validation metadata
+        run: python -m pytest -q tests/test_route_parameter_defaults.py
