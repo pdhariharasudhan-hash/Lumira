@@ -43,6 +43,9 @@ export function ImageUnderstandingPanel() {
   const [providerStatusLoading, setProviderStatusLoading] = useState(true);
   const [providerStatusError, setProviderStatusError] = useState("");
   const [providerStatusRefresh, setProviderStatusRefresh] = useState(0);
+  const [storedArtifactId, setStoredArtifactId] = useState("");
+  const [storedAnalysis, setStoredAnalysis] = useState<Record<string, unknown> | null>(null);
+  const [storedAnalysisLoading, setStoredAnalysisLoading] = useState(false);
 
   useEffect(() => {
     let current = true;
@@ -138,6 +141,22 @@ export function ImageUnderstandingPanel() {
       setSavingReport(false);
     }
   }
+  async function analyzeStoredArtifact() {
+    const artifactId = storedArtifactId.trim();
+    if (!artifactId || storedAnalysisLoading) return;
+    setStoredAnalysisLoading(true);
+    setError("");
+    setStoredAnalysis(null);
+    try {
+      const result = await api.analyzeImageArtifact(artifactId, prompt.trim(), true);
+      setStoredAnalysis(result);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Stored image analysis failed.");
+    } finally {
+      setStoredAnalysisLoading(false);
+    }
+  }
+
   async function analyze(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
@@ -199,6 +218,34 @@ export function ImageUnderstandingPanel() {
               ? <p>A vision provider is enabled in configuration but was not registered. Check the relevant API key or local provider setup, then refresh.</p>
               : <p>No vision provider is registered. Configure either the remote vision provider with its API key or enable local Ollama vision.</p>}
       </div>
+      <section className="image-analysis-message">
+        <h3>Analyze an image already in Artifact Manager</h3>
+        <p>Enter an existing image artifact ID. Lumira will analyze the stored file and can save a linked report without uploading the image again.</p>
+        <label>
+          Image artifact ID
+          <input
+            value={storedArtifactId}
+            onChange={(event) => setStoredArtifactId(event.target.value)}
+            placeholder="Paste an image artifact ID"
+            maxLength={128}
+            disabled={storedAnalysisLoading}
+          />
+        </label>
+        <button className="secondary-action" type="button" disabled={storedAnalysisLoading || !storedArtifactId.trim() || !prompt.trim()} onClick={() => void analyzeStoredArtifact()}>
+          {storedAnalysisLoading ? "Analyzing stored image…" : "Analyze stored image"}
+        </button>
+        {storedAnalysis && (
+          <div className="image-analysis-result" aria-live="polite">
+            <h3>Stored image analysis</h3>
+            <p>{typeof storedAnalysis.description === "string" ? storedAnalysis.description : "No description was returned."}</p>
+            <p>Source artifact: {String(storedAnalysis.source_artifact_id ?? storedArtifactId)}</p>
+            {typeof storedAnalysis.artifact === "object" && storedAnalysis.artifact !== null && (
+              <p>Report artifact: {String((storedAnalysis.artifact as Record<string, unknown>).artifact_id ?? "saved")}</p>
+            )}
+            {storedAnalysis.artifact_saved === true && <p role="status">Analysis report saved and linked to the source image.</p>}
+          </div>
+        )}
+      </section>
       <form className="image-analysis-form" onSubmit={(event) => void analyze(event)}>
         <label>
           Image file
