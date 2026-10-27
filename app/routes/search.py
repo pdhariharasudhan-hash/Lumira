@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Query
+from typing import Annotated
 
 from app.services.search.unified_search_service import (
     UnifiedSearchService
