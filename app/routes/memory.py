@@ -1,6 +1,7 @@
 import json
 
 from fastapi import APIRouter, HTTPException, Query
+from typing import Annotated
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.services.memory.memory_service import MemoryService, MemoryValidationError
@@ -97,9 +98,9 @@ def set_memory(payload: MemoryUpdatePayload):
 # ==========================
 @router.get("/memory/relevant")
 def get_relevant_memory(
-    q: str = Query(default="", max_length=500),
-    session_id: str | None = Query(default=None, max_length=128),
-    project_id: str | None = Query(default=None, max_length=100),
+    q: Annotated[str, Query(max_length=500)] = "",
+    session_id: Annotated[str | None, Query(max_length=128)] = None,
+    project_id: Annotated[str | None, Query(max_length=100)] = None,
 ):
     if session_id:
         session = SessionManagerService().get_session(session_id)
@@ -151,10 +152,10 @@ def create_memory_decision(request: DecisionCreateRequest):
 
 @router.get("/memory/decisions")
 def list_memory_decisions(
-    project_id: str | None = Query(default=None, max_length=100),
-    goal_id: str | None = Query(default=None, max_length=128),
-    session_id: str | None = Query(default=None, max_length=128),
-    limit: int = Query(default=50, ge=0, le=100),
+    project_id: Annotated[str | None, Query(max_length=100)] = None,
+    goal_id: Annotated[str | None, Query(max_length=128)] = None,
+    session_id: Annotated[str | None, Query(max_length=128)] = None,
+    limit: Annotated[int, Query(ge=0, le=100)] = 50,
 ):
     if session_id and SessionManagerService().get_session(session_id) is None:
         raise HTTPException(status_code=404, detail="session not found")
@@ -177,10 +178,10 @@ def list_memory_decisions(
 
 @router.get("/memory/search")
 def search_memory(
-    q: str = Query(min_length=1, max_length=500),
-    project_id: str | None = Query(default=None, max_length=100),
-    goal_id: str | None = Query(default=None, max_length=128),
-    limit: int = Query(default=20, ge=0, le=100),
+    q: Annotated[str, Query(min_length=1, max_length=500)],
+    project_id: Annotated[str | None, Query(max_length=100)] = None,
+    goal_id: Annotated[str | None, Query(max_length=128)] = None,
+    limit: Annotated[int, Query(ge=0, le=100)] = 20,
 ):
     try:
         return {"status": "ok", "data": memory_service.search(q, project_id, goal_id, limit)}
@@ -190,8 +191,8 @@ def search_memory(
 
 @router.get("/memory/summary")
 def summarize_memory(
-    project_id: str | None = Query(default=None, max_length=100),
-    goal_id: str | None = Query(default=None, max_length=128),
+    project_id: Annotated[str | None, Query(max_length=100)] = None,
+    goal_id: Annotated[str | None, Query(max_length=128)] = None,
 ):
     try:
         return {"status": "ok", "data": memory_service.summarize(project_id, goal_id)}
