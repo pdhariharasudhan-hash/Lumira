@@ -113,3 +113,23 @@ def test_retry_voice_memory_rejects_unrelated_transcript(tmp_path, monkeypatch):
 
     assert response.status_code == 409
     assert "does not belong" in response.json()["detail"]
+
+
+
+def test_retry_voice_memory_rejects_archived_artifacts(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    client = TestClient(app)
+    artifacts, audio, transcript, summary = _voice_artifacts()
+    assert artifacts.archive_artifact(transcript["artifact_id"]) is True
+
+    response = client.post(
+        "/voice/retry-memory",
+        json={
+            "audio_artifact_id": audio["artifact_id"],
+            "transcript_artifact_id": transcript["artifact_id"],
+            "summary_artifact_id": summary["artifact_id"],
+        },
+    )
+
+    assert response.status_code == 409
+    assert "archived" in response.json()["detail"]
