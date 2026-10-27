@@ -362,6 +362,28 @@ def save_voice_result(session_id: str, request: VoiceResultSaveRequest):
         metadata["voice_capture"][metadata_key] = artifact_id
         linked_ids.append(artifact_id)
 
+    # Maintain a navigable artifact graph as well as the session's artifact links.
+    artifact_relationships = []
+    relationship_specs = []
+    if request.transcript_artifact_id:
+        relationship_specs.append((request.audio_artifact_id, request.transcript_artifact_id, "transcribed_as"))
+    if request.transcript_artifact_id and request.summary_artifact_id:
+        relationship_specs.append((request.transcript_artifact_id, request.summary_artifact_id, "summarized_as"))
+    for source_id, target_id, relation in relationship_specs:
+        try:
+            artifact_relationships.append(
+                artifacts.link_artifacts(source_id, target_id, relation)
+            )
+        except (KeyError, ValueError):
+            # Keep the voice result available even if relationship metadata needs repair.
+            artifact_relationships.append({
+                "changed": False,
+                "relation": relation,
+                "source_artifact_id": source_id,
+                "target_artifact_id": target_id,
+                "state": "not_linked",
+            })
+
     for artifact_id in linked_ids:
         sessions.link_record(session_id, "artifact", artifact_id)
     message = sessions.append_message(
@@ -375,4 +397,5 @@ def save_voice_result(session_id: str, request: VoiceResultSaveRequest):
         "session_id": session_id,
         "message_id": message["message_id"],
         "linked_artifact_ids": linked_ids,
+        "artifact_relationships": artifact_relationships,
     }
