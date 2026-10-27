@@ -127,6 +127,21 @@ def test_voice_result_is_persisted_to_session_from_stored_artifacts(tmp_path, mo
     assert "Summary text that must survive refresh." in message["content"]
     assert message["metadata"]["voice_capture"]["audio_artifact_id"] == audio["artifact_id"]
 
+    audio_links = artifacts.get_artifact_links(audio["artifact_id"])["links"]
+    transcript_links = artifacts.get_artifact_links(transcript["artifact_id"])["links"]
+    assert any(
+        link["direction"] == "outgoing"
+        and link["artifact_id"] == transcript["artifact_id"]
+        and link["relation"] == "transcribed_as"
+        for link in audio_links
+    )
+    assert any(
+        link["direction"] == "outgoing"
+        and link["artifact_id"] == summary["artifact_id"]
+        and link["relation"] == "summarized_as"
+        for link in transcript_links
+    )
+
 
 def test_voice_result_rejects_transcript_from_another_audio_artifact(tmp_path, monkeypatch):
     from app.services.sessions.session_manager_service import SessionManagerService
@@ -204,6 +219,12 @@ def test_voice_process_preserves_audio_and_transcript_when_summary_provider_fail
     assert artifacts.get_artifact(audio["artifact_id"])["type"] == "audio"
     assert artifacts.get_artifact(body["transcript_artifact_id"])["type"] == "transcripts"
     assert "preserved" in body["message"]
+    links = artifacts.get_artifact_links(audio["artifact_id"])["links"]
+    assert any(
+        link["artifact_id"] == body["transcript_artifact_id"]
+        and link["relation"] == "transcribed_as"
+        for link in links
+    )
     assert body["memory"]["success"] is True
     assert body["memory"]["state"] == "saved"
     from app.services.memory.memory_service import MemoryService
