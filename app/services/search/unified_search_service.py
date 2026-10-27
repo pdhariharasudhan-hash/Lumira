@@ -156,6 +156,31 @@ class UnifiedSearchService:
                 result = dict(public_metadata)
                 if text:
                     result["snippet"] = self._safe_snippet(text)
+                # Surface the artifact graph alongside each match so search can
+                # navigate from a transcript to its summary/audio without exposing
+                # storage paths or duplicating the linked artifact contents.
+                try:
+                    relationship_result = self.artifacts.get_artifact_links(
+                        str(artifact.get("artifact_id", ""))
+                    )
+                    relationships = relationship_result.get("links", [])
+                    result["related_artifacts"] = [
+                        {
+                            "artifact_id": link.get("artifact", {}).get("artifact_id"),
+                            "type": link.get("artifact", {}).get("type"),
+                            "source": link.get("artifact", {}).get("source"),
+                            "relation": link.get("relation"),
+                            "direction": link.get("direction"),
+                        }
+                        for link in relationships[:100]
+                        if isinstance(link, dict) and isinstance(link.get("artifact"), dict)
+                    ]
+                    result["relationship_count"] = len(relationships)
+                except (ValueError, KeyError, OSError):
+                    # A damaged relationship index must not hide an otherwise
+                    # valid artifact search result.
+                    result["related_artifacts"] = []
+                    result["relationship_count"] = 0
                 results.append(result)
                 if len(results) >= 200:
                     break
