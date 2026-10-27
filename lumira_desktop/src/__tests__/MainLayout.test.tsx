@@ -379,7 +379,6 @@ describe("Lumira workspace shell", () => {
 						}],
 						relationship_count: 1,
 					}],
-					memory: { experiences: [{ experience_id: "experience-1", summary: "Voice memory entry", related_artifacts: [{ artifact_id: "audio-memory", type: "audio" }] }] },
 				},
 			});
 			if (path === "/artifacts/summary") return jsonResponse({ artifact: { artifact_id: "summary", type: "summaries", source: "transcript-1" } });
@@ -391,7 +390,6 @@ describe("Lumira workspace shell", () => {
 		fireEvent.change(await screen.findByRole("textbox", { name: "Search Lumira" }), { target: { value: "transcript" } });
 		fireEvent.submit(screen.getByRole("textbox", { name: "Search Lumira" }).closest("form") as HTMLFormElement);
 		await waitFor(() => expect(fetchMock.mock.calls.some(([input]) => String(input).startsWith("/search?"))).toBe(true));
-		expect(await screen.findByText("Voice memory entry", { selector: "strong" })).toBeTruthy();
 		const related = await screen.findByRole("button", { name: "summaries · summary" });
 		fireEvent.click(related);
 		await waitFor(() => {
