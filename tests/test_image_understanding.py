@@ -190,3 +190,62 @@ def test_image_analysis_route_reports_resource_pressure_as_temporary_unavailable
         assert exc.headers["Retry-After"] == "30"
     else:
         raise AssertionError("resource-pressure deferral must be a temporary unavailable response")
+
+
+def test_stored_image_artifact_can_be_analyzed_and_report_linked(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    from app.services.artifacts.artifact_manager_service import ArtifactManagerService
+
+    artifacts = ArtifactManagerService()
+    image = artifacts.create_binary_artifact("images", PNG_HEADER, "test_upload", "png")
+
+    class FakeAnalysis:
+        MAX_IMAGE_BYTES = 10_000_000
+
+        def analyze(self, image_bytes, prompt, *, save_artifact=False):
+            assert image_bytes == PNG_HEADER
+            assert prompt == "Read this image"
+            result = {"success": True, "description": "A test image.", "model": "test-model"}
+            if save_artifact:
+                report = artifacts.create_artifact(
+                    "reports", '{"description":"A test image."}', "image_understanding", "json"
+                )
+                result["artifact"] = {
+                    "artifact_id": report["artifact_id"],
+                    "artifact_type": "reports",
+                    "created_at": report["timestamp"],
+                }
+                result["artifact_saved"] = True
+            return result
+
+    monkeypatch.setattr(route, "ImageUnderstandingService", FakeAnalysis)
+    result = route.analyze_image_artifact(route.ImageArtifactAnalysisRequest(
+        artifact_id=image["artifact_id"],
+        prompt="Read this image",
+        save_artifact=True,
+    ))
+
+    assert result["success"] is True
+    assert result["source_artifact_id"] == image["artifact_id"]
+    assert result["artifact_relationship"]["changed"] is True
+    links = artifacts.get_artifact_links(image["artifact_id"])["links"]
+    assert any(
+        link["relation"] == "analyzed_as"
+        and link["artifact"]["artifact_id"] == result["artifact"]["artifact_id"]
+        for link in links
+    )
+
+
+def test_stored_image_analysis_rejects_non_image_artifact(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    from app.services.artifacts.artifact_manager_service import ArtifactManagerService
+
+    artifact = ArtifactManagerService().create_artifact(
+        "reports", '{"not":"an image"}', "test", "json"
+    )
+    try:
+        route.analyze_image_artifact(route.ImageArtifactAnalysisRequest(artifact_id=artifact["artifact_id"]))
+    except HTTPException as exc:
+        assert exc.status_code == 404
+    else:
+        raise AssertionError("non-image artifact must be rejected")
