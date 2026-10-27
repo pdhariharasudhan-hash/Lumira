@@ -82,3 +82,31 @@ def test_unified_artifact_search_does_not_match_or_return_internal_paths(tmp_pat
     assert len(public_metadata_match) == 1
     assert public_metadata_match[0]["artifact_id"] == "public-artifact"
     assert "file" not in public_metadata_match[0]
+
+
+
+def test_unified_search_finds_workspace_source_code_and_excludes_backups(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    source = tmp_path / "app" / "services" / "planner.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("def build_bounded_plan():\n    return 'lumira planner feature'\n", encoding="utf-8")
+    backup = source.with_name("planner.py.backup")
+    backup.write_text("secret marker lumira planner feature", encoding="utf-8")
+
+    results = UnifiedSearchService().search_all("lumira planner feature")
+
+    assert any(item["path"] == "app/services/planner.py" for item in results["source_files"])
+    assert any(item["path"] == "app/services/planner.py" for item in results["code"])
+    assert all("backup" not in item["path"] for item in results["source_files"])
+
+
+def test_workspace_search_ignores_hidden_runtime_folders(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    hidden = tmp_path / "app" / ".private"
+    hidden.mkdir(parents=True)
+    (hidden / "secrets.py").write_text("lumira unique-private-marker", encoding="utf-8")
+    (tmp_path / "app" / "visible.py").write_text("lumira ordinary source", encoding="utf-8")
+
+    results = UnifiedSearchService().search_all("lumira unique-private-marker")
+
+    assert results["source_files"] == []
