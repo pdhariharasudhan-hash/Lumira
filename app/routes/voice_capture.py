@@ -173,6 +173,45 @@ class VoiceProcessRequest(BaseModel):
     generate_summary: bool = True
 
 
+def _reuse_existing_voice_summary(artifacts, transcript_artifact_id: str) -> dict | None:
+    """Reuse a saved summary for a transcript instead of duplicating artifacts on retry."""
+    try:
+        links = artifacts.get_artifact_links(transcript_artifact_id).get("links", [])
+    except (KeyError, ValueError, OSError):
+        return None
+
+    for link in links if isinstance(links, list) else []:
+        if not isinstance(link, dict):
+            continue
+        if link.get("direction") != "outgoing" or link.get("relation") != "summarized_as":
+            continue
+        summary_id = link.get("artifact_id")
+        if not isinstance(summary_id, str) or not summary_id:
+            continue
+        record = artifacts.get_artifact(summary_id)
+        if not record or record.get("type") != "summaries" or record.get("archived", False):
+            continue
+        if record.get("source") != transcript_artifact_id:
+            continue
+        try:
+            path = artifacts.get_artifact_path(summary_id)
+            if path is None or not path.is_file() or path.stat().st_size > artifacts.MAX_CONTENT_LENGTH:
+                continue
+            summary_text = path.read_text(encoding="utf-8").strip()
+        except (OSError, UnicodeError, ValueError):
+            continue
+        if not summary_text:
+            continue
+        return {
+            "success": True,
+            "transcript_artifact": transcript_artifact_id,
+            "summary_text": summary_text,
+            "summary_artifact": record,
+            "reused": True,
+        }
+    return None
+
+
 def _persist_voice_capture_memory(audio_artifact_id: str, transcript_artifact_id: str, transcription: dict, summary: dict | None = None) -> dict:
     """Persist a voice idea as an unverified memory experience without breaking artifact capture."""
     try:
@@ -294,7 +333,9 @@ def process_voice_capture(request: VoiceProcessRequest):
         result["message"] = "Audio and transcript artifacts are ready."
         return result
 
-    summary = SummaryService().generate_summary(transcript_id)
+    summary = _reuse_existing_voice_summary(artifacts, transcript_id)
+    if summary is None:
+        summary = SummaryService().generate_summary(transcript_id)
     result["summary"] = summary
     result["memory"] = _persist_voice_capture_memory(request.audio_artifact_id, transcript_id, transcript, summary)
     if summary.get("success"):
