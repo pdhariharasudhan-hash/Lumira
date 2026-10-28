@@ -221,7 +221,21 @@ def _persist_voice_capture_memory(audio_artifact_id: str, transcript_artifact_id
         for item in experiences if isinstance(experiences, list) else []:
             ids = item.get("artifact_ids", []) if isinstance(item, dict) else []
             if isinstance(item, dict) and isinstance(ids, list) and audio_artifact_id in ids:
-                return {"success": True, "state": "already_exists", "experience_id": item.get("experience_id"), "message": "This voice capture is already linked to memory."}
+                # A later retry may have produced a summary after memory was first saved.
+                # Attach the newest artifact IDs instead of returning early and losing links.
+                additions = [transcript_artifact_id]
+                summary_record = summary.get("summary_artifact") if isinstance(summary, dict) else None
+                summary_id = summary_record.get("artifact_id") if isinstance(summary_record, dict) else None
+                if isinstance(summary_id, str) and summary_id.strip():
+                    additions.append(summary_id)
+                updated = memory.attach_artifacts_to_experience(audio_artifact_id, additions)
+                return {
+                    "success": True,
+                    "state": "already_exists",
+                    "experience_id": updated.get("experience_id", item.get("experience_id")),
+                    "artifact_ids": updated.get("artifact_ids", ids),
+                    "message": "This voice capture is already linked to memory; newly available artifacts were attached.",
+                }
 
         transcript_text = transcription.get("transcript_text", "")
         transcript_text = transcript_text.strip() if isinstance(transcript_text, str) else ""
