@@ -524,3 +524,56 @@ def test_voice_process_does_not_reuse_archived_summary_on_retry(tmp_path, monkey
     assert calls == {"transcription": 1, "summary": 2}
     assert artifacts.get_artifact(old_summary_id)["archived"] is True
     assert artifacts.get_artifact(body["summary_artifact_id"])["archived"] is not True
+
+
+
+def test_voice_process_does_not_reuse_archived_transcript_on_retry(tmp_path, monkeypatch):
+    from app.routes import voice_capture
+
+    monkeypatch.chdir(tmp_path)
+    client = TestClient(app)
+    artifacts = ArtifactManagerService()
+    audio = artifacts.create_binary_artifact(
+        "audio", b"RIFF" + bytes(4) + b"WAVE", "voice_capture", "wav"
+    )
+    calls = {"transcription": 0}
+
+    class Transcription:
+        def generate_transcript(self, artifact_id):
+            calls["transcription"] += 1
+            transcript = artifacts.create_artifact(
+                "transcripts", f"Transcript attempt {calls['transcription']}", artifact_id, "txt"
+            )
+            return {
+                "success": True,
+                "transcript_text": f"Transcript attempt {calls['transcription']}",
+                "transcript_artifact": transcript,
+            }
+
+    class UnexpectedSummary:
+        def generate_summary(self, artifact_id):
+            raise AssertionError("summary generation was disabled")
+
+    monkeypatch.setattr(voice_capture, "TranscriptService", Transcription)
+    monkeypatch.setattr(voice_capture, "SummaryService", UnexpectedSummary)
+
+    first = client.post(
+        "/voice/process",
+        json={"audio_artifact_id": audio["artifact_id"], "generate_summary": False},
+    )
+    assert first.status_code == 200 and first.json()["success"] is True
+    old_transcript_id = first.json()["transcript_artifact_id"]
+    assert artifacts.archive_artifact(old_transcript_id) is True
+
+    second = client.post(
+        "/voice/process",
+        json={"audio_artifact_id": audio["artifact_id"], "generate_summary": False},
+    )
+    assert second.status_code == 200 and second.json()["success"] is True
+    body = second.json()
+
+    assert body["transcript_artifact_id"] != old_transcript_id
+    assert body["transcription"].get("reused") is not True
+    assert calls["transcription"] == 2
+    assert artifacts.get_artifact(old_transcript_id)["archived"] is True
+    assert artifacts.get_artifact(body["transcript_artifact_id"])["archived"] is not True
