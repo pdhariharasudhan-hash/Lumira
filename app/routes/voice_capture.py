@@ -524,7 +524,10 @@ def retry_voice_summary(request: VoiceSummaryRetryRequest):
     if not transcript_text:
         raise HTTPException(status_code=422, detail="transcript is empty")
 
-    result = SummaryService().generate_summary(request.transcript_artifact_id)
+    # Retrying an already-completed request must not create duplicate summary artifacts.
+    result = _reuse_existing_voice_summary(artifacts, request.transcript_artifact_id)
+    if result is None:
+        result = SummaryService().generate_summary(request.transcript_artifact_id)
     if not result.get("success"):
         return {
             "success": False,
