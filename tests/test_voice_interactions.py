@@ -293,3 +293,56 @@ def test_retry_summary_attaches_summary_artifact_to_existing_voice_memory(tmp_pa
     assert body["memory"]["state"] == "updated"
     memory_record = next(item for item in MemoryService().get_all()["experiences"] if item["experience_id"] == experience["experience_id"])
     assert body["summary_artifact_id"] in memory_record["artifact_ids"]
+
+
+def test_voice_process_reuses_existing_transcript_on_retry(tmp_path, monkeypatch):
+    from app.routes import voice_capture
+
+    monkeypatch.chdir(tmp_path)
+    client = TestClient(app)
+    artifacts = ArtifactManagerService()
+    audio = artifacts.create_binary_artifact(
+        "audio", b"RIFF\\x00\\x00\\x00\\x00WAVE", "voice_capture", "wav"
+    )
+    calls = {"transcription": 0}
+
+    class Transcription:
+        def generate_transcript(self, artifact_id):
+            calls["transcription"] += 1
+            transcript = artifacts.create_artifact(
+                "transcripts", "வணக்கம் Lumira, retry safely", artifact_id, "txt"
+            )
+            return {
+                "success": True,
+                "transcript_text": "வணக்கம் Lumira, retry safely",
+                "transcript_artifact": transcript,
+            }
+
+    class UnexpectedSummary:
+        def generate_summary(self, artifact_id):
+            raise AssertionError("summary generation was disabled")
+
+    monkeypatch.setattr(voice_capture, "TranscriptService", Transcription)
+    monkeypatch.setattr(voice_capture, "SummaryService", UnexpectedSummary)
+
+    first = client.post(
+        "/voice/process",
+        json={"audio_artifact_id": audio["artifact_id"], "generate_summary": False},
+    )
+    second = client.post(
+        "/voice/process",
+        json={"audio_artifact_id": audio["artifact_id"], "generate_summary": False},
+    )
+
+    assert first.status_code == second.status_code == 200
+    first_body, second_body = first.json(), second.json()
+    assert first_body["success"] is True
+    assert second_body["success"] is True
+    assert first_body["transcript_artifact_id"] == second_body["transcript_artifact_id"]
+    assert second_body["transcription"]["reused"] is True
+    assert calls["transcription"] == 1
+    transcript_artifacts = [
+        item for item in artifacts.get_all_artifacts()
+        if item.get("type") == "transcripts" and item.get("source") == audio["artifact_id"]
+    ]
+    assert len(transcript_artifacts) == 1
