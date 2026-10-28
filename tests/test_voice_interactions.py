@@ -346,3 +346,58 @@ def test_voice_process_reuses_existing_transcript_on_retry(tmp_path, monkeypatch
         if item.get("type") == "transcripts" and item.get("source") == audio["artifact_id"]
     ]
     assert len(transcript_artifacts) == 1
+
+
+def test_voice_process_reuses_transcript_and_summary_on_full_retry(tmp_path, monkeypatch):
+    from app.routes import voice_capture
+
+    monkeypatch.chdir(tmp_path)
+    client = TestClient(app)
+    artifacts = ArtifactManagerService()
+    audio = artifacts.create_binary_artifact(
+        "audio", b"RIFF\\x00\\x00\\x00\\x00WAVE", "voice_capture", "wav"
+    )
+    calls = {"transcription": 0, "summary": 0}
+
+    class Transcription:
+        def generate_transcript(self, artifact_id):
+            calls["transcription"] += 1
+            transcript = artifacts.create_artifact(
+                "transcripts", "A voice idea to summarize", artifact_id, "txt"
+            )
+            return {
+                "success": True,
+                "transcript_text": "A voice idea to summarize",
+                "transcript_artifact": transcript,
+            }
+
+    class Summary:
+        def generate_summary(self, transcript_id):
+            calls["summary"] += 1
+            summary = artifacts.create_artifact(
+                "summaries", "A concise voice idea summary", transcript_id, "txt"
+            )
+            return {
+                "success": True,
+                "summary_text": "A concise voice idea summary",
+                "summary_artifact": summary,
+            }
+
+    monkeypatch.setattr(voice_capture, "TranscriptService", Transcription)
+    monkeypatch.setattr(voice_capture, "SummaryService", Summary)
+
+    first = client.post("/voice/process", json={"audio_artifact_id": audio["artifact_id"]})
+    second = client.post("/voice/process", json={"audio_artifact_id": audio["artifact_id"]})
+
+    assert first.status_code == second.status_code == 200
+    first_body, second_body = first.json(), second.json()
+    assert first_body["success"] is True
+    assert second_body["success"] is True
+    assert first_body["transcript_artifact_id"] == second_body["transcript_artifact_id"]
+    assert first_body["summary_artifact_id"] == second_body["summary_artifact_id"]
+    assert second_body["transcription"]["reused"] is True
+    assert second_body["summary"]["reused"] is True
+    assert calls == {"transcription": 1, "summary": 1}
+    stored = artifacts.get_all_artifacts()
+    assert len([item for item in stored if item.get("type") == "transcripts"]) == 1
+    assert len([item for item in stored if item.get("type") == "summaries"]) == 1
