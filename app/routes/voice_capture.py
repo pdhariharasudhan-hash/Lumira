@@ -211,6 +211,50 @@ def _persist_voice_capture_memory(audio_artifact_id: str, transcript_artifact_id
         return {"success": False, "code": "memory_persistence_failed", "message": "Voice artifacts are preserved, but memory persistence did not complete. Retry from the saved artifacts."}
 
 
+def _reuse_existing_voice_transcript(artifacts, audio_artifact_id: str) -> dict | None:
+    """Reuse a prior transcript for this audio so a retried pipeline is idempotent."""
+    try:
+        links = artifacts.get_artifact_links(audio_artifact_id).get("links", [])
+    except (KeyError, ValueError, OSError):
+        return None
+
+    for link in links if isinstance(links, list) else []:
+        if not isinstance(link, dict):
+            continue
+        if link.get("direction") != "outgoing" or link.get("relation") != "transcribed_as":
+            continue
+        transcript_id = link.get("artifact_id")
+        if not isinstance(transcript_id, str) or not transcript_id:
+            continue
+        record = artifacts.get_artifact(transcript_id)
+        if not record or record.get("type") != "transcripts" or record.get("archived", False):
+            continue
+        if record.get("source") != audio_artifact_id:
+            continue
+        try:
+            path = artifacts.get_artifact_path(transcript_id)
+            if path is None or not path.is_file() or path.stat().st_size > artifacts.MAX_CONTENT_LENGTH:
+                continue
+            transcript_text = path.read_text(encoding="utf-8").strip()
+        except (OSError, UnicodeError, ValueError):
+            continue
+        if not transcript_text:
+            continue
+        from app.services.language.language_detection_service import LanguageDetectionService
+
+        language = LanguageDetectionService().detect(transcript_text)
+        return {
+            "success": True,
+            "audio_artifact": audio_artifact_id,
+            "transcript_text": transcript_text,
+            "transcript_artifact": record,
+            "language": language.get("language", "unknown"),
+            "language_confidence": language.get("confidence", 0),
+            "reused": True,
+        }
+    return None
+
+
 @router.post("/voice/process")
 def process_voice_capture(request: VoiceProcessRequest):
     """Run the stored-audio -> transcript -> optional summary artifact workflow."""
@@ -221,7 +265,7 @@ def process_voice_capture(request: VoiceProcessRequest):
     if not audio or audio.get("type") != "audio":
         raise HTTPException(status_code=404, detail="audio artifact not found")
 
-    transcript = TranscriptService().generate_transcript(request.audio_artifact_id)
+    transcript = _reuse_existing_voice_transcript(artifacts, request.audio_artifact_id)\n    if transcript is None:\n        transcript = TranscriptService().generate_transcript(request.audio_artifact_id)
     result = {
         "success": False,
         "audio_artifact_id": request.audio_artifact_id,
