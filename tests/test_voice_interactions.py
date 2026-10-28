@@ -523,7 +523,7 @@ def test_voice_process_does_not_reuse_archived_summary_on_retry(tmp_path, monkey
     assert body["summary"].get("reused") is not True
     assert calls == {"transcription": 1, "summary": 2}
     assert artifacts.get_artifact(old_summary_id)["archived"] is True
-    assert artifacts.get_artifact(body["summary_artifact_id"])["archived"] is not True
+    assert artifacts.get_artifact(body["summary_artifact_id"]).get("archived", False) is False
 
 
 
@@ -576,4 +576,4 @@ def test_voice_process_does_not_reuse_archived_transcript_on_retry(tmp_path, mon
     assert body["transcription"].get("reused") is not True
     assert calls["transcription"] == 2
     assert artifacts.get_artifact(old_transcript_id)["archived"] is True
-    assert artifacts.get_artifact(body["transcript_artifact_id"])["archived"] is not True
+    assert artifacts.get_artifact(body["transcript_artifact_id"]).get("archived", False) is False
