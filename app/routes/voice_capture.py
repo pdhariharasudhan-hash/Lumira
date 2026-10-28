@@ -304,7 +304,9 @@ def process_voice_capture(request: VoiceProcessRequest):
     if not audio or audio.get("type") != "audio":
         raise HTTPException(status_code=404, detail="audio artifact not found")
 
-    transcript = _reuse_existing_voice_transcript(artifacts, request.audio_artifact_id)\n    if transcript is None:\n        transcript = TranscriptService().generate_transcript(request.audio_artifact_id)
+    transcript = _reuse_existing_voice_transcript(artifacts, request.audio_artifact_id)
+    if transcript is None:
+        transcript = TranscriptService().generate_transcript(request.audio_artifact_id)
     result = {
         "success": False,
         "audio_artifact_id": request.audio_artifact_id,
