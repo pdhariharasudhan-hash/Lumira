@@ -520,7 +520,7 @@ def test_voice_process_does_not_reuse_archived_summary_on_retry(tmp_path, monkey
     assert body["transcript_artifact_id"] == first.json()["transcript_artifact_id"]
     assert body["transcription"]["reused"] is True
     assert body["summary_artifact_id"] != old_summary_id
-    assert body["summary"]["reused"] is not True
+    assert body["summary"].get("reused") is not True
     assert calls == {"transcription": 1, "summary": 2}
     assert artifacts.get_artifact(old_summary_id)["archived"] is True
     assert artifacts.get_artifact(body["summary_artifact_id"])["archived"] is not True
