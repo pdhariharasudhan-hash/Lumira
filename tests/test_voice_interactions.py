@@ -302,7 +302,7 @@ def test_voice_process_reuses_existing_transcript_on_retry(tmp_path, monkeypatch
     client = TestClient(app)
     artifacts = ArtifactManagerService()
     audio = artifacts.create_binary_artifact(
-        "audio", b"RIFF\\x00\\x00\\x00\\x00WAVE", "voice_capture", "wav"
+        "audio", b"RIFF" + bytes(4) + b"WAVE", "voice_capture", "wav"
     )
     calls = {"transcription": 0}
 
@@ -355,7 +355,7 @@ def test_voice_process_reuses_transcript_and_summary_on_full_retry(tmp_path, mon
     client = TestClient(app)
     artifacts = ArtifactManagerService()
     audio = artifacts.create_binary_artifact(
-        "audio", b"RIFF\\x00\\x00\\x00\\x00WAVE", "voice_capture", "wav"
+        "audio", b"RIFF" + bytes(4) + b"WAVE", "voice_capture", "wav"
     )
     calls = {"transcription": 0, "summary": 0}
 
