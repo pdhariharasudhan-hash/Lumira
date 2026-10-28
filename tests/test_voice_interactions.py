@@ -401,3 +401,62 @@ def test_voice_process_reuses_transcript_and_summary_on_full_retry(tmp_path, mon
     stored = artifacts.get_all_artifacts()
     assert len([item for item in stored if item.get("type") == "transcripts"]) == 1
     assert len([item for item in stored if item.get("type") == "summaries"]) == 1
+
+
+def test_voice_process_retries_failed_summary_without_retranscribing(tmp_path, monkeypatch):
+    from app.routes import voice_capture
+
+    monkeypatch.chdir(tmp_path)
+    client = TestClient(app)
+    artifacts = ArtifactManagerService()
+    audio = artifacts.create_binary_artifact(
+        "audio", b"RIFF" + bytes(4) + b"WAVE", "voice_capture", "wav"
+    )
+    calls = {"transcription": 0, "summary": 0}
+
+    class Transcription:
+        def generate_transcript(self, artifact_id):
+            calls["transcription"] += 1
+            transcript = artifacts.create_artifact(
+                "transcripts", "Build a personal AI memory system", artifact_id, "txt"
+            )
+            return {
+                "success": True,
+                "transcript_text": "Build a personal AI memory system",
+                "transcript_artifact": transcript,
+            }
+
+    class Summary:
+        def generate_summary(self, transcript_id):
+            calls["summary"] += 1
+            if calls["summary"] == 1:
+                return {
+                    "success": False,
+                    "code": "provider_unavailable",
+                    "message": "Summary provider is unavailable",
+                }
+            summary = artifacts.create_artifact(
+                "summaries", "Build a personal AI memory system", transcript_id, "txt"
+            )
+            return {
+                "success": True,
+                "summary_text": "Build a personal AI memory system",
+                "summary_artifact": summary,
+            }
+
+    monkeypatch.setattr(voice_capture, "TranscriptService", Transcription)
+    monkeypatch.setattr(voice_capture, "SummaryService", Summary)
+
+    first = client.post("/voice/process", json={"audio_artifact_id": audio["artifact_id"]})
+    second = client.post("/voice/process", json={"audio_artifact_id": audio["artifact_id"]})
+
+    assert first.status_code == second.status_code == 200
+    assert first.json()["success"] is False
+    assert first.json()["stage"] == "summary"
+    assert second.json()["success"] is True
+    assert second.json()["stage"] == "completed"
+    assert second.json()["transcription"]["reused"] is True
+    assert calls == {"transcription": 1, "summary": 2}
+    stored = artifacts.get_all_artifacts()
+    assert len([item for item in stored if item.get("type") == "transcripts"]) == 1
+    assert len([item for item in stored if item.get("type") == "summaries"]) == 1
