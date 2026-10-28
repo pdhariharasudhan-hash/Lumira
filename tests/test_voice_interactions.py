@@ -586,7 +586,7 @@ def test_voice_retry_summary_reuses_existing_summary_without_creating_duplicate(
     client = TestClient(app)
     artifacts = ArtifactManagerService()
     audio = artifacts.create_binary_artifact(
-        "audio", b"RIFF\\x00\\x00\\x00\\x00WAVE", "voice_capture", "wav"
+        "audio", b"RIFF\x00\x00\x00\x00WAVE", "voice_capture", "wav"
     )
     transcript = artifacts.create_artifact(
         "transcripts", "A captured idea", audio["artifact_id"], "txt"
