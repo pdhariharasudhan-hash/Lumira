@@ -147,6 +147,30 @@ class ArtifactManagerService:
                     or len(record[timestamp_field]) > 40
                 ):
                     raise PersistenceIntegrityError("Artifact lifecycle timestamps are invalid")
+        known_ids = {record["artifact_id"] for record in data["artifacts"]}
+        for record in data["artifacts"]:
+            links = record.get("links", [])
+            if not isinstance(links, list) or len(links) > 100:
+                raise PersistenceIntegrityError("Artifact links must be a list of at most 100 entries")
+            seen_links = set()
+            for link in links:
+                if not isinstance(link, dict) or not {"artifact_id", "relation", "created_at"}.issubset(link):
+                    raise PersistenceIntegrityError("Artifact link record is incomplete")
+                target_id = link["artifact_id"]
+                relation = link["relation"]
+                created_at = link["created_at"]
+                if (
+                    not isinstance(target_id, str) or target_id not in known_ids
+                    or target_id == record["artifact_id"]
+                    or not isinstance(relation, str)
+                    or not re.fullmatch(r"[a-z][a-z0-9_-]{0,39}", relation)
+                    or not isinstance(created_at, str) or len(created_at) > 40
+                ):
+                    raise PersistenceIntegrityError("Artifact link record is invalid")
+                identity = (target_id, relation)
+                if identity in seen_links:
+                    raise PersistenceIntegrityError("Artifact contains duplicate links")
+                seen_links.add(identity)
         return data
 
     def _save_index(
@@ -324,6 +348,120 @@ class ArtifactManagerService:
             "artifacts"
         ]
 
+    def link_artifacts(self, source_id: str, target_id: str, relation: str = "related_to") -> dict:
+        """Persist a bounded directed relationship between two active artifacts."""
+        if not isinstance(source_id, str) or not source_id or len(source_id) > 128:
+            raise ValueError("Source artifact identifier is invalid")
+        if not isinstance(target_id, str) or not target_id or len(target_id) > 128:
+            raise ValueError("Target artifact identifier is invalid")
+        if source_id == target_id:
+            raise ValueError("An artifact cannot link to itself")
+        if not isinstance(relation, str) or not re.fullmatch(r"[a-z][a-z0-9_-]{0,39}", relation):
+            raise ValueError("Relation must be a lowercase identifier of at most 40 characters")
+
+        now = datetime.now(timezone.utc).isoformat()
+        result = {"changed": False, "link": None}
+
+        def add_link(index):
+            self._validate_index(index)
+            artifacts = index["artifacts"]
+            source = next((item for item in artifacts if item["artifact_id"] == source_id), None)
+            target = next((item for item in artifacts if item["artifact_id"] == target_id), None)
+            if source is None or target is None:
+                raise KeyError("Source or target artifact not found")
+            if source.get("archived", False) or target.get("archived", False):
+                raise ValueError("Archived artifacts cannot be linked")
+            links = source.setdefault("links", [])
+            existing = next((item for item in links if item["artifact_id"] == target_id and item["relation"] == relation), None)
+            if existing is not None:
+                result["link"] = dict(existing)
+                return False
+            if len(links) >= 100:
+                raise ValueError("An artifact can have at most 100 outgoing links")
+            link = {"artifact_id": target_id, "relation": relation, "created_at": now}
+            links.append(link)
+            result["link"] = dict(link)
+            result["changed"] = True
+            return True
+
+        self.store.update(add_link, {"artifacts": []})
+        return result
+
+    def unlink_artifacts(self, source_id: str, target_id: str, relation: str = "related_to") -> dict:
+        """Remove one relationship without deleting either artifact."""
+        if not isinstance(source_id, str) or not source_id or len(source_id) > 128:
+            raise ValueError("Source artifact identifier is invalid")
+        if not isinstance(target_id, str) or not target_id or len(target_id) > 128:
+            raise ValueError("Target artifact identifier is invalid")
+        if not isinstance(relation, str) or not re.fullmatch(r"[a-z][a-z0-9_-]{0,39}", relation):
+            raise ValueError("Relation must be a lowercase identifier of at most 40 characters")
+
+        result = {"changed": False, "removed": None}
+
+        def remove_link(index):
+            self._validate_index(index)
+            artifacts = index["artifacts"]
+            source = next((item for item in artifacts if item["artifact_id"] == source_id), None)
+            target = next((item for item in artifacts if item["artifact_id"] == target_id), None)
+            if source is None or target is None:
+                raise KeyError("Source or target artifact not found")
+            links = source.get("links", [])
+            kept = [
+                link for link in links
+                if not (link.get("artifact_id") == target_id and link.get("relation") == relation)
+            ]
+            if len(kept) == len(links):
+                return False
+            removed = next(
+                link for link in links
+                if link.get("artifact_id") == target_id and link.get("relation") == relation
+            )
+            result["removed"] = dict(removed)
+            result["changed"] = True
+            if kept:
+                source["links"] = kept
+            else:
+                source.pop("links", None)
+            return True
+
+        self.store.update(remove_link, {"artifacts": []})
+        return result
+
+    def get_artifact_links(self, artifact_id: str) -> dict:
+        """Return outgoing and incoming links without exposing local file paths."""
+        index = self._load_index()
+        artifacts = index["artifacts"]
+        selected = next((item for item in artifacts if item["artifact_id"] == artifact_id), None)
+        if selected is None:
+            return {"artifact_id": artifact_id, "links": []}
+
+        by_id = {item["artifact_id"]: item for item in artifacts}
+        links = []
+        for link in selected.get("links", []):
+            target = by_id.get(link["artifact_id"])
+            if target is not None:
+                links.append({
+                    **link,
+                    "direction": "outgoing",
+                    "artifact": {
+                        key: target[key] for key in ("artifact_id", "type", "source", "timestamp", "archived")
+                        if key in target
+                    },
+                })
+        for source in artifacts:
+            for link in source.get("links", []):
+                if link.get("artifact_id") == artifact_id and source["artifact_id"] != artifact_id:
+                    links.append({
+                        **link,
+                        "direction": "incoming",
+                        "artifact": {
+                            key: source[key] for key in ("artifact_id", "type", "source", "timestamp", "archived")
+                            if key in source
+                        },
+                    })
+        links.sort(key=lambda item: (item.get("direction", ""), item.get("created_at", ""), item.get("artifact_id", "")))
+        return {"artifact_id": artifact_id, "links": links}
+
     def get_artifact_path(self, artifact_id: str) -> Path | None:
         artifact = self.get_artifact(artifact_id)
         if artifact is None:
@@ -399,6 +537,11 @@ class ArtifactManagerService:
             removed["path"] = path
             removed["artifact"] = artifact
             index["artifacts"] = [item for item in artifacts if item.get("artifact_id") != artifact_id]
+            for remaining in index["artifacts"]:
+                if "links" in remaining:
+                    remaining["links"] = [link for link in remaining["links"] if link.get("artifact_id") != artifact_id]
+                    if not remaining["links"]:
+                        remaining.pop("links", None)
             return True
 
         deleted = self.store.update(remove_record, {"artifacts": []})

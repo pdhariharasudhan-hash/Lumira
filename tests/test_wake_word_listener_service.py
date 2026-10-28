@@ -162,7 +162,7 @@ def test_wake_word_routes_report_status_and_unavailable_provider(monkeypatch):
     start = client.post("/voice/wake-word/start")
     assert status.status_code == 200
     assert status.json()["listening"] is False
-    assert start.status_code == 501
+    assert start.status_code == 503
     assert start.json()["detail"]["code"] == "provider_unavailable"
 
 

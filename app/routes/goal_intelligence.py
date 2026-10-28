@@ -1,6 +1,6 @@
 from copy import deepcopy
 from datetime import UTC, datetime, timedelta
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field, field_validator
@@ -71,8 +71,8 @@ def _goal_or_404(goals: list[dict], goal_id: str) -> dict:
 
 @router.get("/goals/intelligence")
 def get_goal_intelligence(
-    project_id: str | None = Query(default=None, max_length=100),
-    stale_days: int = Query(default=14, ge=1, le=365),
+    project_id: Annotated[str | None, Query(max_length=100)] = None,
+    stale_days: Annotated[int, Query(ge=1, le=365)] = 14,
 ):
     """A deterministic 28-signal goal portfolio intelligence report; no model guesses."""
     try:
@@ -203,10 +203,10 @@ def get_goal_intelligence(
 
 @router.get("/goals/search")
 def search_goals(
-    q: str = Query(min_length=1, max_length=200),
-    project_id: str | None = Query(default=None, max_length=100),
+    q: Annotated[str, Query(min_length=1, max_length=200)],
+    project_id: Annotated[str | None, Query(max_length=100)] = None,
     status: Literal["active", "paused", "completed", "blocked", "cancelled"] | None = None,
-    limit: int = Query(default=30, ge=1, le=100),
+    limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ):
     query = q.strip().casefold()
     if not query:
@@ -228,9 +228,9 @@ def search_goals(
 
 @router.get("/goals/timeline")
 def get_goal_timeline(
-    project_id: str | None = Query(default=None, max_length=100),
-    days: int = Query(default=30, ge=1, le=365),
-    limit: int = Query(default=100, ge=1, le=300),
+    project_id: Annotated[str | None, Query(max_length=100)] = None,
+    days: Annotated[int, Query(ge=1, le=365)] = 30,
+    limit: Annotated[int, Query(ge=1, le=300)] = 100,
 ):
     try:
         _, goals = _memory_and_goals(project_id)
@@ -260,8 +260,8 @@ def get_goal_timeline(
 
 @router.get("/goals/next-actions")
 def get_goal_next_actions(
-    project_id: str | None = Query(default=None, max_length=100),
-    limit: int = Query(default=10, ge=1, le=50),
+    project_id: Annotated[str | None, Query(max_length=100)] = None,
+    limit: Annotated[int, Query(ge=1, le=50)] = 10,
 ):
     try:
         _, goals = _memory_and_goals(project_id)
@@ -342,7 +342,7 @@ def add_goal_milestone(goal_id: str, request: MilestoneCreate):
 def update_goal_milestone(
     goal_id: str,
     milestone_id: str,
-    status: Literal["pending", "in_progress", "completed", "blocked"] = Query(...),
+    status: Annotated[Literal["pending", "in_progress", "completed", "blocked"], Query()],
 ):
     try:
         memory, goals = _memory_and_goals()
@@ -460,7 +460,7 @@ def restore_goal(goal_id: str):
 
 
 @router.post("/goals/{goal_id}/duplicate")
-def duplicate_goal(goal_id: str, include_children: bool = Query(default=False)):
+def duplicate_goal(goal_id: str, include_children: Annotated[bool, Query()] = False):
     try:
         memory, goals = _memory_and_goals()
         original = _goal_or_404(goals, goal_id)
@@ -522,9 +522,9 @@ def compare_goals(goal_id: str, other_goal_id: str):
 
 @router.get("/goals/export")
 def export_goals(
-    project_id: str | None = Query(default=None, max_length=100),
+    project_id: Annotated[str | None, Query(max_length=100)] = None,
     include_archived: bool = False,
-    limit: int = Query(default=500, ge=1, le=1000),
+    limit: Annotated[int, Query(ge=1, le=1000)] = 500,
 ):
     try:
         _, goals = _memory_and_goals(project_id, include_archived=include_archived)

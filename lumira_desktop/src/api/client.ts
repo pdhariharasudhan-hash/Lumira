@@ -235,6 +235,15 @@ export const api = {
 		request<JsonObject>("/memory/link", json("POST", { source_id, target_id, relation })),
 	archiveMemory: (collection: string, record_id: string) =>
 		request<JsonObject>("/memory/archive", json("POST", { collection, record_id })),
+	getArtifactLinks: (artifactId: string) => request<JsonObject>(`/artifacts/${encodeURIComponent(artifactId)}/links`),
+	linkArtifacts: (sourceArtifactId: string, targetArtifactId: string, relation = "related_to") =>
+		request<JsonObject>(`/artifacts/${encodeURIComponent(sourceArtifactId)}/links`, json("POST", { target_artifact_id: targetArtifactId, relation })),
+	unlinkArtifacts: (sourceArtifactId: string, targetArtifactId: string, relation = "related_to") => {
+		const params = new URLSearchParams({ target_artifact_id: targetArtifactId, relation });
+		return request<JsonObject>(`/artifacts/${encodeURIComponent(sourceArtifactId)}/links?${params.toString()}`, { method: "DELETE" });
+	},
+	analyzeImageArtifact: (artifactId: string, prompt = "Describe this image and extract any readable text.", saveArtifact = true) =>
+		request<JsonObject>("/images/analyze-artifact", json("POST", { artifact_id: artifactId, prompt, save_artifact: saveArtifact })),
 	getOpenApi: () => request<JsonObject>("/openapi.json"),
 	listRuns: () => request<JsonObject>("/runs"),
 	getRun: (runId: string) => request<JsonObject>(`/runs/${encodeURIComponent(runId)}`),
@@ -251,6 +260,8 @@ export const api = {
 		request<JsonObject>("/voice/playback", json("POST", { text, language })),
 	retryVoiceSummary: (transcript_artifact_id: string) =>
 		request<JsonObject>("/voice/retry-summary", json("POST", { transcript_artifact_id })),
+	retryVoiceMemory: (audio_artifact_id: string, transcript_artifact_id: string, summary_artifact_id?: string) =>
+		request<JsonObject>("/voice/retry-memory", json("POST", { audio_artifact_id, transcript_artifact_id, ...(summary_artifact_id ? { summary_artifact_id } : {}) })),
 	transcribeVoice: (artifact_id: string) => request<JsonObject>("/voice/transcript", json("POST", { artifact_id })),
 	summarizeVoice: (artifact_id: string) => request<JsonObject>("/voice/summary", json("POST", { artifact_id })),
 	saveVoiceResult: (sessionId: string, audio_artifact_id: string, transcript_artifact_id?: string, summary_artifact_id?: string) =>

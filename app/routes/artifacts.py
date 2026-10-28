@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
+from typing import Annotated
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 import base64
@@ -18,6 +19,11 @@ class ArtifactCreateRequest(BaseModel):
     content: str = Field(max_length=ArtifactManagerService.MAX_CONTENT_LENGTH)
     source: str = Field(default="api", max_length=500)
     extension: str = Field(default="txt", pattern=r"^[A-Za-z0-9]{1,12}$")
+
+
+class ArtifactLinkRequest(BaseModel):
+    target_artifact_id: str = Field(min_length=1, max_length=128)
+    relation: str = Field(default="related_to", pattern=r"^[a-z][a-z0-9_-]{0,39}$")
 
 
 class BinaryArtifactCreateRequest(BaseModel):
@@ -82,10 +88,10 @@ def create_binary_artifact(request: BinaryArtifactCreateRequest):
 @router.get("/artifacts")
 def list_artifacts(
     artifact_type: str | None = None,
-    q: str | None = Query(default=None, max_length=500),
+    q: Annotated[str | None, Query(max_length=500)] = None,
     include_archived: bool = False,
-    limit: int = Query(default=100, ge=1, le=500),
-    offset: int = Query(default=0, ge=0, le=100000),
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    offset: Annotated[int, Query(ge=0, le=100000)] = 0,
 ):
     try:
         result = ArtifactLibraryQueryService(_manager()).list_artifacts(
@@ -136,6 +142,50 @@ def get_artifact(artifact_id: str):
     # Expose availability, never the local filesystem path itself.
     public_artifact["content_available"] = content_path is not None and content_path.is_file()
     return {"success": True, "artifact": public_artifact}
+
+
+@router.post("/artifacts/{artifact_id}/links", status_code=201)
+def link_artifact(artifact_id: str, request: ArtifactLinkRequest):
+    manager = _manager()
+    try:
+        result = manager.link_artifacts(
+            source_id=artifact_id,
+            target_id=request.target_artifact_id,
+            relation=request.relation,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="source or target artifact not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"success": True, "source_artifact_id": artifact_id, **result}
+
+
+@router.delete("/artifacts/{artifact_id}/links")
+def unlink_artifact(
+    artifact_id: str,
+    target_artifact_id: Annotated[str, Query(min_length=1, max_length=128)],
+    relation: Annotated[str, Query(pattern=r"^[a-z][a-z0-9_-]{0,39}$")] = "related_to",
+):
+    manager = _manager()
+    try:
+        result = manager.unlink_artifacts(
+            source_id=artifact_id,
+            target_id=target_artifact_id,
+            relation=relation,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="source or target artifact not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"success": True, "source_artifact_id": artifact_id, **result}
+
+
+@router.get("/artifacts/{artifact_id}/links")
+def get_artifact_links(artifact_id: str):
+    manager = _manager()
+    if manager.get_artifact(artifact_id) is None:
+        raise HTTPException(status_code=404, detail="artifact not found")
+    return {"success": True, **manager.get_artifact_links(artifact_id)}
 
 
 @router.post("/artifacts/{artifact_id}/archive")

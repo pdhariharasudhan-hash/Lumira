@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Query
+from typing import Annotated
 
 from app.services.search.unified_search_service import (
     UnifiedSearchService
@@ -24,7 +25,7 @@ def _hide_internal_paths(value):
     "/search"
 )
 def search(
-    q: str = Query(min_length=1, max_length=500)
+    q: Annotated[str, Query(min_length=1, max_length=500)]
 ):
 
     normalized_query = q.strip()

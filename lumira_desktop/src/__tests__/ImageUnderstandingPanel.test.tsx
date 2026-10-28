@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import { ImageUnderstandingPanel } from "../components/ImageUnderstanding/ImageUnderstandingPanel";
 
 vi.mock("../api/client", () => ({
-  api: { providerStatus: vi.fn().mockResolvedValue({ providers: { image_understanding: { registered: false, configured: false } } }), analyzeImage: vi.fn(), createBinaryArtifact: vi.fn(), createArtifact: vi.fn() },
+  api: { providerStatus: vi.fn().mockResolvedValue({ providers: { image_understanding: { registered: false, configured: false } } }), analyzeImage: vi.fn(), analyzeImageArtifact: vi.fn(), createBinaryArtifact: vi.fn(), createArtifact: vi.fn() },
 }));
 
 function pngFile() {
@@ -23,6 +23,30 @@ describe("ImageUnderstandingPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Analyze image" }));
     await waitFor(() => expect(api.analyzeImage).toHaveBeenCalledWith(expect.any(String), "Inspect this board"));
     expect(await screen.findByText("A circuit board.")).toBeTruthy();
+  });
+
+  it("analyzes an existing Artifact Manager image without uploading it again", async () => {
+    vi.mocked(api.analyzeImageArtifact).mockResolvedValue({
+      success: true,
+      description: "A stored circuit board.",
+      source_artifact_id: "image-existing",
+      artifact_saved: true,
+      artifact: { artifact_id: "report-linked" },
+    });
+    render(<ImageUnderstandingPanel />);
+    fireEvent.change(screen.getByLabelText("Image artifact ID"), { target: { value: "image-existing" } });
+    fireEvent.change(screen.getByLabelText("What should Lumira inspect?"), { target: { value: "Inspect connector labels" } });
+    fireEvent.click(screen.getByRole("button", { name: "Analyze stored image" }));
+
+    await waitFor(() => expect(api.analyzeImageArtifact).toHaveBeenCalledWith(
+      "image-existing",
+      "Inspect connector labels",
+      true,
+    ));
+    expect(await screen.findByText("A stored circuit board.")).toBeTruthy();
+    expect(screen.getByText("Source artifact: image-existing")).toBeTruthy();
+    expect(screen.getByText("Report artifact: report-linked")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain("linked to the source image");
   });
 
   it("rejects unsupported file types before calling the API", async () => {

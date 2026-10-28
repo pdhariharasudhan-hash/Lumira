@@ -123,3 +123,28 @@ def test_pending_work_item_cannot_be_marked_failed_without_starting(tmp_path):
 
     persisted = service.get_workflow(workflow["workflow_id"])
     assert persisted["tasks"][0]["status"] == "pending"
+
+
+
+def test_completed_work_item_task_accepts_idempotent_completion_update(tmp_path):
+    path = tmp_path / "work_items.json"
+    service = WorkItemService(path)
+    workflow = service.create_workflow(
+        "operations",
+        "Idempotent completion",
+        "Repeated completion must not break workflow recovery",
+        ["Finish the first task"],
+    )
+    task_id = workflow["tasks"][0]["task_id"]
+    service.update_task(workflow["workflow_id"], task_id, "in_progress")
+    first = service.update_task(
+        workflow["workflow_id"], task_id, "completed", result="Verified complete"
+    )
+    second = service.update_task(
+        workflow["workflow_id"], task_id, "completed", result="Verified complete"
+    )
+
+    assert first["tasks"][0]["status"] == "completed"
+    assert second["tasks"][0]["status"] == "completed"
+    assert second["tasks"][0]["result"] == "Verified complete"
+    assert second["status"] == "completed"

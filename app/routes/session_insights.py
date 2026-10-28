@@ -1,6 +1,7 @@
 from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 
+from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query
 
 from app.services.persistence.atomic_json_store import PersistenceIntegrityError
@@ -62,10 +63,10 @@ def session_summary():
 
 @router.get("/sessions/search")
 def search_sessions(
-    q: str = Query(min_length=1, max_length=200),
-    status: str | None = Query(default=None, pattern="^(active|paused|closed)$"),
-    project_id: str | None = Query(default=None, max_length=100),
-    limit: int = Query(default=30, ge=1, le=100),
+    q: Annotated[str, Query(min_length=1, max_length=200)],
+    status: Annotated[str | None, Query(pattern="^(active|paused|closed)$")] = None,
+    project_id: Annotated[str | None, Query(max_length=100)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ):
     query = q.strip().casefold()
     if not query:
@@ -98,10 +99,10 @@ def search_sessions(
 
 @router.get("/sessions/export")
 def export_sessions(
-    status: str | None = Query(default=None, pattern="^(active|paused|closed)$"),
-    project_id: str | None = Query(default=None, max_length=100),
+    status: Annotated[str | None, Query(pattern="^(active|paused|closed)$")] = None,
+    project_id: Annotated[str | None, Query(max_length=100)] = None,
     include_recent_messages: bool = False,
-    limit: int = Query(default=50, ge=1, le=100),
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ):
     sessions = _sessions(200)
     if status:
@@ -159,7 +160,7 @@ def session_health(session_id: str):
 @router.get("/sessions/{session_id}/related-workflows")
 def session_related_workflows(
     session_id: str,
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
 ):
     try:
         session = SessionManagerService().get_session(session_id)

@@ -1,6 +1,7 @@
 from collections import Counter
 from hashlib import sha256
 from pathlib import Path
+from typing import Annotated
 import re
 
 from fastapi import APIRouter, HTTPException, Query
@@ -59,7 +60,7 @@ def project_summary():
 
 
 @router.get("/projects/search")
-def search_projects(q: str = Query(min_length=1, max_length=200), limit: int = Query(default=30, ge=1, le=100)):
+def search_projects(q: Annotated[str, Query(min_length=1, max_length=200)], limit: Annotated[int, Query(ge=1, le=100)] = 30):
     query = q.strip().casefold()
     if not query:
         raise HTTPException(status_code=422, detail="search query must not be empty")
@@ -109,8 +110,8 @@ def project_health(project_name: str):
 @router.get("/projects/{project_name}/manifest")
 def project_manifest(
     project_name: str,
-    version: str | None = Query(default=None, max_length=40),
-    limit: int = Query(default=200, ge=1, le=MAX_MANIFEST_FILES),
+    version: Annotated[str | None, Query(max_length=40)] = None,
+    limit: Annotated[int, Query(ge=1, le=MAX_MANIFEST_FILES)] = 200,
 ):
     project_path, project = _project_or_404(project_name)
     version_name = version or ((project.get("latest") or {}).get("version") if isinstance(project.get("latest"), dict) else None)
@@ -147,8 +148,8 @@ def project_manifest(
 @router.get("/projects/{project_name}/compare-versions")
 def compare_project_versions(
     project_name: str,
-    left: str = Query(min_length=1, max_length=40),
-    right: str = Query(min_length=1, max_length=40),
+    left: Annotated[str, Query(min_length=1, max_length=40)],
+    right: Annotated[str, Query(min_length=1, max_length=40)],
 ):
     project_path, _ = _project_or_404(project_name)
     left_path = resolve_project_path(project_name, left)
@@ -204,7 +205,7 @@ def compare_project_versions(
 @router.get("/projects/{project_name}/integrity")
 def project_integrity(
     project_name: str,
-    version: str | None = Query(default=None, max_length=40),
+    version: Annotated[str | None, Query(max_length=40)] = None,
 ):
     project_path, project = _project_or_404(project_name)
     latest = project.get("latest") if isinstance(project.get("latest"), dict) else {}
@@ -272,7 +273,7 @@ def project_integrity(
 
 
 @router.get("/projects/{project_name}/security-review")
-def project_security_review(project_name: str, version: str | None = Query(default=None, max_length=40)):
+def project_security_review(project_name: str, version: Annotated[str | None, Query(max_length=40)] = None):
     """Run a bounded heuristic scan; never execute project source."""
     project_path, project = _project_or_404(project_name)
     latest = project.get("latest") if isinstance(project.get("latest"), dict) else {}
@@ -347,7 +348,7 @@ def project_security_review(project_name: str, version: str | None = Query(defau
 
 
 @router.get("/projects/{project_name}/readiness-audit")
-def project_readiness_audit(project_name: str, version: str | None = Query(default=None, max_length=40)):
+def project_readiness_audit(project_name: str, version: Annotated[str | None, Query(max_length=40)] = None):
     """Report 28 deterministic packaging/readiness checks without executing project code."""
     import json
 

@@ -35,9 +35,14 @@ class FakeAgents:
         return {"success": True, "state": "completed", "agent": agent_name, "result": {"status": "completed"}}
 
 
-def test_agent_dispatch_passes_through_main_brain_before_dispatch():
+def test_agent_dispatch_passes_through_main_brain_before_dispatch(monkeypatch):
+    from app.services.resources.resource_budget_service import ResourceBudgetService
+    monkeypatch.setattr(ResourceBudgetService, "snapshot", lambda self: {"resource_pressure": "normal"})
+    from threading import Lock
+    monkeypatch.setattr(BrainAgentOrchestrator, "_dispatch_lock", Lock())
     brain = FakeBrain()
     agents = FakeAgents()
+    agents.dispatch = lambda task: (agents.calls.append(("dispatch", task)) or {"success": True, "state": "started", "agent": "planner_agent", "result": {"status": "started"}})
 
     result = BrainAgentOrchestrator(brain, agents).execute("Plan my project")
 

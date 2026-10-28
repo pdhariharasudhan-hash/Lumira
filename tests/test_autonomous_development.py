@@ -1042,8 +1042,8 @@ def test_local_provider_requests_json_mode_without_dummy_auth(
         def __exit__(self, *args):
             return False
 
-        def read(self):
-            return response_body
+        def read(self, size=-1):
+            return response_body[:size] if size >= 0 else response_body
 
     captured = {}
 
@@ -1120,8 +1120,8 @@ def test_provider_falls_back_to_ipv4_only_for_refused_localhost(
         def __exit__(self, *args):
             return False
 
-        def read(self):
-            return response_body
+        def read(self, size=-1):
+            return response_body[:size] if size >= 0 else response_body
 
     requests = []
 

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
+from typing import Annotated
 from pydantic import BaseModel, Field
 
 from app.services.brain.brain_service import BrainService
@@ -56,10 +57,10 @@ def intelligence_status():
 
 @router.get("/intelligence/history")
 def intelligence_history(
-    session_id: str | None = Query(default=None, max_length=128),
-    project_id: str | None = Query(default=None, max_length=100),
+    session_id: Annotated[str | None, Query(max_length=128)] = None,
+    project_id: Annotated[str | None, Query(max_length=100)] = None,
     success: bool | None = None,
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ):
     history = PipelineHistoryService()
     records = history.query(

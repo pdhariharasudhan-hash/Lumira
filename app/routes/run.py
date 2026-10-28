@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
+from typing import Annotated
 
 from app.schemas.common import (
     GenericInput
@@ -46,7 +47,7 @@ def run_pipeline(
 
 
 @router.get("/runs")
-def list_runs(limit: int = Query(default=50, ge=0, le=200)):
+def list_runs(limit: Annotated[int, Query(ge=0, le=200)] = 50):
     from app.services.workflow_recovery.run_recovery_service import RunRecoveryService
 
     return {"runs": RunRecoveryService().list_runs(limit)}

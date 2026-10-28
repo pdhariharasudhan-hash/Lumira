@@ -82,3 +82,45 @@ def test_unified_artifact_search_does_not_match_or_return_internal_paths(tmp_pat
     assert len(public_metadata_match) == 1
     assert public_metadata_match[0]["artifact_id"] == "public-artifact"
     assert "file" not in public_metadata_match[0]
+
+
+
+def test_memory_search_filters_matching_records_and_links_safe_artifact_metadata(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    service = UnifiedSearchService()
+    artifact = service.artifacts.create_artifact(
+        "transcripts",
+        "Private transcript body stays in the artifact store.",
+        "voice capture",
+        "txt",
+    )
+    service.memory.record_experience(
+        experience_type="workflow",
+        summary="unique phrase memory recovery",
+        outcome="The voice idea was saved.",
+        artifact_ids=[artifact["artifact_id"]],
+        lessons=["Use the saved transcript when retrying memory persistence."],
+        verified=False,
+    )
+    service.memory.record_experience(
+        experience_type="workflow",
+        summary="Unrelated memory entry",
+        outcome="Different subject",
+        artifact_ids=[],
+        lessons=[],
+        verified=False,
+    )
+
+    result = service.search_memory("unique phrase memory recovery")
+
+    assert len(result["experiences"]) == 1
+    record = result["experiences"][0]
+    assert record["summary"] == "unique phrase memory recovery"
+    assert record["related_artifacts"] == [{
+        "artifact_id": artifact["artifact_id"],
+        "type": "transcripts",
+        "source": "voice capture",
+        "timestamp": artifact["timestamp"],
+    }]
+    assert "file" not in record["related_artifacts"][0]
+    assert "Private transcript body" not in json.dumps(result)
