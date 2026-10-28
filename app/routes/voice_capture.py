@@ -396,7 +396,22 @@ def retry_voice_memory(request: VoiceMemoryRetryRequest):
     if transcript.get("source") != request.audio_artifact_id:
         raise HTTPException(status_code=409, detail="transcript does not belong to the supplied audio artifact")
 
-    transcript_path = artifacts.get_artifact_path(request.transcript_artifact_id)
+    try:
+        audio_path = artifacts.get_artifact_path(request.audio_artifact_id)
+    except (OSError, ValueError) as error:
+        raise HTTPException(status_code=422, detail="audio content path is invalid") from error
+    if audio_path is None or not audio_path.is_file():
+        raise HTTPException(status_code=404, detail="audio content not found")
+    try:
+        if audio_path.stat().st_size > artifacts.MAX_BINARY_CONTENT_BYTES:
+            raise HTTPException(status_code=413, detail="audio exceeds the processing limit")
+    except OSError as error:
+        raise HTTPException(status_code=422, detail="audio content could not be read") from error
+
+    try:
+        transcript_path = artifacts.get_artifact_path(request.transcript_artifact_id)
+    except (OSError, ValueError) as error:
+        raise HTTPException(status_code=422, detail="transcript content path is invalid") from error
     if transcript_path is None or not transcript_path.is_file():
         raise HTTPException(status_code=404, detail="transcript content not found")
     try:
@@ -420,7 +435,10 @@ def retry_voice_memory(request: VoiceMemoryRetryRequest):
             raise HTTPException(status_code=409, detail="archived summary artifacts cannot be used for memory recovery")
         if summary_record.get("source") != request.transcript_artifact_id:
             raise HTTPException(status_code=409, detail="summary does not belong to the supplied transcript")
-        summary_path = artifacts.get_artifact_path(request.summary_artifact_id)
+        try:
+            summary_path = artifacts.get_artifact_path(request.summary_artifact_id)
+        except (OSError, ValueError) as error:
+            raise HTTPException(status_code=422, detail="summary content path is invalid") from error
         if summary_path is None or not summary_path.is_file():
             raise HTTPException(status_code=404, detail="summary content not found")
         try:
@@ -511,7 +529,10 @@ def retry_voice_summary(request: VoiceSummaryRetryRequest):
     if transcript.get("archived", False):
         raise HTTPException(status_code=409, detail="archived transcript artifacts cannot be summarized")
 
-    transcript_path = artifacts.get_artifact_path(request.transcript_artifact_id)
+    try:
+        transcript_path = artifacts.get_artifact_path(request.transcript_artifact_id)
+    except (OSError, ValueError) as error:
+        raise HTTPException(status_code=422, detail="transcript content path is invalid") from error
     if transcript_path is None or not transcript_path.is_file():
         raise HTTPException(status_code=404, detail="transcript content not found")
 
