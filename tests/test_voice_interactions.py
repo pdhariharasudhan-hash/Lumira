@@ -577,3 +577,47 @@ def test_voice_process_does_not_reuse_archived_transcript_on_retry(tmp_path, mon
     assert calls["transcription"] == 2
     assert artifacts.get_artifact(old_transcript_id)["archived"] is True
     assert artifacts.get_artifact(body["transcript_artifact_id"]).get("archived", False) is False
+
+
+def test_voice_retry_summary_reuses_existing_summary_without_creating_duplicate(tmp_path, monkeypatch):
+    from app.routes import voice_capture
+
+    monkeypatch.chdir(tmp_path)
+    client = TestClient(app)
+    artifacts = ArtifactManagerService()
+    audio = artifacts.create_binary_artifact(
+        "audio", b"RIFF\\x00\\x00\\x00\\x00WAVE", "voice_capture", "wav"
+    )
+    transcript = artifacts.create_artifact(
+        "transcripts", "A captured idea", audio["artifact_id"], "txt"
+    )
+    summary = artifacts.create_artifact(
+        "summaries", "A concise summary", transcript["artifact_id"], "txt"
+    )
+    artifacts.link_artifacts(audio["artifact_id"], transcript["artifact_id"], "transcribed_as")
+    artifacts.link_artifacts(transcript["artifact_id"], summary["artifact_id"], "summarized_as")
+
+    class UnexpectedSummary:
+        def generate_summary(self, transcript_id):
+            raise AssertionError("retry must reuse the existing summary")
+
+    monkeypatch.setattr(voice_capture, "SummaryService", UnexpectedSummary)
+    response = client.post(
+        "/voice/retry-summary",
+        json={"transcript_artifact_id": transcript["artifact_id"]},
+    )
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["success"] is True
+    assert body["summary_artifact_id"] == summary["artifact_id"]
+    assert body["summary"]["reused"] is True
+    assert body["summary"]["summary_text"] == "A concise summary"
+    links = artifacts.get_artifact_links(transcript["artifact_id"])["links"]
+    matching = [
+        link for link in links
+        if link["direction"] == "outgoing"
+        and link["relation"] == "summarized_as"
+        and link["artifact_id"] == summary["artifact_id"]
+    ]
+    assert len(matching) == 1
