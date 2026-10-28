@@ -405,6 +405,7 @@ def test_voice_process_reuses_transcript_and_summary_on_full_retry(tmp_path, mon
 
 def test_voice_process_retries_failed_summary_without_retranscribing(tmp_path, monkeypatch):
     from app.routes import voice_capture
+    from app.services.memory.memory_service import MemoryService
 
     monkeypatch.chdir(tmp_path)
     client = TestClient(app)
