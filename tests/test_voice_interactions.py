@@ -457,6 +457,12 @@ def test_voice_process_retries_failed_summary_without_retranscribing(tmp_path, m
     assert second.json()["stage"] == "completed"
     assert second.json()["transcription"]["reused"] is True
     assert calls == {"transcription": 1, "summary": 2}
+    assert second.json()["memory"]["state"] == "already_exists"
+    memory_record = next(
+        item for item in MemoryService().get_all()["experiences"]
+        if item.get("experience_id") == first.json()["memory"]["experience_id"]
+    )
+    assert second.json()["summary_artifact_id"] in memory_record["artifact_ids"]
     stored = artifacts.get_all_artifacts()
     assert len([item for item in stored if item.get("type") == "transcripts"]) == 1
     assert len([item for item in stored if item.get("type") == "summaries"]) == 1
