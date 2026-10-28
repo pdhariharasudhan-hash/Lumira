@@ -133,3 +133,29 @@ def test_retry_voice_memory_rejects_archived_artifacts(tmp_path, monkeypatch):
 
     assert response.status_code == 409
     assert "archived" in response.json()["detail"]
+
+
+
+def test_retry_voice_memory_rejects_missing_audio_content(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    client = TestClient(app)
+    artifacts, audio, transcript, _ = _voice_artifacts()
+    audio_path = artifacts.get_artifact_path(audio["artifact_id"])
+    assert audio_path is not None
+    audio_path.unlink()
+
+    response = client.post(
+        "/voice/retry-memory",
+        json={
+            "audio_artifact_id": audio["artifact_id"],
+            "transcript_artifact_id": transcript["artifact_id"],
+            "summary_artifact_id": None,
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "audio content not found"
+    assert not any(
+        audio["artifact_id"] in item.get("artifact_ids", [])
+        for item in MemoryService().get_all()["experiences"]
+    )
