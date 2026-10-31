@@ -74,6 +74,9 @@ class DeviceGatewayService:
 
     def receive(self, envelope: dict) -> dict:
         device_id, device_type, message_type, payload = self._validate_envelope(envelope)
+        core_context = envelope.get("core_context")
+        if core_context is not None and not isinstance(core_context, dict):
+            raise ValueError("core_context must be an object")
         message_id = envelope.get("message_id") or str(uuid4())
         message = {
             "schema_version": 1,
@@ -86,6 +89,7 @@ class DeviceGatewayService:
             "received_at": datetime.now(UTC).isoformat(),
             "payload": redact_sensitive_value(payload),
             "status": "received",
+            "core_context": redact_sensitive_value(core_context) if isinstance(core_context, dict) else None,
         }
 
         def append(document):
