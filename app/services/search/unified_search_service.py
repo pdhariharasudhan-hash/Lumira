@@ -308,6 +308,11 @@ class UnifiedSearchService:
                 results.append(conversation)
         return results
 
+    def search_overview(self, query: str) -> dict:
+        results = self.search_all(query)
+        counts = {key: len(value) for key, value in results.items() if isinstance(value, (list, dict)) and key != "items"}
+        return {"query": query, "total_categories": sum(1 for value in counts.values() if value), "total_matches": sum(counts.values()), "counts": counts}
+
     def search_counts(self, query: str) -> dict[str, int]:
         results = self.search_all(query)
         return {key: len(value) for key, value in results.items() if isinstance(value, (list, dict)) and key != "items"}
