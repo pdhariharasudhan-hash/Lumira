@@ -24,6 +24,11 @@ def save_checkpoint(request: CheckpointRequest):
     return {"success": True, "checkpoint": checkpoint}
 
 
+@router.get("/summary")
+def checkpoint_summary():
+    return {"success": True, "summary": RecoveryCheckpointService().summary()}
+
+
 @router.get("")
 def list_checkpoints(limit: int = 20):
     if limit < 0 or limit > 100:
