@@ -201,6 +201,22 @@ def voice_pipeline_status(artifact_id: str):
     return VoiceIdeaPipelineService().inspect(artifact_id)
 
 
+class VoiceIdeaPipelineRequest(BaseModel):
+    audio_artifact_id: str = Field(min_length=1, max_length=128)
+    project_id: str | None = Field(default=None, max_length=128)
+    goal_id: str | None = Field(default=None, max_length=128)
+
+
+@router.post("/voice/idea-pipeline/linked")
+def process_linked_voice_idea_pipeline(request: VoiceIdeaPipelineRequest):
+    from app.services.voice.voice_idea_pipeline_service import VoiceIdeaPipelineService
+    result = VoiceIdeaPipelineService().process(request.audio_artifact_id, request.project_id, request.goal_id)
+    _raise_for_voice_readiness(result)
+    if not result.get("success") and result.get("stage") == "validate":
+        raise HTTPException(status_code=422, detail=result)
+    return result
+
+
 @router.post("/voice/idea-pipeline")
 def process_voice_idea_pipeline(request: ArtifactRequest):
     """Run the canonical voice idea pipeline with transcript, summary and memory."""
