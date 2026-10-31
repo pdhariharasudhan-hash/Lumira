@@ -50,17 +50,17 @@ class BrainAgentOrchestrator:
             }
         return None
 
-    def execute(self, task: str, agent_name: str | None = None) -> dict:
+    def execute(self, task: str, agent_name: str | None = None, session_id: str | None = None, project_id: str | None = None, goal_id: str | None = None) -> dict:
         rejected = self._preflight(task, agent_name)
         if rejected:
             return rejected
 
         if self.brain_service is None:
             self.brain_service = BrainService()
-        brain = self.brain_service.execute(BrainRequest(message=task.strip()))
+        metadata = {}\n        try:\n            from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService\n            metadata["core_context"] = CoreRuntimeBridgeService().context(session_id, project_id, goal_id).get("context", {})\n        except Exception:\n            metadata = {}\n        brain = self.brain_service.execute(BrainRequest(message=task.strip(), session_id=session_id or "", project=project_id or "", metadata=metadata))
         return self.execute_after_brain(task, brain, agent_name=agent_name)
 
-    def execute_after_brain(self, task: str, brain_response, agent_name: str | None = None) -> dict:
+    def execute_after_brain(self, task: str, brain_response, agent_name: str | None = None, core_context: dict | None = None) -> dict:
         """Dispatch only after the caller's primary-brain pass succeeded."""
         rejected = self._preflight(task, agent_name)
         if rejected:
@@ -132,7 +132,7 @@ class BrainAgentOrchestrator:
         execution_context = getattr(state, "execution_context", None)
         agent_state = result.get("state")
         normalized_agent_state = agent_state.strip().lower() if isinstance(agent_state, str) else ""
-        result["orchestration"] = {
+        result["core_context"] = core_context or getattr(getattr(brain_response, "state", None), "execution_context", None).metadata.get("core_context", {}) if getattr(getattr(brain_response, "state", None), "execution_context", None) else (core_context or {})\n        result["orchestration"] = {
             "brain_gate": "passed",
             "brain_execution_id": getattr(execution_context, "execution_id", None),
             "brain_last_completed_stage": getattr(state, "last_completed_stage", None),
