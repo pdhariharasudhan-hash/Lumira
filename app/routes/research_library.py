@@ -24,6 +24,28 @@ def add_research(request: ResearchCreateRequest):
     return {"success": True, "research": item}
 
 
+@router.get("/{research_id}")
+def get_research(research_id: str):
+    try:
+        item = ResearchLibraryService().get(research_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if item is None:
+        raise HTTPException(status_code=404, detail="research item not found")
+    return {"success": True, "research": item}
+
+
+@router.delete("/{research_id}")
+def delete_research(research_id: str):
+    try:
+        deleted = ResearchLibraryService().remove(research_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if not deleted:
+        raise HTTPException(status_code=404, detail="research item not found")
+    return {"success": True, "deleted": True, "research_id": research_id}
+
+
 @router.get("/recent")
 def recent_research(limit: int = Query(default=20, ge=0, le=100)):
     try:
