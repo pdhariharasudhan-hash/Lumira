@@ -35,6 +35,26 @@ def get_research(research_id: str):
     return {"success": True, "research": item}
 
 
+class ResearchUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    title: str | None = Field(default=None, min_length=1, max_length=300)
+    source: str | None = Field(default=None, min_length=1, max_length=2000)
+    summary: str | None = Field(default=None, max_length=10000)
+    project_id: str | None = Field(default=None, max_length=200)
+    tags: list[str] | None = Field(default=None, max_length=20)
+
+
+@router.patch("/{research_id}")
+def update_research(research_id: str, request: ResearchUpdateRequest):
+    try:
+        item = ResearchLibraryService().update(research_id, **request.model_dump(exclude_unset=True))
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="research item not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"success": True, "research": item}
+
+
 @router.delete("/{research_id}")
 def delete_research(research_id: str):
     try:
