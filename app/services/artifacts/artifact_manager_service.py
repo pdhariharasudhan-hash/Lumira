@@ -412,6 +412,13 @@ class ArtifactManagerService:
         self.memory.remove_artifact(artifact_id)
         return deleted
 
+    def type_counts(self) -> dict:
+        counts = {}
+        for item in self.get_all_artifacts():
+            key = item.get("type", "unknown")
+            counts[key] = counts.get(key, 0) + 1
+        return counts
+
     def recent_artifacts(self, limit: int = 20, include_archived: bool = False) -> list[dict]:
         if not isinstance(limit, int) or isinstance(limit, bool) or limit < 0 or limit > 100:
             raise ValueError("limit must be between 0 and 100")
