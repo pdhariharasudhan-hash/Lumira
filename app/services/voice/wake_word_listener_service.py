@@ -56,6 +56,7 @@ class WakeWordListenerService:
             self._last_detected_at = None
             self._last_error = None
             self._state = "starting"
+            self._emit_core_event("wake_word_start")
             self._thread = threading.Thread(
                 target=self._listen,
                 args=(provider, self._stop_event),
@@ -113,6 +114,15 @@ class WakeWordListenerService:
     def wait_for_detection(self, timeout_seconds: float = 0.0) -> bool:
         return self._detected_event.wait(max(0.0, min(float(timeout_seconds), 5.0)))
 
+    def _emit_core_event(self, operation: str) -> None:
+        try:
+            from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
+            context = CoreRuntimeBridgeService().execution_context(operation)
+            with self._lock:
+                self._core_context = context
+        except Exception:
+            return
+
     def _listen(self, provider: Any, stop_event: threading.Event) -> None:
         detector = None
         recorder = None
@@ -140,6 +150,7 @@ class WakeWordListenerService:
                         self._activated = True
                         self._last_detected_at = datetime.now(timezone.utc).isoformat()
                         self._state = "activated"
+                    self._emit_core_event("wake_word_detected")
                     self._detected_event.set()
         except Exception as error:
             # Only expose a stable error category; never leak SDK details or credentials.
