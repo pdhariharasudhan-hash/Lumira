@@ -72,6 +72,10 @@ class VoiceIdeaPipelineService:
         }
 
         artifact_ids = [audio_artifact_id, transcript_id]
+        if not summary.get("success"):
+            result["recoverable"] = True
+            result["preserved_artifacts"] = artifact_ids.copy()
+            return result
         summary_record = summary.get("summary_artifact")
         if isinstance(summary_record, dict) and summary_record.get("artifact_id"):
             artifact_ids.append(summary_record["artifact_id"])
