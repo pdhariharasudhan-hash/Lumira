@@ -31,6 +31,12 @@ class ArtifactRequest(BaseModel):
     artifact_id: str = Field(min_length=1, max_length=128)
 
 
+class VoiceCoreProcessRequest(BaseModel):
+    audio_artifact_id: str = Field(min_length=1, max_length=128)
+    project_id: str | None = Field(default=None, max_length=100)
+    goal_id: str | None = Field(default=None, max_length=128)
+
+
 class PlaybackRequest(BaseModel):
     text: str = Field(min_length=1, max_length=1_000_000)
     language: str = Field(default="en", pattern=r"^(en|ta|ta-en)$")
@@ -81,6 +87,18 @@ async def upload_voice(
         "data":
         result
     }
+
+
+@router.post("/voice/core-process")
+def process_voice_through_core(request: VoiceCoreProcessRequest):
+    from app.services.voice.voice_idea_pipeline_service import VoiceIdeaPipelineService
+    result = VoiceIdeaPipelineService().process(
+        request.audio_artifact_id,
+        project_id=request.project_id,
+        goal_id=request.goal_id,
+    )
+    _raise_for_voice_readiness(result)
+    return result
 
 
 @router.post("/voice/transcript")
