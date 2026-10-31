@@ -30,6 +30,49 @@ class FeatureActivationService:
             "blockers": blockers,
         }
 
+    def dependency_plan(self, feature_name: str):
+        """Return the exact dependency order and blockers without mutating state."""
+        name = self._name(feature_name)
+        root = self.registry.get_feature(name)
+        if root is None:
+            return {"success": False, "feature": name, "error": "feature_not_found"}
+
+        ordered, visiting, visited, blockers = [], set(), set(), []
+
+        def visit(feature_id):
+            if feature_id in visiting:
+                blockers.append("feature dependency cycle detected")
+                return
+            if feature_id in visited:
+                return
+            item = self.registry.get_feature(feature_id)
+            if item is None:
+                blockers.append(f"unknown feature dependency: {feature_id}")
+                return
+            visiting.add(feature_id)
+            for dependency in item.get("dependencies", []):
+                visit(dependency)
+            visiting.remove(feature_id)
+            visited.add(feature_id)
+            ordered.append(feature_id)
+            allowed, item_blockers = self.registry.can_enable(feature_id)
+            if item.get("enabled") is not True and not allowed:
+                blockers.extend(f"{feature_id}: {value}" for value in item_blockers)
+
+        visit(root.get("feature_id", name))
+        blockers = list(dict.fromkeys(blockers))
+        return {
+            "success": True,
+            "feature": root.get("feature_id", name),
+            "activation_order": ordered,
+            "already_enabled": [
+                feature_id for feature_id in ordered
+                if (self.registry.get_feature(feature_id) or {}).get("enabled") is True
+            ],
+            "blockers": blockers,
+            "ready": not blockers,
+        }
+
     def activate_with_dependencies(self, feature_name: str):
         """Activate a feature and its dependency chain as one deterministic bridge."""
         name = self._name(feature_name)
