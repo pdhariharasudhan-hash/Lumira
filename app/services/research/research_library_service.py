@@ -9,6 +9,23 @@ class ResearchLibraryService:
         if not Path(path).exists():
             self.store.write({"schema_version": 1, "items": []})
 
+    def get(self, research_id):
+        if not isinstance(research_id, str) or not research_id.strip():
+            raise ValueError("research_id is required")
+        records = self.store.read({"schema_version": 1, "items": []}).get("items", [])
+        return next((item for item in records if item.get("research_id") == research_id.strip()), None)
+
+    def remove(self, research_id):
+        if not isinstance(research_id, str) or not research_id.strip():
+            raise ValueError("research_id is required")
+        target = research_id.strip()
+        def mutate(document):
+            records = document.setdefault("items", [])
+            before = len(records)
+            records[:] = [item for item in records if item.get("research_id") != target]
+            return before != len(records)
+        return self.store.update(mutate, {"schema_version": 1, "items": []})
+
     def add(self, title, source, summary="", project_id=None, tags=None):
         if not isinstance(title, str) or not title.strip():
             raise ValueError("title is required")
