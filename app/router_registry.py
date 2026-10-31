@@ -69,6 +69,8 @@ from app.routes.execution_loop import router as execution_loop_router
 from app.routes.blocker_queue import router as blocker_queue_router
 from app.routes.blocker_insights import router as blocker_insights_router
 from app.routes.execution_readiness import router as execution_readiness_router
+from app.routes.core_intelligence import router as core_intelligence_router
+from app.routes.action_summary import router as action_summary_router
 
 
 ROUTERS = [
@@ -99,6 +101,7 @@ ROUTERS = [
     (action_priority_router, ["Action Priority"]), (core_activity_summary_router, ["System Activity"]),
     (briefing_priorities_router, None), (core_attention_router, None), (execution_loop_router, None),
     (blocker_queue_router, None), (blocker_insights_router, None), (execution_readiness_router, None),
+    (core_intelligence_router, ['Core Intelligence']), (action_summary_router, ['Action Summary']),
 ]
 
 
