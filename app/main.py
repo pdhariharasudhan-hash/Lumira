@@ -1,3 +1,4 @@
+from app.routes.personal_briefing import router as personal_briefing_router
 
 
 from fastapi import FastAPI, Request
@@ -431,3 +432,5 @@ def root():
     return FileResponse(
         "app/frontend/index.html"
     )
+
+app.include_router(personal_briefing_router, tags=['Personal Briefing'])
