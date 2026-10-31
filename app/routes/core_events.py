@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
 from app.services.system.core_event_log_service import CoreEventLogService
+from app.services.system.event_insights_service import EventInsightsService
 
 router=APIRouter(prefix="/core/events",tags=["core-events"])
 _service=CoreEventLogService()
@@ -25,3 +26,8 @@ def recent_events(limit:int=Query(50,ge=1,le=200)):
 @router.get("/search")
 def search_events(event: str | None = None, source: str | None = None, limit: int = Query(100, ge=1, le=500)):
     return _service.search(event, source, limit)
+
+
+@router.get("/insights")
+def event_insights(limit: int = Query(200, ge=1, le=500)):
+    return _insights.summary(limit)
