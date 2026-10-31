@@ -10,9 +10,11 @@ from typing import Any
 class QuickTaskService:
     """Durable personal task capture connected to Lumira core context."""
 
-    def __init__(self, storage_path: str | Path = "memory/quick_tasks.json"):
+    def __init__(self, storage_path: str | Path = "memory/quick_tasks.json", event_service=None, notification_service=None):
         self.storage_path = Path(storage_path)
         self._lock = threading.RLock()
+        self.event_service = event_service
+        self.notification_service = notification_service
 
     def _load(self):
         try:
@@ -42,11 +44,36 @@ class QuickTaskService:
             items=self._load()
             return {"success": True, "tasks": [x for x in items if not status or x.get("status")==status]}
 
+    def _publish_completion(self, item):
+        """Bridge task completion into Lumira's shared event and notification systems."""
+        try:
+            events = self.event_service
+            if events is None:
+                from app.services.system.core_event_log_service import CoreEventLogService
+                events = CoreEventLogService()
+            context = item.get("core_context") if isinstance(item.get("core_context"), dict) else {}
+            values = context.get("context", {}) if isinstance(context.get("context"), dict) else {}
+            result = events.record(
+                "quick_task_completed", "quick_tasks",
+                {"task_id": item["id"], "title": item["title"]},
+                session_id=values.get("session_id"),
+                project_id=values.get("project_id"),
+                goal_id=values.get("goal_id"),
+            )
+            notifications = self.notification_service
+            if notifications is None:
+                from app.services.notifications.notification_service import NotificationService
+                notifications = NotificationService()
+            notifications.create_from_core_event(result)
+        except Exception:
+            return
+
     def complete(self, task_id: str):
         with self._lock:
             items=self._load()
             for item in items:
                 if item.get("id")==task_id:
                     item["status"]="completed"; item["completed_at"]=datetime.now(timezone.utc).isoformat(); self._save(items)
+                    self._publish_completion(item)
                     return {"success": True, "task": item}
         return {"success": False, "error": "task_not_found"}
