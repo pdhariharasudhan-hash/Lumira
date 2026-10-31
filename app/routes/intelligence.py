@@ -54,6 +54,19 @@ def intelligence_status():
     }
 
 
+@router.get("/intelligence/capabilities")
+def intelligence_capabilities():
+    summary = FeatureActivationService().list_features()
+    return {
+        "success": True,
+        "feature_count": summary["count"],
+        "enabled": summary["enabled"],
+        "available": summary["available"],
+        "activation_blocked": summary["activation_blocked"],
+        "providers": {name: ProviderRegistry.get(name) is not None for name in PROVIDER_STATUS_NAMES},
+    }
+
+
 @router.get("/intelligence/history")
 def intelligence_history(
     session_id: str | None = Query(default=None, max_length=128),
