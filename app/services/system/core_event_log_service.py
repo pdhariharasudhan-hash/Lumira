@@ -37,6 +37,17 @@ class CoreEventLogService:
             self.storage_path.write_text(json.dumps(items,indent=2),encoding="utf-8")
         return {"success": True, "event_record": item}
 
+    def search(self, event: str | None = None, source: str | None = None, limit: int = 100) -> dict:
+        with self._lock:
+            items = self._load()
+            if event:
+                needle = event.lower()
+                items = [item for item in items if needle in str(item.get("event", "")).lower()]
+            if source:
+                needle = source.lower()
+                items = [item for item in items if needle in str(item.get("source", "")).lower()]
+            return {"success": True, "events": items[-max(1, min(limit, 500)):], "count": len(items)}
+
     def recent(self, limit: int = 50) -> dict:
         with self._lock:
             return {"success": True, "events": self._load()[-max(1,min(limit,200)):]}
