@@ -1,3 +1,4 @@
+from app.routes.core_activity_summary import router as core_activity_summary_router
 from app.routes.action_priority import router as action_priority_router
 from app.routes.decision_context import router as decision_context_router
 from app.routes.personal_briefing import router as personal_briefing_router
@@ -440,3 +441,5 @@ app.include_router(personal_briefing_router, tags=['Personal Briefing'])
 app.include_router(decision_context_router, tags=['Memory Context'])
 
 app.include_router(action_priority_router, tags=['Action Priority'])
+
+app.include_router(core_activity_summary_router, tags=['System Activity'])
