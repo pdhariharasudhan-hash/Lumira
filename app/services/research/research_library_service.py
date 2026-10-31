@@ -59,7 +59,7 @@ class ResearchLibraryService:
             raise ValueError("title is required")
         if not isinstance(source, str) or not source.strip() or len(source) > 2000:
             raise ValueError("source is invalid")
-        item={"research_id": datetime.now(UTC).strftime("%Y%m%d%H%M%S%f"),"title":title.strip()[:300],"source":source.strip(),"summary":str(summary)[:10000],"project_id":project_id,"tags":[str(tag)[:64] for tag in (tags or [])[:20]],"created_at":datetime.now(UTC).isoformat()}
+        item={"research_id": datetime.now(UTC).strftime("%Y%m%d%H%M%S%f"),"title":title.strip()[:300],"source":source.strip(),"summary":str(summary)[:10000],"project_id":project_id,"tags":[str(tag)[:64] for tag in (tags or [])[:20]],"created_at":datetime.now(UTC).isoformat(),"updated_at":datetime.now(UTC).isoformat()}
         def mutate(document):
             document.setdefault("items", []).append(item)
             document["items"]=document["items"][-1000:]
