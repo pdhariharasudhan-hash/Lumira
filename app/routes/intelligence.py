@@ -23,6 +23,12 @@ class SelectModeRequest(BaseModel):
     mode_id: str = Field(min_length=1, max_length=50)
 
 
+@router.get("/intelligence/core-bridge")
+def intelligence_core_bridge():
+    from app.services.system.core_feature_bridge_service import CoreFeatureBridgeService
+    return CoreFeatureBridgeService().overview()
+
+
 @router.get("/intelligence/status")
 def intelligence_status():
     """Expose the existing brain pipeline and capability readiness in one place."""
