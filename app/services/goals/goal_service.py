@@ -126,13 +126,7 @@ class GoalService:
 
         lowered = text.lower()
 
-        if "api" in lowered:
-            return "software"
-
-        if "website" in lowered:
-            return "software"
-
-        if "app" in lowered:
+        if any(term in lowered for term in ("api", "website", "app", "software", "python", "code", "backend")):
             return "software"
 
         if any(term in lowered for term in ("drone", "robot", "esp32", "arduino", "raspberry pi", "circuit", "pcb", "sensor", "electronics")):
@@ -141,8 +135,11 @@ class GoalService:
         if any(term in lowered for term in ("business", "startup", "revenue", "market", "sales", "customer", "product")):
             return "business"
 
-        if any(term in lowered for term in ("study", "exam", "school", "physics", "chemistry", "mathematics", "math", "learn")):
+        if any(term in lowered for term in ("study", "exam", "school", "physics", "chemistry", "mathematics", "math", "learn", "class", "revision")):
             return "education"
+
+        if any(term in lowered for term in ("health", "fitness", "workout", "exercise", "diet", "sleep")):
+            return "personal"
 
         return "general"
 
