@@ -27,6 +27,18 @@ class VoiceIdeaPipelineService:
         transcript = self.transcripts.generate_transcript(audio_artifact_id.strip())
         return {"success": bool(transcript.get("success")), "stage": "transcript", "audio_artifact": audio_artifact_id, "transcript": transcript}
 
+    def retry_summary(self, transcript_artifact_id: str) -> dict:
+        if not isinstance(transcript_artifact_id, str) or not transcript_artifact_id.strip():
+            return {"success": False, "code": "invalid_transcript_artifact"}
+        summary = self.summaries.generate_summary(transcript_artifact_id.strip())
+        return {
+            "success": bool(summary.get("success")),
+            "stage": "complete" if summary.get("success") else "summary",
+            "transcript_artifact": transcript_artifact_id.strip(),
+            "summary": summary,
+            "recoverable": not bool(summary.get("success")),
+        }
+
     def process(
         self,
         audio_artifact_id: str,
