@@ -24,6 +24,14 @@ def add_research(request: ResearchCreateRequest):
     return {"success": True, "research": item}
 
 
+@router.get("/search")
+def search_research(q: str = Query(min_length=1, max_length=500), limit: int = Query(default=50, ge=0, le=100)):
+    try:
+        items = ResearchLibraryService().search(q.strip(), limit=limit)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(status_code=503, detail="Research library is unavailable") from exc
+    return {"success": True, "query": q.strip(), "count": len(items), "items": items}
+
 @router.get("/{research_id}")
 def get_research(research_id: str):
     try:
@@ -91,10 +99,3 @@ def research_summary():
         raise HTTPException(status_code=503, detail="Research library is unavailable") from exc
 
 
-@router.get("/search")
-def search_research(q: str = Query(min_length=1, max_length=500), limit: int = Query(default=50, ge=0, le=100)):
-    try:
-        items = ResearchLibraryService().search(q.strip(), limit=limit)
-    except (ValueError, OSError) as exc:
-        raise HTTPException(status_code=503, detail="Research library is unavailable") from exc
-    return {"success": True, "query": q.strip(), "count": len(items), "items": items}
