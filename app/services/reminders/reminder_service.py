@@ -10,9 +10,10 @@ from typing import Any
 class ReminderService:
     """Small persistent reminder engine with explicit main-core context."""
 
-    def __init__(self, storage_path: str | Path = "memory/reminders.json"):
+    def __init__(self, storage_path: str | Path = "memory/reminders.json", notification_service=None):
         self.storage_path = Path(storage_path)
         self._lock = threading.RLock()
+        self.notification_service = notification_service
 
     def _load(self) -> list[dict[str, Any]]:
         if not self.storage_path.exists():
@@ -64,9 +65,33 @@ class ReminderService:
                 if item.get("status") == "pending" and due_at <= now:
                     item["status"] = "due"
                     item["triggered_at"] = now.isoformat()
+                    notification = self._notify_due(item)
+                    if notification is not None:
+                        item["notification_id"] = notification
                     triggered.append(item)
             self._save(items)
         return {"success": True, "reminders": triggered}
+
+    def _notify_due(self, item: dict[str, Any]) -> str | None:
+        """Bridge a due reminder into Lumira's persistent notification inbox."""
+        try:
+            service = self.notification_service
+            if service is None:
+                from app.services.notifications.notification_service import NotificationService
+                service = NotificationService()
+            context = item.get("core_context") if isinstance(item.get("core_context"), dict) else {}
+            values = context.get("context", {}) if isinstance(context.get("context"), dict) else {}
+            result = service.create(
+                item["message"],
+                "info",
+                session_id=values.get("session_id"),
+                project_id=values.get("project_id"),
+                goal_id=values.get("goal_id"),
+            )
+            notification = result.get("notification") if isinstance(result, dict) else None
+            return notification.get("id") if isinstance(notification, dict) else None
+        except Exception:
+            return None
 
     def list(self) -> dict:
         with self._lock:
