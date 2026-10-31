@@ -115,6 +115,13 @@ class BrainExecutor:
                     if result is not None:
                         state = result
 
+                    state.last_completed_stage = module_name
+                    if PipelineGuard.should_stop(module_name, state):
+                        state.status = "rejected"
+                        state.current_stage = ""
+                        self.last_recovery_state = recovery_state
+                        return state
+
                     if recovery_state.failures:
 
                         latest = recovery_state.failures[-1]
