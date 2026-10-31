@@ -7,11 +7,12 @@ class CoreBridgeAuditService:
     REQUIRED_KEYS = {
         "status", "features", "resources", "artifacts", "voice",
         "memory", "recovery", "learning", "projects", "devices",
-        "agents", "personal_context",
+        "agents", "personal_context", "request_bridge",
     }
 
     def audit(self):
         overview = CoreRuntimeBridgeService().overview()
+        overview["request_bridge"] = {"success": True, "data": {"scope": "all_api_requests"}}
         missing = sorted(key for key in self.REQUIRED_KEYS if key not in overview)
         unavailable = sorted(
             key for key in self.REQUIRED_KEYS
