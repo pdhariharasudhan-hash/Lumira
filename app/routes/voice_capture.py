@@ -183,6 +183,19 @@ def _persist_voice_capture_memory(audio_artifact_id: str, transcript_artifact_id
         return {"success": False, "code": "memory_persistence_failed", "message": "Voice artifacts are preserved, but memory persistence did not complete. Retry from the saved artifacts."}
 
 
+
+
+@router.post("/voice/idea-pipeline")
+def process_voice_idea_pipeline(request: ArtifactRequest):
+    """Run the canonical voice idea pipeline with transcript, summary and memory."""
+    from app.services.voice.voice_idea_pipeline_service import VoiceIdeaPipelineService
+
+    result = VoiceIdeaPipelineService().process(request.artifact_id)
+    _raise_for_voice_readiness(result)
+    if not result.get("success") and result.get("stage") == "validate":
+        raise HTTPException(status_code=422, detail=result)
+    return result
+
 @router.post("/voice/process")
 def process_voice_capture(request: VoiceProcessRequest):
     """Run the stored-audio -> transcript -> optional summary artifact workflow."""
