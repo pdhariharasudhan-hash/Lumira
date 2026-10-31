@@ -36,6 +36,12 @@ def create_session(request: SessionCreateRequest):
     )
 
 
+@router.get("/sessions/core-context/{session_id}")
+def session_core_context(session_id: str):
+    from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
+    return CoreRuntimeBridgeService().context(session_id=session_id)
+
+
 @router.get("/sessions")
 def list_sessions(limit: int = Query(default=50, ge=0, le=200)):
     try:
