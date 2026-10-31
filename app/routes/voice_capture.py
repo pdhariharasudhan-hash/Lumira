@@ -287,6 +287,20 @@ def process_voice_capture(request: VoiceProcessRequest):
 
 
 
+class VoicePipelineSummaryRetryRequest(BaseModel):
+    transcript_artifact_id: str = Field(min_length=1, max_length=128)
+
+
+@router.post("/voice/idea-pipeline/retry-summary")
+def retry_pipeline_summary(request: VoicePipelineSummaryRetryRequest):
+    from app.services.voice.voice_idea_pipeline_service import VoiceIdeaPipelineService
+    result = VoiceIdeaPipelineService().retry_summary(request.transcript_artifact_id)
+    _raise_for_voice_readiness(result)
+    if not result.get("success") and result.get("code") == "invalid_transcript_artifact":
+        raise HTTPException(status_code=422, detail=result)
+    return result
+
+
 class VoiceSummaryRetryRequest(BaseModel):
     transcript_artifact_id: str = Field(min_length=1, max_length=128)
 
