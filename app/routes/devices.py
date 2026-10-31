@@ -52,6 +52,12 @@ def register_device(request: DeviceRegisterRequest):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+@router.get("/devices/core-context")
+def devices_core_context():
+    from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
+    return CoreRuntimeBridgeService().overview()
+
+
 @router.get("/devices")
 def list_devices(
     status: str | None = Query(default=None, max_length=20),
