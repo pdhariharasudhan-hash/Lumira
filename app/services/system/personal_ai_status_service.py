@@ -12,7 +12,7 @@ class PersonalAIStatusService:
         features = FeatureRegistryService().list_features()
         notes = NotepadService().note_summary()
         research = ResearchLibraryService().summary()
-        checkpoints = RecoveryCheckpointService().list_recent(100)
+        recovery = RecoveryCheckpointService().summary()
         return {
             "knowledge": {
                 "notes": notes,
@@ -25,8 +25,5 @@ class PersonalAIStatusService:
                 "available": len(features.get("available", [])),
                 "failed": len(features.get("failed", [])),
             },
-            "recovery": {
-                "checkpoint_count": len(checkpoints),
-                "latest": checkpoints[0] if checkpoints else None,
-            },
+            "recovery": recovery,
         }
