@@ -67,6 +67,24 @@ def intelligence_capabilities():
     }
 
 
+@router.get("/intelligence/summary")
+def intelligence_summary():
+    features = FeatureActivationService().list_features()
+    history = PipelineHistoryService().stats()
+    modes = ModeRegistryService().count()
+    return {
+        "success": True,
+        "features": {
+            "total": features["count"],
+            "enabled": len(features["enabled"]),
+            "available": len(features["available"]),
+            "failed": len(features["failed"]),
+        },
+        "modes": modes,
+        "pipeline_history": history,
+    }
+
+
 @router.get("/intelligence/history")
 def intelligence_history(
     session_id: str | None = Query(default=None, max_length=128),
