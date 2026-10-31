@@ -33,6 +33,14 @@ def recent_research(limit: int = Query(default=20, ge=0, le=100)):
     return {"success": True, "count": len(items), "items": items}
 
 
+@router.get("/tags")
+def research_tags():
+    try:
+        return {"success": True, "tags": ResearchLibraryService().tag_counts()}
+    except OSError as exc:
+        raise HTTPException(status_code=503, detail="Research library is unavailable") from exc
+
+
 @router.get("/summary")
 def research_summary():
     try:
