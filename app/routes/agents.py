@@ -24,6 +24,20 @@ def list_agents():
     }
 
 
+@router.get("/agents/summary")
+def agent_summary():
+    manager = AgentManager()
+    agents = []
+    for name in manager.list_agents():
+        agent = manager.registry.get(name)
+        agents.append({
+            "name": name,
+            "capability_count": len(getattr(agent, "capabilities", []) or []),
+            "description": getattr(agent, "description", ""),
+        })
+    return {"success": True, "count": len(agents), "agents": agents}
+
+
 @router.post("/agents/dispatch")
 def dispatch_agent(request: AgentTask):
     return BrainAgentOrchestrator().execute(request.task)
