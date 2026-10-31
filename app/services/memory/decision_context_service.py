@@ -8,6 +8,9 @@ class DecisionContextService:
             memory = MemoryService()
         else:
             memory = self.memory_service
-        data = memory.get_all()
+        try:
+            data = memory._read_cognitive_memory()
+        except Exception:
+            data = {}
         records = data.get('decisions', []) if isinstance(data, dict) else []
         return {'success': True, 'count': len(records[:limit]), 'records': records[:limit]}
