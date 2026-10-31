@@ -131,6 +131,7 @@ def command(
         session_id=session["session_id"],
         workspace=request.workspace_id,
         metadata={
+            "core_context": shared_core_context,
             "active_mode": (
                 parsed["payload"]["mode"]
                 if parsed.get("success") and parsed.get("capability") == "activate_mode"
