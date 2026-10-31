@@ -1,3 +1,6 @@
+from app.routes.execution_loop import router as execution_loop_router
+from app.routes.core_attention import router as core_attention_router
+from app.routes.briefing_priorities import router as briefing_priorities_router
 from app.routes.core_activity_summary import router as core_activity_summary_router
 from app.routes.action_priority import router as action_priority_router
 from app.routes.decision_context import router as decision_context_router
@@ -443,3 +446,9 @@ app.include_router(decision_context_router, tags=['Memory Context'])
 app.include_router(action_priority_router, tags=['Action Priority'])
 
 app.include_router(core_activity_summary_router, tags=['System Activity'])
+
+app.include_router(briefing_priorities_router)
+
+app.include_router(core_attention_router)
+
+app.include_router(execution_loop_router)
