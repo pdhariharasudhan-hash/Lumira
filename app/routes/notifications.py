@@ -2,9 +2,11 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from app.services.notifications.notification_service import NotificationService
+from app.services.notifications.notification_insights_service import NotificationInsightsService
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 _service = NotificationService()
+_insights = NotificationInsightsService(_service)
 
 
 class NotificationCreateRequest(BaseModel):
@@ -41,3 +43,8 @@ def mark_all_notifications_read():
 @router.delete("/{notification_id}")
 def delete_notification(notification_id: str):
     return _service.delete(notification_id)
+
+
+@router.get("/insights")
+def notification_insights():
+    return _insights.summary()
