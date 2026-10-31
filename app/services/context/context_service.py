@@ -104,7 +104,7 @@ class ContextService:
         if "app" in text:
             return "application"
 
-        if "drone" in text:
+        if any(term in text for term in ("drone", "robot", "esp32", "arduino", "circuit", "pcb")):
             return "hardware"
 
         return "general"
@@ -120,8 +120,14 @@ class ContextService:
         if "medical" in text:
             return "healthcare"
 
-        if "education" in text:
+        if any(term in text for term in ("education", "study", "exam", "physics", "math")):
             return "education"
+
+        if any(term in text for term in ("robot", "drone", "esp32", "arduino", "pcb", "electronics")):
+            return "engineering"
+
+        if any(term in text for term in ("business", "startup", "sales", "market", "revenue")):
+            return "business"
 
         return "general"
 
