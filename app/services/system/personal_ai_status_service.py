@@ -27,3 +27,6 @@ class PersonalAIStatusService:
             },
             "recovery": recovery,
         }
+
+    def overview(self):
+        return self.snapshot()
