@@ -10,12 +10,14 @@ from app.services.learning.learning_module import LearningModule
 from app.services.lifecycle.project_lifecycle_service import ProjectLifecycleService
 from app.services.devices.device_registry_service import DeviceRegistryService
 from app.services.search.unified_search_service import UnifiedSearchService
+from app.agents.agent_manager import AgentManager
+from app.services.personal_context.personal_context_service import PersonalContextService
 
 
 class CoreRuntimeBridgeService:
     """Main-core runtime bridge for subsystems that otherwise operate independently."""
 
-    def __init__(self, status=None, features=None, resources=None, artifacts=None, wake_word=None, sessions=None, memory=None, recovery=None, learning=None, projects=None, devices=None, search=None):
+    def __init__(self, status=None, features=None, resources=None, artifacts=None, wake_word=None, sessions=None, memory=None, recovery=None, learning=None, projects=None, devices=None, search=None, agents=None, personal_context=None):
         self.status = status or PersonalAIStatusService()
         self.features = features or CoreFeatureBridgeService()
         self.resources = resources or ResourceBudgetService()
@@ -28,6 +30,8 @@ class CoreRuntimeBridgeService:
         self.projects = projects or ProjectLifecycleService()
         self.devices = devices or DeviceRegistryService()
         self.search = search or UnifiedSearchService()
+        self.agents = agents or AgentManager()
+        self.personal_context = personal_context or PersonalContextService()
 
     @staticmethod
     def _safe(name, callback):
@@ -49,6 +53,8 @@ class CoreRuntimeBridgeService:
             "learning": self._safe("learning", self._learning_summary),
             "projects": self._safe("projects", self._project_summary),
             "devices": self._safe("devices", self._device_summary),
+            "agents": self._safe("agents", self._agent_summary),
+            "personal_context": self._safe("personal_context", self._personal_context_summary),
         }
 
     def _memory_summary(self):
@@ -58,6 +64,20 @@ class CoreRuntimeBridgeService:
             "decisions": len(data.get("decisions", [])),
             "experiences": len(data.get("experiences", [])),
             "learning_records": len(data.get("learning_records", [])),
+        }
+
+    def _agent_summary(self):
+        names = self.agents.list_agents()
+        return {"total": len(names), "agents": list(names)}
+
+    def _personal_context_summary(self):
+        snapshot = self.personal_context.snapshot("", 5)
+        if not isinstance(snapshot, dict):
+            return {"available": False}
+        return {
+            "available": True,
+            "note_count": len(snapshot.get("notes", [])),
+            "project_count": len(snapshot.get("projects", [])),
         }
 
     def _project_summary(self):
