@@ -27,6 +27,15 @@ class ResearchLibraryService:
         records = self.store.read({"schema_version": 1, "items": []}).get("items", [])
         return list(reversed(records[-limit:]))
 
+    def tag_counts(self):
+        records = self.store.read({"schema_version": 1, "items": []}).get("items", [])
+        counts = {}
+        for item in records:
+            for tag in item.get("tags", []):
+                key = str(tag)[:64]
+                counts[key] = counts.get(key, 0) + 1
+        return dict(sorted(counts.items(), key=lambda pair: (-pair[1], pair[0]))[:100])
+
     def summary(self):
         records = self.store.read({"schema_version": 1, "items": []}).get("items", [])
         projects = {item.get("project_id") for item in records if item.get("project_id")}
