@@ -20,9 +20,12 @@ class CoreFeatureBridgeService:
             if item.get("enabled") is True:
                 bucket["enabled"].append(feature_id)
             else:
-                ready, blockers = self.features.registry.can_enable(feature_id)
-                if not ready:
-                    bucket["blocked"].append({"feature": feature_id, "blockers": blockers})
+                status = self.features.status(feature_id)
+                if status.get("success") is True and status.get("can_enable") is not True:
+                    bucket["blocked"].append({
+                        "feature": feature_id,
+                        "blockers": status.get("blockers", []),
+                    })
 
         return {
             "success": True,
