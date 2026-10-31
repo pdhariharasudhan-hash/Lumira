@@ -10,7 +10,7 @@ def test_status_service_has_expected_top_level_shape(monkeypatch):
     class Research:
         def summary(self): return {"total": 4}
     class Recovery:
-        def list_recent(self, limit): return []
+        def summary(self): return {"total": 0, "stages": {}, "latest": None}
 
     import app.services.system.personal_ai_status_service as module
     monkeypatch.setattr(module, "ArtifactManagerService", Artifacts)
