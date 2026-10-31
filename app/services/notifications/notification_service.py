@@ -55,6 +55,23 @@ class NotificationService:
             self._save(items)
         return {"success": True, "notification": item}
 
+    def create_from_core_event(self, event_record: dict[str, Any]) -> dict[str, Any]:
+        """Convert a recorded core event into a durable user notification."""
+        event = event_record.get("event_record", event_record)
+        if not isinstance(event, dict):
+            return {"success": False, "error": "invalid_event_record"}
+        context = event.get("core_context") if isinstance(event.get("core_context"), dict) else {}
+        values = context.get("context") if isinstance(context.get("context"), dict) else {}
+        label = str(event.get("event") or "core_event").replace("_", " ").capitalize()
+        source = str(event.get("source") or "lumira")
+        return self.create(
+            f"{label} ({source})",
+            "info",
+            session_id=values.get("session_id"),
+            project_id=values.get("project_id"),
+            goal_id=values.get("goal_id"),
+        )
+
     def list(self, unread_only: bool = False) -> dict[str, Any]:
         with self._lock:
             items = self._load()
