@@ -87,6 +87,17 @@ class VoiceIdeaPipelineService:
         language = self.languages.detect(transcript_text)
         summary = self.summaries.generate_summary(transcript_id)
 
+        core_context = {}
+        try:
+            from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
+            core_context = CoreRuntimeBridgeService().execution_context(
+                "voice_idea_process",
+                project_id=project_id,
+                goal_id=goal_id,
+            )
+        except Exception:
+            core_context = {"success": False, "error": "core_context_unavailable"}
+
         result = {
             "success": bool(summary.get("success")),
             "stage": "complete" if summary.get("success") else "summary",
@@ -94,6 +105,7 @@ class VoiceIdeaPipelineService:
             "transcript": transcript,
             "language": language,
             "summary": summary,
+            "core_context": core_context,
         }
 
         artifact_ids = [audio_artifact_id, transcript_id]
