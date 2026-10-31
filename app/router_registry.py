@@ -74,6 +74,7 @@ from app.routes.action_summary import router as action_summary_router
 from app.routes.execution_feedback import router as execution_feedback_router
 from app.routes.outcome_insights import router as outcome_insights_router
 from app.routes.execution_review import router as execution_review_router
+from app.routes.outcome_learning import router as outcome_learning_router
 
 
 ROUTERS = [
@@ -107,6 +108,7 @@ ROUTERS = [
     (core_intelligence_router, ['Core Intelligence']), (action_summary_router, ['Action Summary']),
     (execution_feedback_router, ['Execution Feedback']), (outcome_insights_router, ['Outcome Insights']),
     (execution_review_router, ['Execution Review']),
+    (outcome_learning_router, ['Outcome Learning']),
 ]
 
 
