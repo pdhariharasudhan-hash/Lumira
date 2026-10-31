@@ -280,6 +280,27 @@ class SessionManagerService:
             return session
         return self.create_session(workspace_id, project_id)
 
+    def get_session_summary(self, session_id: str) -> dict:
+        session = self.get_session(session_id)
+        if session is None:
+            raise KeyError("session not found")
+        messages = session.get("recent_messages", [])
+        conversation = session.get("conversation", {})
+        cognitive = session.get("cognitive_state") or {}
+        return {
+            "session_id": session["session_id"],
+            "status": session.get("status"),
+            "project_id": session.get("active_project"),
+            "goal": session.get("current_goal"),
+            "topic": conversation.get("current_topic", ""),
+            "objective": conversation.get("active_objective", ""),
+            "language": conversation.get("language_context", "en"),
+            "message_count": len(messages),
+            "last_updated": session.get("updated_at"),
+            "execution_status": cognitive.get("execution_status"),
+            "verification_status": cognitive.get("verification_status"),
+        }
+
     def list_sessions(self, limit: int = 50) -> list[dict]:
         document = self._validate_document(self.store.read())
         sessions = sorted(
