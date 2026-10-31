@@ -116,6 +116,7 @@ from app.routes.personal_context import router as personal_context_router
 from app.routes.knowledge import router as knowledge_router
 from app.routes.system_status import router as system_status_router
 from app.routes.core_features import router as core_features_router
+from app.routes.core_runtime import router as core_runtime_router
 import ipaddress
 
 from app.services.auth.local_auth_service import LocalAuthService
@@ -401,6 +402,7 @@ app.include_router(
 app.include_router(knowledge_router)
 app.include_router(system_status_router)
 app.include_router(core_features_router)
+app.include_router(core_runtime_router)
 
 
 @app.get("/")
