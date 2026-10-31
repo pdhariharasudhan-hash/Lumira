@@ -119,6 +119,7 @@ from app.routes.core_features import router as core_features_router
 from app.routes.core_runtime import router as core_runtime_router
 from app.routes.reminders import router as reminders_router
 from app.routes.notifications import router as notifications_router
+from app.routes.quick_tasks import router as quick_tasks_router
 import ipaddress
 
 from app.services.auth.local_auth_service import LocalAuthService
@@ -407,6 +408,7 @@ app.include_router(core_features_router)
 app.include_router(core_runtime_router)
 app.include_router(reminders_router, tags=["Reminders"])
 app.include_router(notifications_router, tags=["Notifications"])
+app.include_router(quick_tasks_router, tags=["Quick Tasks"])
 
 
 @app.get("/")
