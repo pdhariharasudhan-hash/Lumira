@@ -412,6 +412,19 @@ class ArtifactManagerService:
         self.memory.remove_artifact(artifact_id)
         return deleted
 
+    def availability_summary(self) -> dict:
+        total = 0
+        available = 0
+        for item in self.get_all_artifacts():
+            total += 1
+            try:
+                path = self.get_artifact_path(item["artifact_id"])
+                if path is not None and path.is_file():
+                    available += 1
+            except (ValueError, KeyError):
+                continue
+        return {"total": total, "available": available, "unavailable": total - available}
+
     def type_counts(self) -> dict:
         counts = {}
         for item in self.get_all_artifacts():
