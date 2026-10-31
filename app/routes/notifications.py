@@ -31,3 +31,13 @@ def list_notifications(unread_only: bool = False):
 @router.post("/{notification_id}/read")
 def mark_notification_read(notification_id: str):
     return _service.mark_read(notification_id)
+
+
+@router.post("/read-all")
+def mark_all_notifications_read():
+    return _service.mark_all_read()
+
+
+@router.delete("/{notification_id}")
+def delete_notification(notification_id: str):
+    return _service.delete(notification_id)
