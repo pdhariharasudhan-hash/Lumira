@@ -64,6 +64,13 @@ def provider_status():
     """
     providers = _all_provider_states()
     return {
+        "capabilities": {
+            "memory": True,
+            "voice_capture": True,
+            "artifact_manager": True,
+            "unified_search": True,
+            "sessions": True,
+        },
         "providers": providers,
         "registered_count": sum(state["registered"] for state in providers.values()),
         "configured_but_unregistered": [
