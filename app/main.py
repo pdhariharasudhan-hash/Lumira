@@ -110,6 +110,8 @@ from app.routes.intelligence import router as intelligence_router
 from app.routes.notepad import router as notepad_router
 from app.routes.image_understanding import router as image_understanding_router
 from app.routes.image_generation import router as image_generation_router
+from app.routes.research_library import router as research_library_router
+from app.routes.recovery_checkpoints import router as recovery_checkpoints_router
 import ipaddress
 
 from app.services.auth.local_auth_service import LocalAuthService
@@ -375,6 +377,16 @@ app.include_router(
 app.include_router(
     image_generation_router,
     tags=["Image Generation"]
+)
+
+app.include_router(
+    research_library_router,
+    tags=["Research Library"]
+)
+
+app.include_router(
+    recovery_checkpoints_router,
+    tags=["Recovery Checkpoints"]
 )
 
 
