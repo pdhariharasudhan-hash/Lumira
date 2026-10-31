@@ -24,6 +24,24 @@ def save_checkpoint(request: CheckpointRequest):
     return {"success": True, "checkpoint": checkpoint}
 
 
+@router.get("")
+def list_checkpoints(limit: int = 20):
+    if limit < 0 or limit > 100:
+        raise HTTPException(status_code=422, detail="limit must be between 0 and 100")
+    return {"success": True, "checkpoints": RecoveryCheckpointService().list_recent(limit)}
+
+
+@router.delete("/{workflow_id}")
+def discard_checkpoint(workflow_id: str):
+    try:
+        deleted = RecoveryCheckpointService().discard(workflow_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if not deleted:
+        raise HTTPException(status_code=404, detail="checkpoint not found")
+    return {"success": True, "deleted": True, "workflow_id": workflow_id}
+
+
 @router.get("/{workflow_id}")
 def get_checkpoint(workflow_id: str):
     checkpoint = RecoveryCheckpointService().resume(workflow_id)
