@@ -88,6 +88,15 @@ class NotepadService:
                     break
         return matches
 
+    def recent_notes(self, limit: int = 20) -> list[dict[str, Any]]:
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 0 <= limit <= 100:
+            raise NotepadValidationError("limit must be between 0 and 100")
+        return self.list_notes()[:limit]
+
+    def note_summary(self) -> dict[str, int]:
+        notes = self.list_notes()
+        return {"total": len(notes), "with_content": sum(1 for note in notes if note.get("content", "").strip())}
+
     def create_note(self, title: str, content: str = "") -> dict[str, Any]:
         title = self._text(title, "title", 200)
         content = self._text(content, "content", 20000, allow_empty=True)
