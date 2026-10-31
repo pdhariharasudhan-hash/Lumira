@@ -345,6 +345,12 @@ class WorkItemService:
             "is_complete": bool(total_count) and completed_count == total_count,
         }
 
+    def recovery_checkpoint(self, workflow_id: str) -> dict:
+        progress = self.get_workflow_progress(workflow_id)
+        stage = "completed" if progress.get("is_complete") else ("active" if progress.get("active_tasks") else "ready")
+        from app.services.recovery.recovery_checkpoint_service import RecoveryCheckpointService
+        return RecoveryCheckpointService().save(workflow_id, stage, progress)
+
     def get_task_history(self, workflow_id: str, task_id: str) -> dict:
         """Return the bounded status and outcome history for one workflow task."""
         workflow = self.get_workflow(workflow_id)
