@@ -44,6 +44,14 @@ def list_sessions(limit: int = Query(default=50, ge=0, le=200)):
         raise _http_error(exc) from exc
 
 
+@router.get("/sessions/{session_id}/summary")
+def get_session_summary(session_id: str):
+    try:
+        return {"success": True, "summary": SessionManagerService().get_session_summary(session_id)}
+    except Exception as exc:
+        raise _http_error(exc) from exc
+
+
 @router.get("/sessions/{session_id}")
 def get_session(session_id: str):
     try:
