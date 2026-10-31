@@ -17,3 +17,8 @@ def runtime_context(
         return CoreRuntimeBridgeService().context(session_id, project_id, goal_id)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/checkpoint-context")
+def runtime_checkpoint_context(workflow_id: str | None = Query(default=None, max_length=128)):
+    return CoreRuntimeBridgeService().checkpoint_context(workflow_id)
