@@ -33,23 +33,18 @@ class VoiceIdeaPipelineService:
             "recoverable": not bool(summary.get("success")),
         }
 
+    def retry(self, audio_artifact_id: str, project_id: str | None = None, goal_id: str | None = None) -> dict:
+        """Retry the complete pipeline while preserving explicit context."""
+        return self.process(audio_artifact_id, project_id=project_id, goal_id=goal_id)
+
+    def retry_summary(self, transcript_artifact_id: str) -> dict:
+        return self.inspect_transcript(transcript_artifact_id)
+
     def inspect(self, audio_artifact_id: str) -> dict:
         if not isinstance(audio_artifact_id, str) or not audio_artifact_id.strip():
             return {"success": False, "code": "invalid_audio_artifact"}
         transcript = self.transcripts.generate_transcript(audio_artifact_id.strip())
         return {"success": bool(transcript.get("success")), "stage": "transcript", "audio_artifact": audio_artifact_id, "transcript": transcript}
-
-    def retry_summary(self, transcript_artifact_id: str) -> dict:
-        if not isinstance(transcript_artifact_id, str) or not transcript_artifact_id.strip():
-            return {"success": False, "code": "invalid_transcript_artifact"}
-        summary = self.summaries.generate_summary(transcript_artifact_id.strip())
-        return {
-            "success": bool(summary.get("success")),
-            "stage": "complete" if summary.get("success") else "summary",
-            "transcript_artifact": transcript_artifact_id.strip(),
-            "summary": summary,
-            "recoverable": not bool(summary.get("success")),
-        }
 
     def process(
         self,
