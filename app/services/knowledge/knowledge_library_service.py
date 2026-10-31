@@ -31,4 +31,13 @@ class KnowledgeLibraryService:
             return {"query": "", "items": [], "count": 0}
         results = self.search_service.search_all(query)
         items = list(results.get("items", []))[:max(0, min(int(limit), 100))]
-        return {"query": query, "items": items, "count": len(items)}
+        return {
+            "query": query,
+            "items": items,
+            "count": len(items),
+            "categories": {
+                key: len(value)
+                for key, value in results.items()
+                if key != "items" and isinstance(value, (list, dict)) and value
+            },
+        }
