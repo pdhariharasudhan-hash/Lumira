@@ -42,6 +42,19 @@ class RecoveryCheckpointService:
         records = self.store.read({"schema_version": 1, "checkpoints": []}).get("checkpoints", [])
         return list(reversed(records[-limit:]))
 
+    def summary(self):
+        records = self.store.read({"schema_version": 1, "checkpoints": []}).get("checkpoints", [])
+        stages = {}
+        for item in records:
+            stage = str(item.get("stage") or "unknown")
+            stages[stage] = stages.get(stage, 0) + 1
+        return {
+            "total": len(records),
+            "capacity": 200,
+            "stages": stages,
+            "latest": records[-1] if records else None,
+        }
+
     def resume(self, workflow_id):
         document = self.store.read({"schema_version": 1, "checkpoints": []})
         for item in reversed(document.get("checkpoints", [])):
