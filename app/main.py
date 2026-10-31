@@ -114,6 +114,7 @@ from app.routes.research_library import router as research_library_router
 from app.routes.recovery_checkpoints import router as recovery_checkpoints_router
 from app.routes.personal_context import router as personal_context_router
 from app.routes.knowledge import router as knowledge_router
+from app.routes.system_status import router as system_status_router
 import ipaddress
 
 from app.services.auth.local_auth_service import LocalAuthService
@@ -397,6 +398,7 @@ app.include_router(
 )
 
 app.include_router(knowledge_router)
+app.include_router(system_status_router)
 
 
 @app.get("/")
