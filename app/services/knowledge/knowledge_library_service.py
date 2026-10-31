@@ -25,6 +25,23 @@ class KnowledgeLibraryService:
             "research": self.research.list_recent(research_limit),
         }
 
+    def digest(self, query, limit=10):
+        result = self.search(query, limit)
+        highlights = []
+        for item in result.get("items", [])[:limit]:
+            if not isinstance(item, dict):
+                continue
+            highlights.append({
+                "title": str(item.get("title") or item.get("name") or item.get("summary") or "Untitled")[:300],
+                "source": str(item.get("source") or item.get("type") or "knowledge")[:100],
+            })
+        return {
+            "query": result.get("query", ""),
+            "result_count": result.get("count", 0),
+            "categories": result.get("categories", {}),
+            "highlights": highlights,
+        }
+
     def search(self, query, limit=50):
         query = str(query).strip()
         if not query:
