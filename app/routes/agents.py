@@ -24,6 +24,12 @@ def list_agents():
     }
 
 
+@router.get("/agents/core-context")
+def agents_core_context():
+    from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
+    return CoreRuntimeBridgeService().overview()
+
+
 @router.get("/agents/summary")
 def agent_summary():
     manager = AgentManager()
