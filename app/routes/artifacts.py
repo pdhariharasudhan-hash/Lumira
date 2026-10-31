@@ -106,6 +106,12 @@ def recent_artifacts(limit: int = Query(default=20, ge=0, le=100), include_archi
     return {"success": True, "artifacts": [_public_artifact(item) for item in records]}
 
 
+@router.get("/artifacts/types")
+def artifact_types():
+    counts = _manager().type_counts()
+    return {"success": True, "types": counts, "total": sum(counts.values())}
+
+
 @router.get("/artifacts/stats")
 def artifact_stats():
     manager = _manager()
