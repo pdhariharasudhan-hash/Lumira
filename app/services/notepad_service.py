@@ -74,6 +74,20 @@ class NotepadService:
         notes.sort(key=lambda item: (item["updated_at"], item["note_id"]), reverse=True)
         return notes
 
+    def search_notes(self, query: str, limit: int = 50) -> list[dict[str, Any]]:
+        query = self._text(query, "query", 500)
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
+            raise NotepadValidationError("limit must be between 1 and 100")
+        terms = [term.casefold() for term in query.split() if term]
+        matches = []
+        for note in self.list_notes():
+            searchable = (note["title"] + " " + note["content"]).casefold()
+            if all(term in searchable for term in terms):
+                matches.append(note)
+                if len(matches) >= limit:
+                    break
+        return matches
+
     def create_note(self, title: str, content: str = "") -> dict[str, Any]:
         title = self._text(title, "title", 200)
         content = self._text(content, "content", 20000, allow_empty=True)
