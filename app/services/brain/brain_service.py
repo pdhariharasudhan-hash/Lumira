@@ -524,6 +524,23 @@ class BrainService:
                 error=error,
             )
 
+        # A verification rejection is terminal and must not be converted into success.
+        if final_state.status == "rejected":
+            error = redact_sensitive_text("Verification rejected execution")
+            self._record_pipeline(
+                state=final_state,
+                success=False,
+                trace=trace,
+                error=error,
+            )
+            self._persist_run(final_state, session, success=False, error=error)
+            return BrainResponse(
+                success=False,
+                state=final_state,
+                trace=trace,
+                error=error,
+            )
+
         # ----------------------------------
         # Final validation
         # ----------------------------------
