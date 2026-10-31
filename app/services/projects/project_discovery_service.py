@@ -159,6 +159,13 @@ class ProjectDiscoveryService:
 
         return versions
 
+    def project_summary(self, project_name: str) -> Dict:
+        project = self.get_project(project_name)
+        if project is None:
+            raise KeyError("project not found")
+        latest = project.get("latest") or {}
+        return {"project": project_name, "versions": project.get("versions", 0), "status": latest.get("status", "unknown"), "latest_version": latest.get("version"), "created": latest.get("created")}
+
     def get_metadata(
         self,
         project_name: str
