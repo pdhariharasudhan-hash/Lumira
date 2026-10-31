@@ -12,3 +12,11 @@ def test_add_and_search_research(tmp_path):
 def test_empty_research_query_returns_no_matches(tmp_path):
     service = ResearchLibraryService(tmp_path / "research.json")
     assert service.search("") == []
+
+
+def test_get_and_remove_research(tmp_path):
+    service = ResearchLibraryService(tmp_path / "research.json")
+    item = service.add("Test", "https://example.com")
+    assert service.get(item["research_id"])["title"] == "Test"
+    assert service.remove(item["research_id"]) is True
+    assert service.get(item["research_id"]) is None
