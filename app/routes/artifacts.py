@@ -100,6 +100,12 @@ def list_artifacts(
     return {"success": True, **result}
 
 
+@router.get("/artifacts/recent")
+def recent_artifacts(limit: int = Query(default=20, ge=0, le=100), include_archived: bool = False):
+    records = _manager().recent_artifacts(limit, include_archived)
+    return {"success": True, "artifacts": [_public_artifact(item) for item in records]}
+
+
 @router.get("/artifacts/stats")
 def artifact_stats():
     manager = _manager()
