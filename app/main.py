@@ -126,6 +126,7 @@ from app.routes.system_health import router as system_health_router
 from app.routes.core_diagnostics import router as core_diagnostics_router
 from app.routes.goal_insights import router as goal_insights_router
 from app.routes.workflow_insights import router as workflow_insights_router
+from app.routes.next_actions import router as next_actions_router
 import ipaddress
 
 from app.services.auth.local_auth_service import LocalAuthService
@@ -421,6 +422,7 @@ app.include_router(system_health_router, tags=["System Health"])
 app.include_router(core_diagnostics_router, tags=["Core Diagnostics"])
 app.include_router(goal_insights_router, tags=["Goal Insights"])
 app.include_router(workflow_insights_router, tags=["Workflow Insights"])
+app.include_router(next_actions_router, tags=["Next Actions"])
 
 
 @app.get("/")
