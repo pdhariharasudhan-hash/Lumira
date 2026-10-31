@@ -83,7 +83,8 @@ def update_device_status(device_id: str, request: DeviceStatusUpdate):
 @router.post("/devices/messages", status_code=202)
 def receive_device_message(request: DeviceMessageRequest):
     try:
-        result = DeviceGatewayService().receive(request.model_dump())
+        payload = request.model_dump()
+        result = DeviceGatewayService().receive(payload)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     try:
