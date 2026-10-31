@@ -47,3 +47,9 @@ def runtime_execution_context(
     goal_id: str | None = Query(default=None, max_length=128),
 ):
     return CoreRuntimeBridgeService().execution_context(operation, session_id, project_id, goal_id)
+
+
+@router.get("/bridge-audit")
+def core_bridge_audit():
+    from app.services.system.core_bridge_audit_service import CoreBridgeAuditService
+    return CoreBridgeAuditService().audit()
