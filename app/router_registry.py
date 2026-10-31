@@ -80,6 +80,7 @@ from app.routes.recovery_intelligence import router as recovery_intelligence_rou
 from app.routes.workflow_recovery import router as workflow_recovery_router
 from app.routes.task_recovery import router as task_recovery_router
 from app.routes.task_recovery_plan import router as task_recovery_plan_router
+from app.routes.recovery_resume import router as recovery_resume_router
 
 
 ROUTERS = [
@@ -119,6 +120,7 @@ ROUTERS = [
     (workflow_recovery_router, ['Workflow Recovery']),
     (task_recovery_router, ['Task Recovery']),
     (task_recovery_plan_router, ['Task Recovery Plan']),
+    (recovery_resume_router, ['Recovery Resume']),
 ]
 
 
