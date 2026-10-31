@@ -7,12 +7,15 @@ from app.services.sessions.session_manager_service import SessionManagerService
 from app.services.memory.memory_service import MemoryService
 from app.services.recovery.recovery_checkpoint_service import RecoveryCheckpointService
 from app.services.learning.learning_module import LearningModule
+from app.services.lifecycle.project_lifecycle_service import ProjectLifecycleService
+from app.services.devices.device_registry_service import DeviceRegistryService
+from app.services.search.unified_search_service import UnifiedSearchService
 
 
 class CoreRuntimeBridgeService:
     """Main-core runtime bridge for subsystems that otherwise operate independently."""
 
-    def __init__(self, status=None, features=None, resources=None, artifacts=None, wake_word=None, sessions=None, memory=None, recovery=None, learning=None):
+    def __init__(self, status=None, features=None, resources=None, artifacts=None, wake_word=None, sessions=None, memory=None, recovery=None, learning=None, projects=None, devices=None, search=None):
         self.status = status or PersonalAIStatusService()
         self.features = features or CoreFeatureBridgeService()
         self.resources = resources or ResourceBudgetService()
@@ -22,6 +25,9 @@ class CoreRuntimeBridgeService:
         self.memory = memory or MemoryService()
         self.recovery = recovery or RecoveryCheckpointService()
         self.learning = learning or LearningModule()
+        self.projects = projects or ProjectLifecycleService()
+        self.devices = devices or DeviceRegistryService()
+        self.search = search or UnifiedSearchService()
 
     @staticmethod
     def _safe(name, callback):
@@ -41,6 +47,8 @@ class CoreRuntimeBridgeService:
             "memory": self._safe("memory", self._memory_summary),
             "recovery": self._safe("recovery", self.recovery.summary),
             "learning": self._safe("learning", self._learning_summary),
+            "projects": self._safe("projects", self._project_summary),
+            "devices": self._safe("devices", self._device_summary),
         }
 
     def _memory_summary(self):
@@ -51,6 +59,26 @@ class CoreRuntimeBridgeService:
             "experiences": len(data.get("experiences", [])),
             "learning_records": len(data.get("learning_records", [])),
         }
+
+    def _project_summary(self):
+        projects = self.projects.list_projects()
+        values = projects.get("projects", []) if isinstance(projects, dict) else []
+        return {"total": len(values), "available": True}
+
+    def _device_summary(self):
+        devices = self.devices.list_devices(limit=200)
+        counts = {}
+        for device in devices:
+            state = device.get("status", "unknown")
+            counts[state] = counts.get(state, 0) + 1
+        return {"total": len(devices), "statuses": counts}
+
+    def search_context(self, query: str, limit: int = 20):
+        if not isinstance(query, str) or not query.strip():
+            return {"success": False, "error": "invalid_query"}
+        result = self.search.search_all(query.strip())
+        items = result.get("items", []) if isinstance(result, dict) else []
+        return {"success": True, "query": query.strip(), "count": min(len(items), limit), "items": items[:limit]}
 
     def _learning_summary(self):
         return {"available": self.learning is not None, "engine": "learning"}
