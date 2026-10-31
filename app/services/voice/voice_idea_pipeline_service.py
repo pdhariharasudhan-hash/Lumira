@@ -21,6 +21,18 @@ class VoiceIdeaPipelineService:
         self.memory = memory_service or MemoryService()
         self.languages = language_service or LanguageDetectionService()
 
+    def inspect_transcript(self, transcript_artifact_id: str) -> dict:
+        if not isinstance(transcript_artifact_id, str) or not transcript_artifact_id.strip():
+            return {"success": False, "code": "invalid_transcript_artifact"}
+        summary = self.summaries.generate_summary(transcript_artifact_id.strip())
+        return {
+            "success": bool(summary.get("success")),
+            "stage": "complete" if summary.get("success") else "summary",
+            "transcript_artifact": transcript_artifact_id.strip(),
+            "summary": summary,
+            "recoverable": not bool(summary.get("success")),
+        }
+
     def inspect(self, audio_artifact_id: str) -> dict:
         if not isinstance(audio_artifact_id, str) or not audio_artifact_id.strip():
             return {"success": False, "code": "invalid_audio_artifact"}
