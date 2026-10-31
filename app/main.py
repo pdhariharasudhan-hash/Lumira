@@ -113,6 +113,7 @@ from app.routes.image_generation import router as image_generation_router
 from app.routes.research_library import router as research_library_router
 from app.routes.recovery_checkpoints import router as recovery_checkpoints_router
 from app.routes.personal_context import router as personal_context_router
+from app.routes.knowledge import router as knowledge_router
 import ipaddress
 
 from app.services.auth.local_auth_service import LocalAuthService
@@ -394,6 +395,8 @@ app.include_router(
     personal_context_router,
     tags=["Personal Context"]
 )
+
+app.include_router(knowledge_router)
 
 
 @app.get("/")
