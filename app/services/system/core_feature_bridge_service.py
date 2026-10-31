@@ -39,6 +39,20 @@ class CoreFeatureBridgeService:
             },
         }
 
+    def bridge_health(self):
+        overview = self.overview()
+        features = overview.get("features", {})
+        categories = features.get("categories", {})
+        blocked = sum(len(value.get("blocked", [])) for value in categories.values() if isinstance(value, dict))
+        return {
+            "success": True,
+            "feature_total": features.get("total", 0),
+            "enabled_count": len(features.get("enabled", [])),
+            "failed_count": len(features.get("failed", [])),
+            "blocked_count": blocked,
+            "core_available": overview.get("core") is not None,
+        }
+
     def plan(self, feature_id):
         return self.features.dependency_plan(feature_id)
 
