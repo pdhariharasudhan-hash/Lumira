@@ -183,6 +183,15 @@ class UnifiedSearchService:
         return [record for record in records
                 if cls._matches(json.dumps(record, ensure_ascii=False), query)][:200]
 
+    def search_notes(self, query: str) -> list[dict]:
+        if not self._terms(query):
+            return []
+        try:
+            from app.services.notepad_service import NotepadService
+            return NotepadService().search_notes(query, limit=100)
+        except (ValueError, OSError):
+            return []
+
     def search_workflows(self, query: str) -> list[dict]:
         """Search durable workflows and their task metadata."""
         if not self._terms(query):
@@ -329,6 +338,7 @@ class UnifiedSearchService:
             "experiences": self._search_records(memory.get("experiences", []), query),
             "learning": self._search_records(memory.get("learning_records", []), query),
             "memory_links": self._search_records(memory.get("memory_links", []), query),
+            "notes": self.search_notes(query),
             "workflows": self.search_workflows(query),
             "devices": self.search_devices(query),
         })
