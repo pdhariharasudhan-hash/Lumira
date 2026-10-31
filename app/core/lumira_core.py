@@ -12,6 +12,47 @@ class LumiraCore:
     def plan(self, goal: str):
         return self.registry.get("planner").create_plan(goal)
 
+    def understand(
+        self,
+        request: str,
+        session_id: str = "",
+        project: str = "",
+        metadata: dict | None = None,
+    ):
+        """Run a request through Lumira's modular intelligence pipeline."""
+        if not isinstance(request, str) or not request.strip() or len(request) > self.MAX_GOAL_LENGTH:
+            return self._stopped(
+                "validate",
+                None,
+                error={
+                    "code": "invalid_input",
+                    "message": "Request must contain 1 to 10000 characters.",
+                },
+            )
+
+        from app.services.brain.brain_request import BrainRequest
+        from app.services.brain.brain_service import BrainService
+
+        response = BrainService().execute(
+            BrainRequest(
+                message=request.strip(),
+                session_id=session_id,
+                project=project,
+                metadata=dict(metadata or {}),
+            )
+        )
+        state = response.state.model_dump(mode="json") if response.state is not None else None
+        return {
+            "success": bool(response.success),
+            "status": "accept" if response.success else "reject",
+            "current_stage": state.get("current_stage", "") if isinstance(state, dict) else "brain",
+            "last_completed_stage": state.get("last_completed_stage") if isinstance(state, dict) else None,
+            "final_status": state.get("status") if isinstance(state, dict) else ("completed" if response.success else "failed"),
+            "state": state,
+            "trace": response.trace or [],
+            "error": response.error,
+        }
+
     def build(self, goal: str):
         return self.registry.get("builder").build(goal)
 
