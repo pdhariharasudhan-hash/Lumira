@@ -319,7 +319,7 @@ class UnifiedSearchService:
         memory = self.memory.get_all()
         artifacts = self.search_artifacts(query)
         files = self.search_project_files(query)
-        return MemoryService._redact_nested({
+        grouped = {
             "projects": self.search_projects(query),
             "project_versions": self.search_project_versions(query),
             "files": files,
@@ -341,4 +341,6 @@ class UnifiedSearchService:
             "notes": self.search_notes(query),
             "workflows": self.search_workflows(query),
             "devices": self.search_devices(query),
-        })
+        }
+        grouped["items"] = self._build_unified_items(grouped, query)
+        return MemoryService._redact_nested(grouped)
