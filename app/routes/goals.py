@@ -349,6 +349,26 @@ def generate_goal_plan(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+@router.get("/goals/{goal_id}/summary")
+def get_goal_summary(goal_id: str):
+    try:
+        goals = MemoryService().get_all().get("goals", [])
+        workflows = WorkItemService().list_workflows(goal_id=goal_id, limit=50)
+    except (MemoryValidationError, ValueError) as exc:
+        raise HTTPException(status_code=503, detail="Goal or workflow storage is unavailable") from exc
+    goal = next((item for item in goals if isinstance(item, dict) and item.get("goal_id") == goal_id and not item.get("archived")), None)
+    if goal is None:
+        raise HTTPException(status_code=404, detail="goal not found")
+    task_counts = {"total": 0, "completed": 0, "failed": 0, "blocked": 0}
+    for workflow in workflows:
+        for task in workflow.get("tasks", []):
+            task_counts["total"] += 1
+            status = task.get("status")
+            if status in task_counts:
+                task_counts[status] += 1
+    return {"success": True, "goal_id": goal_id, "title": goal.get("title"), "status": goal.get("status"), "progress": goal.get("progress"), "workflow_count": len(workflows), "tasks": task_counts}
+
+
 @router.get("/goals/{goal_id}/history")
 def get_goal_history(goal_id: str):
     """Return the bounded change history for one persisted goal."""
