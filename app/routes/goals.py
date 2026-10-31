@@ -113,6 +113,15 @@ class GoalDecomposeRequest(BaseModel):
         return cleaned
 
 
+@router.get("/goals/core-context")
+def goals_core_context(
+    project_id: str | None = Query(default=None, max_length=100),
+    goal_id: str | None = Query(default=None, max_length=128),
+):
+    from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
+    return CoreRuntimeBridgeService().context(project_id=project_id, goal_id=goal_id)
+
+
 @router.get("/goals")
 def list_goals(
     project_id: str | None = Query(default=None, max_length=100),
