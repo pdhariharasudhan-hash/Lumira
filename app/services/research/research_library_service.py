@@ -87,6 +87,17 @@ class ResearchLibraryService:
         tags = {tag.casefold() for item in records for tag in item.get("tags", [])}
         return {"total": len(records), "linked_projects": len(projects), "unique_tags": len(tags)}
 
+    def export(self, limit=1000):
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 0 <= limit <= 1000:
+            raise ValueError("limit must be between 0 and 1000")
+        records = self.store.read({"schema_version": 1, "items": []}).get("items", [])
+        items = [dict(item) for item in records[-limit:]]
+        return {
+            "schema_version": 1,
+            "exported_count": len(items),
+            "items": items,
+        }
+
     def search(self, query, limit=50):
         terms=[term.casefold() for term in str(query).split() if term][:10]
         if not terms: return []
