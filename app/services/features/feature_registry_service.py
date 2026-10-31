@@ -26,6 +26,7 @@ CORE_FEATURES = {"memory", "voice_input"}
 # while its external service remains unconfigured.
 FEATURE_PROVIDER_REQUIREMENTS = {
     "voice_idea_capture": ("transcription",),
+    "voice_transcript": ("transcription",),
     "image_understanding": ("image_understanding",),
     "image_generation": ("image_generation",),
     "research": ("research",),
@@ -48,6 +49,8 @@ FEATURE_CATALOG: Dict[str, Dict[str, Any]] = {
     "artifact_manager": {"version": "1.0", "category": "multimodal", "status": "AVAILABLE", "dependencies": ["memory"], "capabilities": ["artifact.create", "artifact.search", "artifact.retrieve"], "configuration": {}, "permissions": ["filesystem.artifacts"], "health": "healthy", "tests": True},
     "unified_search": {"version": "1.0", "category": "multimodal", "status": "AVAILABLE", "dependencies": ["memory", "artifact_manager", "projects"], "capabilities": ["search.unified"], "configuration": {}, "permissions": ["memory.read", "filesystem.project", "filesystem.artifacts"], "health": "healthy", "tests": True},
     "voice_idea_capture": {"version": "1.0", "category": "voice", "status": "AVAILABLE", "dependencies": ["voice_input", "artifact_manager", "memory"], "capabilities": ["voice.record", "voice.transcribe", "voice.idea"], "configuration": {}, "permissions": ["microphone", "filesystem.artifacts"], "health": "healthy", "tests": True},
+    "voice_transcript": {"version": "1.0", "category": "voice", "status": "AVAILABLE", "dependencies": ["voice_input", "artifact_manager"], "capabilities": ["voice.transcribe", "voice.language"], "configuration": {}, "permissions": ["microphone", "filesystem.artifacts"], "health": "healthy", "tests": True},
+    "idea_summarization": {"version": "1.0", "category": "voice", "status": "AVAILABLE", "dependencies": ["memory", "artifact_manager"], "capabilities": ["idea.summarize", "idea.store"], "configuration": {}, "permissions": ["memory.read", "memory.write", "filesystem.artifacts"], "health": "healthy", "tests": True},
     "image_understanding": {"version": "1.0", "category": "multimodal", "status": "EXPERIMENTAL", "dependencies": ["artifact_manager"], "capabilities": ["image.analyze", "image.ocr"], "configuration": {}, "permissions": ["filesystem.artifacts"], "health": "healthy", "tests": True},
     "image_generation": {"version": "1.0", "category": "multimodal", "status": "AVAILABLE", "dependencies": ["artifact_manager"], "capabilities": ["image.generate"], "configuration": {}, "permissions": ["filesystem.artifacts"], "health": "healthy", "tests": True},
     "web_access": {"version": "1.0", "category": "research", "status": "AVAILABLE", "dependencies": ["artifact_manager"], "capabilities": ["web.fetch", "web.process"], "configuration": {"max_response_bytes": 5000000, "max_redirects": 3}, "permissions": ["network.public_https"], "health": "healthy", "tests": True},
@@ -74,6 +77,9 @@ class FeatureRegistryService:
     FEATURE_ALIASES = {
         "voice_capture": "voice_idea_capture",
         "idea_capture": "voice_idea_capture",
+        "transcript_generation": "voice_transcript",
+        "audio_transcription": "voice_transcript",
+        "idea_summary": "idea_summarization",
         "unified_search_service": "unified_search",
         "artifact_management": "artifact_manager",
         "project_previews": "project_preview",
