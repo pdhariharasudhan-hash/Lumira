@@ -20,6 +20,14 @@ def recent_knowledge(
     except (ValueError, OSError) as exc:
         raise HTTPException(status_code=503, detail="Knowledge library is unavailable") from exc
 
+@router.get("/digest")
+def knowledge_digest(q: str = Query(min_length=1, max_length=500), limit: int = Query(default=10, ge=1, le=50)):
+    try:
+        return {"success": True, "digest": KnowledgeLibraryService().digest(q, limit)}
+    except (ValueError, OSError) as exc:
+        raise HTTPException(status_code=503, detail="Knowledge library is unavailable") from exc
+
+
 @router.get("/search")
 def search_knowledge(q: str = Query(min_length=1, max_length=500), limit: int = Query(default=50, ge=0, le=100)):
     try:
