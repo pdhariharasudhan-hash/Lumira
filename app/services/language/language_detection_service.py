@@ -17,6 +17,13 @@ class LanguageDetectionService:
         "yenna", "unga", "ungalukku",
     }
 
+    def detect_many(self, texts):
+        if not isinstance(texts, list):
+            raise ValueError("texts must be a list")
+        if len(texts) > 100:
+            raise ValueError("at most 100 texts may be detected at once")
+        return [self.detect(text) for text in texts]
+
     def detect(self, text: str):
         if not isinstance(text, str) or not text.strip():
             return {"language": "unknown", "confidence": 0.0}
