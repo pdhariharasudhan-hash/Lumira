@@ -25,6 +25,23 @@ class RecoveryCheckpointService:
             return record
         return self.store.update(mutate, {"schema_version": 1, "checkpoints": []})
 
+    def discard(self, workflow_id):
+        if not isinstance(workflow_id, str) or not workflow_id.strip():
+            raise ValueError("workflow_id is required")
+        target = workflow_id.strip()
+        def mutate(document):
+            records = document.setdefault("checkpoints", [])
+            before = len(records)
+            records[:] = [item for item in records if item.get("workflow_id") != target]
+            return before != len(records)
+        return self.store.update(mutate, {"schema_version": 1, "checkpoints": []})
+
+    def list_recent(self, limit=20):
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 0 <= limit <= 100:
+            raise ValueError("limit must be between 0 and 100")
+        records = self.store.read({"schema_version": 1, "checkpoints": []}).get("checkpoints", [])
+        return list(reversed(records[-limit:]))
+
     def resume(self, workflow_id):
         document = self.store.read({"schema_version": 1, "checkpoints": []})
         for item in reversed(document.get("checkpoints", [])):
