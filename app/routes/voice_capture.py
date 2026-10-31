@@ -167,6 +167,15 @@ def stop_wake_word_listener():
 def get_wake_word_listener_status():
     return _wake_word_listener.status()
 
+@router.post("/voice/wake-word/consume")
+def consume_wake_word_activation():
+    """Hand one background wake-word activation to the main Lumira runtime."""
+    result = _wake_word_listener.consume_activation()
+    if result.get("activated"):
+        event = result.get("event") if isinstance(result.get("event"), dict) else {}
+        result["main_core"] = event.get("core_context", {})
+    return result
+
 
 class VoiceProcessRequest(BaseModel):
     audio_artifact_id: str = Field(min_length=1, max_length=128)
