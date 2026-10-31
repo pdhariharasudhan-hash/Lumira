@@ -120,6 +120,7 @@ from app.routes.core_runtime import router as core_runtime_router
 from app.routes.reminders import router as reminders_router
 from app.routes.notifications import router as notifications_router
 from app.routes.quick_tasks import router as quick_tasks_router
+from app.routes.task_insights import router as task_insights_router
 from app.routes.core_events import router as core_events_router
 from app.routes.system_health import router as system_health_router
 import ipaddress
@@ -411,6 +412,7 @@ app.include_router(core_runtime_router)
 app.include_router(reminders_router, tags=["Reminders"])
 app.include_router(notifications_router, tags=["Notifications"])
 app.include_router(quick_tasks_router, tags=["Quick Tasks"])
+app.include_router(task_insights_router, tags=["Task Insights"])
 app.include_router(core_events_router, tags=["Core Events"])
 app.include_router(system_health_router, tags=["System Health"])
 
