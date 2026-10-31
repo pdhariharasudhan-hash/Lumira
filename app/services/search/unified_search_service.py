@@ -308,6 +308,10 @@ class UnifiedSearchService:
                 results.append(conversation)
         return results
 
+    def search_counts(self, query: str) -> dict[str, int]:
+        results = self.search_all(query)
+        return {key: len(value) for key, value in results.items() if isinstance(value, (list, dict)) and key != "items"}
+
     def search_all(self, query: str) -> dict[str, Any]:
         if not self._terms(query):
             return {key: [] for key in (
