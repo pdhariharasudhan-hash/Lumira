@@ -22,3 +22,8 @@ def runtime_context(
 @router.get("/checkpoint-context")
 def runtime_checkpoint_context(workflow_id: str | None = Query(default=None, max_length=128)):
     return CoreRuntimeBridgeService().checkpoint_context(workflow_id)
+
+
+@router.get("/search-context")
+def runtime_search_context(q: str = Query(min_length=1, max_length=500), limit: int = Query(default=20, ge=1, le=100)):
+    return CoreRuntimeBridgeService().search_context(q, limit)
