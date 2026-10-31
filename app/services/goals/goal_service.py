@@ -135,11 +135,14 @@ class GoalService:
         if "app" in lowered:
             return "software"
 
-        if "drone" in lowered:
+        if any(term in lowered for term in ("drone", "robot", "esp32", "arduino", "raspberry pi", "circuit", "pcb", "sensor", "electronics")):
             return "hardware"
 
-        if "business" in lowered:
+        if any(term in lowered for term in ("business", "startup", "revenue", "market", "sales", "customer", "product")):
             return "business"
+
+        if any(term in lowered for term in ("study", "exam", "school", "physics", "chemistry", "mathematics", "math", "learn")):
+            return "education"
 
         return "general"
 
