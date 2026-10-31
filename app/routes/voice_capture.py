@@ -108,6 +108,16 @@ def activate_voice(request: ArtifactRequest):
     return result
 
 
+@router.get("/voice/artifacts/{artifact_id}/availability")
+def voice_artifact_availability(artifact_id: str):
+    from app.services.voice.audio_playback_service import AudioPlaybackService
+    result = AudioPlaybackService().resolve(artifact_id)
+    if not result.get("success"):
+        status = 404 if result.get("code") in {"audio_not_found", "audio_unavailable"} else 422
+        raise HTTPException(status_code=status, detail=result)
+    return {"success": True, "artifact_id": artifact_id, "available": True}
+
+
 @router.post("/voice/playback")
 def playback_voice(request: PlaybackRequest):
     from app.services.voice.voice_interaction_service import SpeechPlaybackService
