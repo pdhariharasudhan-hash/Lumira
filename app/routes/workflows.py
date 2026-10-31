@@ -59,6 +59,16 @@ def list_workflows(
     )}
 
 
+@router.get("/workflows/core-context")
+def workflows_core_context(
+    session_id: str | None = Query(default=None, max_length=100),
+    project_id: str | None = Query(default=None, max_length=100),
+    goal_id: str | None = Query(default=None, max_length=128),
+):
+    from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
+    return CoreRuntimeBridgeService().context(session_id, project_id, goal_id)
+
+
 @router.get("/workflows/{workflow_id}")
 def get_workflow(workflow_id: str):
     workflow = WorkItemService().get_workflow(workflow_id)
