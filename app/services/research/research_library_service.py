@@ -15,6 +15,34 @@ class ResearchLibraryService:
         records = self.store.read({"schema_version": 1, "items": []}).get("items", [])
         return next((item for item in records if item.get("research_id") == research_id.strip()), None)
 
+    def update(self, research_id, title=None, source=None, summary=None, project_id=None, tags=None):
+        if not isinstance(research_id, str) or not research_id.strip():
+            raise ValueError("research_id is required")
+        if title is source is summary is project_id is tags is None:
+            raise ValueError("at least one field must be supplied")
+        if title is not None and (not isinstance(title, str) or not title.strip() or len(title.strip()) > 300):
+            raise ValueError("title is invalid")
+        if source is not None and (not isinstance(source, str) or not source.strip() or len(source.strip()) > 2000):
+            raise ValueError("source is invalid")
+        if summary is not None and len(str(summary)) > 10000:
+            raise ValueError("summary is too long")
+        if tags is not None and (not isinstance(tags, list) or len(tags) > 20):
+            raise ValueError("tags are invalid")
+        target = research_id.strip()
+        def mutate(document):
+            for item in document.setdefault("items", []):
+                if item.get("research_id") != target:
+                    continue
+                if title is not None: item["title"] = title.strip()
+                if source is not None: item["source"] = source.strip()
+                if summary is not None: item["summary"] = str(summary)
+                if project_id is not None: item["project_id"] = project_id
+                if tags is not None: item["tags"] = [str(tag)[:64] for tag in tags]
+                item["updated_at"] = datetime.now(UTC).isoformat()
+                return dict(item)
+            raise KeyError(target)
+        return self.store.update(mutate, {"schema_version": 1, "items": []})
+
     def remove(self, research_id):
         if not isinstance(research_id, str) or not research_id.strip():
             raise ValueError("research_id is required")
