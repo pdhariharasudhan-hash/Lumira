@@ -12,6 +12,14 @@ class LumiraCore:
     def plan(self, goal: str):
         return self.registry.get("planner").create_plan(goal)
 
+    def core_context(self, session_id: str = "", project_id: str = "", goal_id: str = ""):
+        from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
+        return CoreRuntimeBridgeService().context(
+            session_id or None,
+            project_id or None,
+            goal_id or None,
+        )
+
     def understand(
         self,
         request: str,
@@ -33,12 +41,17 @@ class LumiraCore:
         from app.services.brain.brain_request import BrainRequest
         from app.services.brain.brain_service import BrainService
 
+        request_metadata = dict(metadata or {})
+        request_metadata.setdefault(
+            "core_context",
+            self.core_context(session_id=session_id, project_id=project).get("context", {}),
+        )
         response = BrainService().execute(
             BrainRequest(
                 message=request.strip(),
                 session_id=session_id,
                 project=project,
-                metadata=dict(metadata or {}),
+                metadata=request_metadata,
             )
         )
         state = response.state.model_dump(mode="json") if response.state is not None else None
