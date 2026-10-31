@@ -317,6 +317,13 @@ class UnifiedSearchService:
         results = self.search_all(query)
         return {key: len(value) for key, value in results.items() if isinstance(value, (list, dict)) and key != "items"}
 
+    def search_research(self, query: str) -> list[dict]:
+        try:
+            from app.services.research.research_library_service import ResearchLibraryService
+            return ResearchLibraryService().search(query, limit=100)
+        except (ValueError, OSError):
+            return []
+
     def search_all(self, query: str) -> dict[str, Any]:
         if not self._terms(query):
             return {key: [] for key in (
@@ -349,6 +356,7 @@ class UnifiedSearchService:
             "memory_links": self._search_records(memory.get("memory_links", []), query),
             "notes": self.search_notes(query),
             "workflows": self.search_workflows(query),
+            "research": self.search_research(query),
             "devices": self.search_devices(query),
         }
         grouped["items"] = self._build_unified_items(grouped, query)
