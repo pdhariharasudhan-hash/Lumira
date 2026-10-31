@@ -412,6 +412,12 @@ class ArtifactManagerService:
         self.memory.remove_artifact(artifact_id)
         return deleted
 
+    def recent_artifacts(self, limit: int = 20, include_archived: bool = False) -> list[dict]:
+        if not isinstance(limit, int) or isinstance(limit, bool) or limit < 0 or limit > 100:
+            raise ValueError("limit must be between 0 and 100")
+        items = self.search(include_archived=include_archived)
+        return sorted(items, key=lambda item: item.get("timestamp", ""), reverse=True)[:limit]
+
     def stats(self) -> dict:
         artifacts = self.get_all_artifacts()
         counts = {artifact_type: 0 for artifact_type in SUPPORTED_ARTIFACT_TYPES}
