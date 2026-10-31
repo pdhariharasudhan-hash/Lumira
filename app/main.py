@@ -1,3 +1,6 @@
+from app.routes.execution_readiness import router as execution_readiness_router
+from app.routes.blocker_insights import router as blocker_insights_router
+from app.routes.blocker_queue import router as blocker_queue_router
 from app.routes.execution_loop import router as execution_loop_router
 from app.routes.core_attention import router as core_attention_router
 from app.routes.briefing_priorities import router as briefing_priorities_router
@@ -452,3 +455,9 @@ app.include_router(briefing_priorities_router)
 app.include_router(core_attention_router)
 
 app.include_router(execution_loop_router)
+
+app.include_router(blocker_queue_router)
+
+app.include_router(blocker_insights_router)
+
+app.include_router(execution_readiness_router)
