@@ -372,6 +372,11 @@ app.include_router(
     tags=["Image Understanding"]
 )
 
+app.include_router(
+    image_generation_router,
+    tags=["Image Generation"]
+)
+
 
 @app.get("/")
 def root():
