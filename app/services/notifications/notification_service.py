@@ -79,6 +79,28 @@ class NotificationService:
                 items = [item for item in items if item.get("status") == "unread"]
             return {"success": True, "notifications": items}
 
+    def mark_all_read(self) -> dict[str, Any]:
+        with self._lock:
+            items = self._load()
+            now = datetime.now(timezone.utc).isoformat()
+            changed = 0
+            for item in items:
+                if item.get("status") == "unread":
+                    item["status"] = "read"
+                    item["read_at"] = now
+                    changed += 1
+            self._save(items)
+        return {"success": True, "marked_read": changed}
+
+    def delete(self, notification_id: str) -> dict[str, Any]:
+        with self._lock:
+            items = self._load()
+            remaining = [item for item in items if item.get("id") != notification_id]
+            if len(remaining) == len(items):
+                return {"success": False, "error": "notification_not_found"}
+            self._save(remaining)
+        return {"success": True, "deleted_id": notification_id}
+
     def mark_read(self, notification_id: str) -> dict[str, Any]:
         with self._lock:
             items = self._load()
