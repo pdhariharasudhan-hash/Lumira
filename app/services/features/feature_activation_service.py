@@ -30,6 +30,63 @@ class FeatureActivationService:
             "blockers": blockers,
         }
 
+    def activate_with_dependencies(self, feature_name: str):
+        """Activate a feature and its dependency chain as one deterministic bridge."""
+        name = self._name(feature_name)
+        root = self.registry.get_feature(name)
+        if root is None:
+            return {"success": False, "feature": name, "error": "feature_not_found"}
+
+        ordered = []
+        visiting = set()
+        visited = set()
+
+        def visit(feature_id):
+            if feature_id in visiting:
+                raise ValueError("feature dependency cycle detected")
+            if feature_id in visited:
+                return
+            item = self.registry.get_feature(feature_id)
+            if item is None:
+                raise ValueError(f"unknown feature dependency: {feature_id}")
+            visiting.add(feature_id)
+            for dependency in item.get("dependencies", []):
+                visit(dependency)
+            visiting.remove(feature_id)
+            visited.add(feature_id)
+            ordered.append(feature_id)
+
+        try:
+            visit(root.get("feature_id", name))
+        except ValueError as exc:
+            return {"success": False, "feature": name, "error": "dependency_resolution_failed", "blockers": [str(exc)]}
+
+        activated = []
+        for feature_id in ordered:
+            item = self.registry.get_feature(feature_id)
+            if item and item.get("enabled") is True:
+                continue
+            allowed, blockers = self.registry.enable(feature_id)
+            if not allowed:
+                return {
+                    "success": False,
+                    "feature": name,
+                    "error": "activation_blocked",
+                    "activated": activated,
+                    "blocked_feature": feature_id,
+                    "blockers": blockers,
+                }
+            activated.append(feature_id)
+
+        return {
+            "success": True,
+            "action": "activate_with_dependencies",
+            "feature": root.get("feature_id", name),
+            "activation_order": ordered,
+            "activated": activated,
+            "status": "ENABLED",
+        }
+
     def deactivate(self, feature_name: str):
         name = self._name(feature_name)
         feature = self.registry.get_feature(name)
