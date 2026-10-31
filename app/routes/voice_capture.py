@@ -195,6 +195,12 @@ def _persist_voice_capture_memory(audio_artifact_id: str, transcript_artifact_id
 
 
 
+@router.get("/voice/idea-pipeline/{artifact_id}/status")
+def voice_pipeline_status(artifact_id: str):
+    from app.services.voice.voice_idea_pipeline_service import VoiceIdeaPipelineService
+    return VoiceIdeaPipelineService().inspect(artifact_id)
+
+
 @router.post("/voice/idea-pipeline")
 def process_voice_idea_pipeline(request: ArtifactRequest):
     """Run the canonical voice idea pipeline with transcript, summary and memory."""
