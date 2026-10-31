@@ -39,6 +39,9 @@ class CoreFeatureBridgeService:
             },
         }
 
+    def plan(self, feature_id):
+        return self.features.dependency_plan(feature_id)
+
     def readiness(self, feature_id):
         result = self.features.status(feature_id)
         if result.get("success") is not True:
