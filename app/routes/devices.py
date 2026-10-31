@@ -98,6 +98,20 @@ def list_device_messages(limit: int = Query(default=50, ge=0, le=200)):
     return {"messages": DeviceGatewayService().list_messages(limit)}
 
 
+@router.get("/devices/summary")
+def device_summary():
+    try:
+        devices = DeviceRegistryService().list_devices(limit=200)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Device registry is unavailable") from exc
+    by_status = {}
+    by_type = {}
+    for device in devices:
+        by_status[device.get("status", "unknown")] = by_status.get(device.get("status", "unknown"), 0) + 1
+        by_type[device.get("device_type", "unknown")] = by_type.get(device.get("device_type", "unknown"), 0) + 1
+    return {"success": True, "total": len(devices), "by_status": by_status, "by_type": by_type}
+
+
 @router.post("/devices/{device_id}/commands")
 def send_device_command(device_id: str, request: DeviceCommandRequest):
     try:
