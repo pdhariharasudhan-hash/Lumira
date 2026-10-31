@@ -37,3 +37,13 @@ def runtime_agent_context(
     goal_id: str | None = Query(default=None, max_length=128),
 ):
     return CoreRuntimeBridgeService().agent_context(task, session_id, project_id, goal_id)
+
+
+@router.get("/execution-context")
+def runtime_execution_context(
+    operation: str = Query(min_length=1, max_length=100),
+    session_id: str | None = Query(default=None, max_length=100),
+    project_id: str | None = Query(default=None, max_length=100),
+    goal_id: str | None = Query(default=None, max_length=128),
+):
+    return CoreRuntimeBridgeService().execution_context(operation, session_id, project_id, goal_id)
