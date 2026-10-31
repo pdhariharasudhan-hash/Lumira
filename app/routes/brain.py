@@ -66,6 +66,16 @@ def brain_endpoint(payload: GenericInput):
     )
 
 
+@router.get("/brain/core-context")
+def brain_core_context(
+    session_id: str | None = None,
+    project_id: str | None = None,
+    goal_id: str | None = None,
+):
+    from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
+    return CoreRuntimeBridgeService().context(session_id, project_id, goal_id)
+
+
 @router.get("/brain/state/{session_id}")
 def get_brain_state(session_id: str):
     try:
