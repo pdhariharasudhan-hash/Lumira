@@ -28,6 +28,17 @@ def list_notes():
     return {"success": True, "count": len(notes), "notes": notes}
 
 
+@router.get("/notepad/search")
+def search_notes(query: str, limit: int = 50):
+    try:
+        notes = NotepadService().search_notes(query, limit)
+    except NotepadValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except (ValueError, PersistenceIntegrityError) as exc:
+        raise HTTPException(status_code=503, detail="Notepad storage is unavailable") from exc
+    return {"success": True, "count": len(notes), "notes": notes}
+
+
 @router.post("/notepad", status_code=201)
 def create_note(request: NoteCreateRequest):
     try:
