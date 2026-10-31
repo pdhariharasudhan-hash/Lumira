@@ -305,7 +305,7 @@ class UnifiedSearchService:
                 "projects", "project_versions", "files", "code", "documentation",
                 "voice_ideas", "images", "artifacts", "memory", "feature_history",
                 "pipeline_history", "sessions", "conversations", "goals", "decisions",
-                "experiences", "learning", "memory_links", "workflows", "devices", "items",
+                "experiences", "learning", "memory_links", "notes", "workflows", "devices", "items",
             )}
         memory = self.memory.get_all()
         artifacts = self.search_artifacts(query)
