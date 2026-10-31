@@ -108,6 +108,17 @@ class CoreRuntimeBridgeService:
             return {"success": True, "checkpoint": None}
         return {"success": True, "checkpoint": self.recovery.resume(workflow_id)}
 
+    def execution_context(self, operation: str, session_id: str | None = None, project_id: str | None = None, goal_id: str | None = None):
+        if not isinstance(operation, str) or not operation.strip():
+            return {"success": False, "error": "invalid_operation"}
+        context = self.context(session_id, project_id, goal_id).get("context", {})
+        return {
+            "success": True,
+            "operation": operation.strip(),
+            "context": context,
+            "bridge_health": self.features.bridge_health(),
+        }
+
     def agent_context(self, task: str, session_id: str | None = None, project_id: str | None = None, goal_id: str | None = None):
         if not isinstance(task, str) or not task.strip():
             return {"success": False, "error": "invalid_task"}
