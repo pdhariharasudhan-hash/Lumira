@@ -19,6 +19,14 @@ def get_feature(feature_id: str):
     return result
 
 
+@router.get("/features/{feature_id}/bridge-plan")
+def feature_bridge_plan(feature_id: str):
+    result = FeatureActivationService().dependency_plan(feature_id)
+    if result.get("success") is not True:
+        raise HTTPException(status_code=404, detail="Feature not found")
+    return result
+
+
 @router.post("/features/{feature_id}/activate-bridge")
 def activate_feature_bridge(feature_id: str):
     """Activate the requested feature through its full dependency bridge."""
