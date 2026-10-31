@@ -1,3 +1,4 @@
+from app.routes.decision_context import router as decision_context_router
 from app.routes.personal_briefing import router as personal_briefing_router
 
 
@@ -434,3 +435,5 @@ def root():
     )
 
 app.include_router(personal_briefing_router, tags=['Personal Briefing'])
+
+app.include_router(decision_context_router, tags=['Memory Context'])
