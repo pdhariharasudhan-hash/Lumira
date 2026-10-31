@@ -38,3 +38,8 @@ def core_feature_activate(feature_id: str):
     if plan.get("ready") is not True:
         raise HTTPException(status_code=409, detail=plan)
     return bridge.features.activate_with_dependencies(feature_id)
+
+
+@router.get("/features/bridge-health")
+def core_feature_bridge_health():
+    return CoreFeatureBridgeService().bridge_health()
