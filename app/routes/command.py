@@ -32,6 +32,7 @@ from app.services.sessions.session_manager_service import SessionManagerService
 from app.services.sessions.reference_resolution_service import ReferenceResolutionService
 from app.services.memory.memory_service import MemoryService, MemoryValidationError
 from app.services.brain.public_brain_view import public_brain_state, public_brain_trace
+from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
 from app.services.sessions.session_manager_service import redact_sensitive_text
 
 router = APIRouter()
