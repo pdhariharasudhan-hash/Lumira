@@ -18,8 +18,10 @@ class SystemHealthService:
     def _check(name: str, probe) -> dict[str, Any]:
         try:
             details = probe()
-            if details is False or (isinstance(details, dict) and details.get("success") is False):
+            if details is False:
                 return {"status": "degraded", "error": "probe_failed"}
+            if isinstance(details, dict) and details.get("success") is False:
+                return {"status": "degraded", **details}
             return {"status": "healthy", **(details if isinstance(details, dict) else {})}
         except Exception as exc:
             return {"status": "degraded", "error": type(exc).__name__}
