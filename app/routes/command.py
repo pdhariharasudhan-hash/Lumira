@@ -161,11 +161,17 @@ def command(
 
     intent = IntentClassifierService().classify(request.input)
     if not parsed["success"]:
+        try:
+            from app.agents.agent_manager import AgentManager
+            agent_recommendation = AgentManager().select_agent(request.input)
+        except Exception:
+            agent_recommendation = {"success": False, "selected_agent": None, "reason": "recommendation_unavailable"}
         sessions.append_message(session["session_id"], "assistant", "I could not map that request to a supported capability.")
         return {
             "success": False,
             "intent": intent,
             "parsed": parsed,
+            "agent_recommendation": agent_recommendation,
             "brain": {
                 "state": public_brain_state(brain_response.state),
                 "trace": public_brain_trace(brain_response.trace),
