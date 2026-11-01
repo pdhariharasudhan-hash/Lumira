@@ -7,6 +7,7 @@ from typing import Any
 
 from app.services.persistence.atomic_json_store import AtomicJsonStore, PersistenceIntegrityError
 from app.services.projects.project_paths import resolve_project_path
+from app.services.workspace.container_sandbox_provider import ContainerSandboxProvider
 
 
 class ProjectTerminalService:
@@ -14,11 +15,15 @@ class ProjectTerminalService:
 
     # Keep this false until execution is isolated by a real OS security boundary.
     # The flag alone is never proof that an OS sandbox exists.
-    OS_SANDBOX_ENABLED = False
+    OS_SANDBOX_ENABLED = True
+
+    def __init__(self, root: str | Path = "memory/project_terminal_runs.json", sandbox=None):
+        self.store = AtomicJsonStore(root)
+        self.sandbox = sandbox or ContainerSandboxProvider()
 
     def _os_sandbox_verified(self) -> bool:
-        """Fail closed until a concrete OS sandbox provider and verifier exist."""
-        return False
+        """Execution is enabled only when a concrete isolation provider verifies itself."""
+        return bool(self.sandbox.status().available)
 
     COMMANDS: dict[str, tuple[str, ...]] = {
         "pytest": ("python", "-m", "pytest", "-q"),
@@ -29,9 +34,6 @@ class ProjectTerminalService:
     MAX_OUTPUT = 20_000
     MAX_RUNS = 100
     TIMEOUT_SECONDS = 120
-
-    def __init__(self, root: str | Path = "memory/project_terminal_runs.json"):
-        self.store = AtomicJsonStore(root)
 
     @staticmethod
     def _require_runs(data: Any) -> list:
@@ -88,9 +90,8 @@ class ProjectTerminalService:
 
         started = datetime.now(UTC).isoformat()
         try:
-            result = subprocess.run(
-                list(command), cwd=project_path, capture_output=True,
-                text=True, timeout=self.TIMEOUT_SECONDS, shell=False,
+            result = self.sandbox.run(
+                command, project_path, timeout=self.TIMEOUT_SECONDS
             )
             output = "\n".join(x for x in (result.stdout, result.stderr) if x)
             record = {
@@ -108,8 +109,8 @@ class ProjectTerminalService:
                 "return_code": None, "status": "timeout",
                 "output": str(exc)[-self.MAX_OUTPUT:],
             }
-        except OSError as exc:
-            # OS exceptions may contain local paths or other machine details.
+        except (OSError, RuntimeError) as exc:
+            # Provider exceptions may contain local paths or machine details.
             return {
                 "success": False,
                 "code": "terminal_execution_failed",
