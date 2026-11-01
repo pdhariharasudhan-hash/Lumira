@@ -145,8 +145,17 @@ ROUTERS = [
 
 
 def register_routes(app):
-    """Attach every Lumira API router exactly once."""
+    """Attach every configured Lumira API router exactly once.
+
+    Router identity is checked before registration so an accidental duplicate in
+    this central registry cannot silently expose the same router twice.
+    """
+    seen_router_ids: set[int] = set()
     for router, tags in ROUTERS:
+        router_id = id(router)
+        if router_id in seen_router_ids:
+            raise RuntimeError("Duplicate router registered in Lumira router registry")
+        seen_router_ids.add(router_id)
         if tags is None:
             app.include_router(router)
         else:
