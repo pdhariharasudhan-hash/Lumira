@@ -184,6 +184,47 @@ class AgentManager:
             "duration_ms": round((time.monotonic() - started) * 1000, 2),
         }
 
+    def select_agent(self, task: str) -> dict:
+        """Recommend one registered agent without starting a process.
+
+        Selection is deterministic and intentionally side-effect free so the
+        primary command route can expose agent guidance without duplicating
+        capability execution.
+        """
+        if not isinstance(task, str) or not task.strip():
+            return {
+                "success": False,
+                "selected_agent": None,
+                "reason": "invalid_task",
+                "available_agents": self.list_agents(),
+            }
+        normalized = " ".join(task.casefold().split())
+        families = (
+            ("research_agent", (
+                r"\b(research|compare|comparison|versus|vs|investigate|analy[sz]e|analysis|evidence|summari[sz]e|extract knowledge|market research|technical research|document research|knowledge retrieval|find sources|gather sources|fact check|fact-check)\b",
+            )),
+            ("planner_agent", (
+                r"\b(plan|planning|steps|roadmap|prioriti[sz]e|break down|decompose|milestone|schedule|sequence tasks|goal)\b",
+            )),
+            ("code_agent", (
+                r"\b(debug|fix|repair|refactor|implement|code|api|app|website|software|program|script|compile|syntax error|bug|patch|generate files)\b",
+            )),
+        )
+        for agent_name, patterns in families:
+            if any(re.search(pattern, normalized) for pattern in patterns):
+                return {
+                    "success": True,
+                    "selected_agent": agent_name,
+                    "reason": "deterministic_capability_match",
+                    "available_agents": self.list_agents(),
+                }
+        return {
+            "success": False,
+            "selected_agent": None,
+            "reason": "no_matching_agent",
+            "available_agents": self.list_agents(),
+        }
+
     def dispatch(self, task: str):
         if not isinstance(task, str):
             return self.run("", task)
@@ -194,27 +235,16 @@ class AgentManager:
         # Specific intent families must be checked before broad verbs such as
         # "create" or "build", otherwise "create a research comparison" would
         # be incorrectly sent to the code agent.
-        research_intents = (
-            r"\b(research|compare|comparison|versus|vs|investigate|analy[sz]e|analysis|evidence|summari[sz]e|extract knowledge|market research|technical research|document research|knowledge retrieval|find sources|gather sources|fact check|fact-check)\b",
-        )
-        planning_intents = (
-            r"\b(plan|planning|steps|roadmap|prioriti[sz]e|break down|decompose|milestone|schedule|sequence tasks|goal)\b",
-        )
-        code_intents = (
-            r"\b(debug|fix|repair|refactor|implement|code|api|app|website|software|program|script|compile|syntax error|bug|patch|generate files)\b",
-        )
-        if any(re.search(pattern, normalized) for pattern in research_intents):
-            return self.run("research_agent", task)
-        if any(re.search(pattern, normalized) for pattern in planning_intents):
-            return self.run("planner_agent", task)
-        if any(re.search(pattern, normalized) for pattern in code_intents):
-            return self.run("code_agent", task)
+        recommendation = self.select_agent(task)
+        selected = recommendation.get("selected_agent")
+        if selected:
+            return self.run(selected, task)
         return {
             "success": False,
             "state": "rejected",
             "code": "no_matching_agent",
             "message": "No registered agent capability matches this task.",
-            "available_agents": self.list_agents(),
+            "available_agents": recommendation.get("available_agents", self.list_agents()),
         }
 
     def list_agents(self):
