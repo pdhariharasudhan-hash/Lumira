@@ -229,7 +229,7 @@ class FeatureRegistryService:
             return False, [f"unknown feature: {name}"]
         if name == "terminal":
             return False, [
-                "verified OS-level sandbox is not implemented; terminal activation is blocked"
+                "verified OS-level isolation is not currently available; terminal activation is blocked"
             ]
 
         # Use one persisted snapshot so concurrent registry updates cannot make
