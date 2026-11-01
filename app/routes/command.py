@@ -124,6 +124,14 @@ def command(
             }
 
     brain = BrainService()
+    try:
+        shared_core_context = CoreRuntimeBridgeService().context(
+            session_id=session["session_id"],
+            project_id=session.get("active_project"),
+            goal_id=session.get("goal_id"),
+        ).get("context", {})
+    except Exception:
+        shared_core_context = {}
 
     brain_request = BrainRequest(
         message=request.input,
