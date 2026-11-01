@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
@@ -66,7 +67,38 @@ class SystemHealthService:
 
         def storage_probe():
             paths = [Path("memory"), Path("data")]
-            return {"storage_roots": {str(path): {"exists": path.exists(), "writable": path.exists() and path.is_dir()} for path in paths}}
+            return {"storage_roots": {
+                str(path): {"present": path.exists(), "is_directory": path.is_dir()}
+                for path in paths
+            }}
+
+        def dependency_probe():
+            requirements = Path("requirements.txt")
+            if not requirements.is_file():
+                raise FileNotFoundError("requirements.txt")
+            checked = []
+            missing = []
+            mismatched = []
+            for raw in requirements.read_text(encoding="utf-8").splitlines():
+                line = raw.strip()
+                if not line or line.startswith("#") or line.startswith("-"):
+                    continue
+                package = line.split("==", 1)[0].strip()
+                expected = line.split("==", 1)[1].strip() if "==" in line else None
+                try:
+                    installed = version(package)
+                except PackageNotFoundError:
+                    missing.append(package)
+                    continue
+                checked.append(package)
+                if expected and installed != expected:
+                    mismatched.append({"package": package, "expected": expected, "installed": installed})
+            return {
+                "checked_count": len(checked),
+                "missing": missing,
+                "version_mismatches": mismatched,
+                "success": not missing and not mismatched,
+            }
 
         checks["core_events"] = self._check("core_events", events_probe)
         checks["notifications"] = self._check("notifications", notification_probe)
@@ -74,6 +106,7 @@ class SystemHealthService:
         checks["workflows"] = self._check("workflows", workflow_probe)
         checks["artifacts"] = self._check("artifacts", artifact_probe)
         checks["storage"] = self._check("storage", storage_probe)
+        checks["dependencies"] = self._check("dependencies", dependency_probe)
 
         degraded = [name for name, value in checks.items() if value["status"] != "healthy"]
         overall = "healthy" if not degraded else "degraded"
