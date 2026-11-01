@@ -75,3 +75,14 @@ def test_decision_outcome_is_persisted_without_auto_verifying_learning(tmp_path)
     stored = memory._read_cognitive_memory()
     assert stored["experiences"][-1]["type"] == "success"
     assert stored["experiences"][-1]["verified"] is False
+
+    retry = service.record_outcome(decision["decision_id"], "success", "Integration tests passed")
+    assert retry["idempotent"] is True
+    assert len(memory._read_cognitive_memory()["experiences"]) == 1
+
+    try:
+        service.record_outcome(decision["decision_id"], "failure", "Later changed outcome")
+    except ValueError as exc:
+        assert "already recorded" in str(exc)
+    else:
+        raise AssertionError("a recorded decision outcome must not be silently overwritten")
