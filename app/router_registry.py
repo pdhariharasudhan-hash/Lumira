@@ -47,6 +47,11 @@ from app.routes.image_generation import router as image_generation_router
 from app.routes.research_library import router as research_library_router
 from app.routes.research_compare import router as research_compare_router
 from app.routes.text_ideas import router as text_ideas_router
+from app.routes.idea_planning import router as idea_planning_router
+from app.routes.voice_history import router as voice_history_router
+from app.routes.circuit_planning import router as circuit_planning_router
+from app.routes.microcontroller_projects import router as microcontroller_projects_router
+from app.routes.project_documentation import router as project_documentation_router
 from app.routes.ai_modes import router as ai_modes_router
 from app.routes.personal_preferences import router as personal_preferences_router
 from app.routes.device_profiles import router as device_profiles_router
@@ -102,7 +107,7 @@ ROUTERS = [
     (project_details_router, ["Project Details"]), (continue_router, ["Continue"]),
     (compare_router, ["Compare"]), (project_versions_router, ["Project Versions"]),
     (project_files_router, ["Project Files"]), (project_file_content_router, ["Project File Content"]),
-    (search_router, ["Search"]), (text_ideas_router, ["Idea Capture"]), (voice_capture_router, ["Voice Capture"]), (artifacts_router, ["Artifacts"]),
+    (search_router, ["Search"]), (text_ideas_router, ["Idea Capture"]), (idea_planning_router, ["Idea Planning"]), (voice_capture_router, ["Voice Capture"]), (voice_history_router, ["Voice History"]), (artifacts_router, ["Artifacts"]),
     (command_router, ["Command"]), (session_insights_router, ["Session Insights"]), (sessions_router, ["Sessions"]),
     (goals_router, ["Goals"]), (goal_intelligence_router, ["Goal Intelligence"]), (agents_router, ["Agents"]),
     (workflow_insights_router, ["Workflow Insights"]), (workflows_router, ["Workflows"]),
@@ -112,7 +117,7 @@ ROUTERS = [
     (intelligence_router, ["Intelligence and Modes"]), (notepad_router, ["Notepad"]),
     (image_understanding_router, ["Image Understanding"]), (image_generation_router, ["Image Generation"]),
     (research_library_router, ["Research Library"]), (research_compare_router, ["Research"]), (recovery_checkpoints_router, ["Recovery Checkpoints"]),
-    (personal_context_router, ["Personal Context"]), (knowledge_router, None), (personal_library_router, ["Personal Library"]), (electronics_assistant_router, ["Electronics Assistant"]), (personal_todos_router, ["Personal To-Do"]), (system_status_router, None),
+    (personal_context_router, ["Personal Context"]), (knowledge_router, None), (personal_library_router, ["Personal Library"]), (electronics_assistant_router, ["Electronics Assistant"]), (circuit_planning_router, ["Circuit Planning"]), (microcontroller_projects_router, ["Microcontroller Projects"]), (project_documentation_router, ["Project Documentation"]), (personal_todos_router, ["Personal To-Do"]), (system_status_router, None),
     (core_features_router, None), (core_runtime_router, None), (reminders_router, ["Reminders"]),
     (notifications_router, ["Notifications"]), (quick_tasks_router, ["Quick Tasks"]),
     (task_insights_router, ["Task Insights"]), (core_events_router, ["Core Events"]),
