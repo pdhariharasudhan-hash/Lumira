@@ -69,7 +69,7 @@ class DecisionLifecycleService:
     def record_outcome(self, decision_id: str, outcome_status: str, outcome: str = "") -> dict:
         if outcome_status not in self.OUTCOME_STATES:
             raise MemoryValidationError("unsupported decision outcome status")
-        outcome = self.memory._bounded_text(outcome, "outcome", 3000)
+        outcome = "" if outcome == "" else self.memory._bounded_text(outcome, "outcome", 3000)
         existing = self.get(decision_id)
         if existing is None:
             raise KeyError("decision not found")
