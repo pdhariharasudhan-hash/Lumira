@@ -61,6 +61,7 @@ from app.routes.goal_insights import router as goal_insights_router
 from app.routes.next_actions import router as next_actions_router
 from app.routes.personal_briefing import router as personal_briefing_router
 from app.routes.decision_context import router as decision_context_router
+from app.routes.decision_lifecycle import router as decision_lifecycle_router
 from app.routes.action_priority import router as action_priority_router
 from app.routes.core_activity_summary import router as core_activity_summary_router
 from app.routes.briefing_priorities import router as briefing_priorities_router
@@ -109,6 +110,7 @@ ROUTERS = [
     (system_health_router, ["System Health"]), (core_diagnostics_router, ["Core Diagnostics"]),
     (goal_insights_router, ["Goal Insights"]), (next_actions_router, ["Next Actions"]),
     (personal_briefing_router, ["Personal Briefing"]), (decision_context_router, ["Memory Context"]),
+    (decision_lifecycle_router, ["Decision Intelligence"]),
     (action_priority_router, ["Action Priority"]), (core_activity_summary_router, ["System Activity"]),
     (briefing_priorities_router, None), (core_attention_router, None), (execution_loop_router, None),
     (blocker_queue_router, None), (blocker_insights_router, None), (execution_readiness_router, None),
