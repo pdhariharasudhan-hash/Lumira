@@ -9,6 +9,7 @@ from app.routes.code import router as code_router
 from app.routes.execute import router as execute_router
 from app.routes.validate import router as validate_router
 from app.routes.memory import router as memory_router
+from app.routes.memory_links import router as memory_links_router
 from app.routes.health import router as health_router
 from app.routes.resources import router as resources_router
 from app.routes.brain import router as brain_router
@@ -47,6 +48,9 @@ from app.routes.research_library import router as research_library_router
 from app.routes.recovery_checkpoints import router as recovery_checkpoints_router
 from app.routes.personal_context import router as personal_context_router
 from app.routes.knowledge import router as knowledge_router
+from app.routes.personal_library import router as personal_library_router
+from app.routes.electronics_assistant import router as electronics_assistant_router
+from app.routes.personal_todos import router as personal_todos_router
 from app.routes.system_status import router as system_status_router
 from app.routes.core_features import router as core_features_router
 from app.routes.core_runtime import router as core_runtime_router
@@ -87,7 +91,7 @@ from app.routes.recovery_transition import router as recovery_transition_router
 
 ROUTERS = [
     (builder_router, ["Builder"]), (code_router, ["Code"]), (execute_router, ["Execute"]),
-    (validate_router, ["Validate"]), (memory_router, ["Memory"]), (health_router, None),
+    (validate_router, ["Validate"]), (memory_router, ["Memory"]), (memory_links_router, ["Memory Links"]), (health_router, None),
     (resources_router, None), (brain_router, ["Brain"]), (run_router, ["Run"]),
     (project_insights_router, ["Project Insights"]), (projects_router, ["Projects"]),
     (project_details_router, ["Project Details"]), (continue_router, ["Continue"]),
@@ -103,7 +107,7 @@ ROUTERS = [
     (intelligence_router, ["Intelligence and Modes"]), (notepad_router, ["Notepad"]),
     (image_understanding_router, ["Image Understanding"]), (image_generation_router, ["Image Generation"]),
     (research_library_router, ["Research Library"]), (recovery_checkpoints_router, ["Recovery Checkpoints"]),
-    (personal_context_router, ["Personal Context"]), (knowledge_router, None), (system_status_router, None),
+    (personal_context_router, ["Personal Context"]), (knowledge_router, None), (personal_library_router, ["Personal Library"]), (electronics_assistant_router, ["Electronics Assistant"]), (personal_todos_router, ["Personal To-Do"]), (system_status_router, None),
     (core_features_router, None), (core_runtime_router, None), (reminders_router, ["Reminders"]),
     (notifications_router, ["Notifications"]), (quick_tasks_router, ["Quick Tasks"]),
     (task_insights_router, ["Task Insights"]), (core_events_router, ["Core Events"]),
