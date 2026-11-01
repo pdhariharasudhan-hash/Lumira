@@ -23,11 +23,15 @@ class BlockerInsightsService:
                 continue
             item = dict(raw)
             kind = str(item.get("kind") or item.get("type") or "unknown")
-            dependency_failure = bool(item.get("dependency_failure"))
+            dependency_failure = bool(
+                item.get("dependency_failure")
+                or item.get("failed_dependencies")
+                or kind in {"dependency_failure", "dependency_blocker"}
+            )
             status = str(item.get("status") or "").lower()
             severity = (
                 "critical" if dependency_failure or status == "failed"
-                else "high" if kind in {"manual", "explicit", "external"}
+                else "high" if kind in {"manual", "explicit", "external", "manual_blocker", "goal_blocker"}
                 else "medium"
             )
             item["severity"] = severity
