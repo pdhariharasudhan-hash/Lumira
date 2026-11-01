@@ -45,6 +45,11 @@ from app.routes.notepad import router as notepad_router
 from app.routes.image_understanding import router as image_understanding_router
 from app.routes.image_generation import router as image_generation_router
 from app.routes.research_library import router as research_library_router
+from app.routes.research_compare import router as research_compare_router
+from app.routes.text_ideas import router as text_ideas_router
+from app.routes.ai_modes import router as ai_modes_router
+from app.routes.personal_preferences import router as personal_preferences_router
+from app.routes.device_profiles import router as device_profiles_router
 from app.routes.recovery_checkpoints import router as recovery_checkpoints_router
 from app.routes.personal_context import router as personal_context_router
 from app.routes.knowledge import router as knowledge_router
@@ -97,16 +102,16 @@ ROUTERS = [
     (project_details_router, ["Project Details"]), (continue_router, ["Continue"]),
     (compare_router, ["Compare"]), (project_versions_router, ["Project Versions"]),
     (project_files_router, ["Project Files"]), (project_file_content_router, ["Project File Content"]),
-    (search_router, ["Search"]), (voice_capture_router, ["Voice Capture"]), (artifacts_router, ["Artifacts"]),
+    (search_router, ["Search"]), (text_ideas_router, ["Idea Capture"]), (voice_capture_router, ["Voice Capture"]), (artifacts_router, ["Artifacts"]),
     (command_router, ["Command"]), (session_insights_router, ["Session Insights"]), (sessions_router, ["Sessions"]),
     (goals_router, ["Goals"]), (goal_intelligence_router, ["Goal Intelligence"]), (agents_router, ["Agents"]),
     (workflow_insights_router, ["Workflow Insights"]), (workflows_router, ["Workflows"]),
-    (auth_router, ["Authentication"]), (devices_router, ["Device Gateway"]),
+    (auth_router, ["Authentication"]), (devices_router, ["Device Gateway"]), (device_profiles_router, ["Device Profiles"]), (ai_modes_router, ["AI Modes"]), (personal_preferences_router, ["Personal Preferences"]),
     (project_terminal_router, ["Project Terminal"]), (project_preview_router, ["Project Preview"]),
     (web_router, ["Web Access"]), (recovery_router, ["Workflow Recovery"]), (features_router, ["Features"]),
     (intelligence_router, ["Intelligence and Modes"]), (notepad_router, ["Notepad"]),
     (image_understanding_router, ["Image Understanding"]), (image_generation_router, ["Image Generation"]),
-    (research_library_router, ["Research Library"]), (recovery_checkpoints_router, ["Recovery Checkpoints"]),
+    (research_library_router, ["Research Library"]), (research_compare_router, ["Research"]), (recovery_checkpoints_router, ["Recovery Checkpoints"]),
     (personal_context_router, ["Personal Context"]), (knowledge_router, None), (personal_library_router, ["Personal Library"]), (electronics_assistant_router, ["Electronics Assistant"]), (personal_todos_router, ["Personal To-Do"]), (system_status_router, None),
     (core_features_router, None), (core_runtime_router, None), (reminders_router, ["Reminders"]),
     (notifications_router, ["Notifications"]), (quick_tasks_router, ["Quick Tasks"]),
