@@ -38,14 +38,26 @@ def test_preview_rejects_malformed_ports_and_authorities_without_raising(tmp_pat
         assert result["code"] == "unsafe_preview_url"
 
 
-def test_terminal_is_not_reported_as_sandboxed_without_os_boundary():
-    assert ProjectTerminalService.OS_SANDBOX_ENABLED is False
+class FakeSandbox:
+    def __init__(self, available=False, reason="not_available"):
+        self.available = available
+        self.reason = reason
+
+    def status(self):
+        from app.services.workspace.container_sandbox_provider import SandboxStatus
+        return SandboxStatus(self.available, "fake" if self.available else None, self.reason)
+
+
+def test_terminal_requires_a_verified_execution_boundary():
+    assert ProjectTerminalService.OS_SANDBOX_ENABLED is True
+    service = ProjectTerminalService(sandbox=FakeSandbox(False))
+    assert service._os_sandbox_verified() is False
 
 
 def test_boolean_flag_cannot_enable_terminal_without_verified_sandbox(tmp_path, monkeypatch):
     monkeypatch.setattr(ProjectTerminalService, "OS_SANDBOX_ENABLED", True)
     monkeypatch.setenv("LUMIRA_ALLOW_UNSANDBOXED_PROJECT_COMMANDS", "1")
-    service = ProjectTerminalService(tmp_path / "terminal.json")
+    service = ProjectTerminalService(tmp_path / "terminal.json", sandbox=FakeSandbox(False))
 
     result = service.run("demo", "v1", "pytest", trusted_project=True)
 
