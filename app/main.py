@@ -12,9 +12,9 @@ from app.services.providers.startup_registration import register_configured_prov
 
 
 app = FastAPI(
-    title="Personal AI Core",
+    title="Lumira",
     version="1.0.0",
-    description="Simple FastAPI backend MVP for Personal AI Core",
+    description="Personal AI backend for Lumira",
 )
 
 register_configured_providers()
