@@ -53,9 +53,11 @@ class ProjectTerminalService:
         trusted_project: bool = False,
     ) -> dict[str, Any]:
         if not self.OS_SANDBOX_ENABLED or not self._os_sandbox_verified():
+            sandbox_reason = self.sandbox.status().reason
             return {
                 "success": False,
                 "code": "project_execution_disabled",
+                "sandbox_reason": sandbox_reason,
                 "message": (
                     "Project command execution is disabled because no OS-level sandbox "
                     "is configured. Environment flags and UI confirmation cannot provide "
