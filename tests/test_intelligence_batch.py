@@ -1,4 +1,4 @@
-from app.services.memory.memory_service import MemoryService
+from app.services.memory.memory_service import MemoryService, MemoryValidationError
 from app.services.memory.decision_lifecycle_service import DecisionLifecycleService
 from app.services.work_items.action_priority_service import ActionPriorityService
 from app.services.work_items.blocker_insights_service import BlockerInsightsService
@@ -82,7 +82,7 @@ def test_decision_outcome_is_persisted_without_auto_verifying_learning(tmp_path)
 
     try:
         service.record_outcome(decision["decision_id"], "failure", "Later changed outcome")
-    except ValueError as exc:
+    except MemoryValidationError as exc:
         assert "already recorded" in str(exc)
     else:
         raise AssertionError("a recorded decision outcome must not be silently overwritten")
