@@ -141,7 +141,7 @@ def goals_core_context(
 @router.get("/goals")
 def list_goals(
     project_id: str | None = Query(default=None, max_length=100),
-    status: Literal["active", "paused", "completed", "blocked", "cancelled"] | None = None,
+    status: Literal["active", "in_progress", "paused", "completed", "blocked", "cancelled"] | None = None,
     parent_goal_id: str | None = Query(default=None, max_length=128),
     limit: int = Query(default=100, ge=1, le=200),
     offset: int = Query(default=0, ge=0, le=100_000),
