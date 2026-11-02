@@ -164,7 +164,7 @@ class BrainAgentOrchestrator:
             # process creation can fail before the agent begins), so fail closed.
             "agent_execution_started": normalized_agent_state in {
                 "started", "running", "in_progress", "in-progress", "working",
-                "executing", "timed_out", "completed",
+                "executing", "timed_out", "completed", "planned",
             },
         }
         return result
