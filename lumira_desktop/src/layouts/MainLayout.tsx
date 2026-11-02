@@ -107,15 +107,8 @@ function formatError(error: unknown): { message: string; response: ApiResponse }
 
 function renderOutput(output: OutputDescriptor | undefined) {
 	if (!output) return null;
-	if (output.type === "json") {
-		if (typeof output.content !== "string" || !output.content.trim()) return null;
-		try {
-			const parsed: unknown = JSON.parse(output.content);
-			return <pre className="assistant-structured-output">{JSON.stringify(safeDisplay(parsed), null, 2)}</pre>;
-		} catch {
-			return <pre className="assistant-structured-output">{output.content}</pre>;
-		}
-	}
+	// Structured data is internal by default. Never render raw JSON in normal chat.
+	if (output.type === "json") return null;
 	if (output.type === "text") {
 		return output.content?.trim()
 			? <div className="assistant-message">{output.content}</div>
