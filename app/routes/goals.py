@@ -716,6 +716,9 @@ def remove_goal_blocker(goal_id: str, blocker: str = Query(min_length=1, max_len
 @router.post("/goals/{goal_id}/dependencies")
 def add_goal_dependency(goal_id: str, request: GoalDependencyRequest):
     """Add a dependency only when it cannot introduce a directed cycle."""
+    dependency_id = request.dependency_goal_id.strip()
+    if dependency_id == goal_id.strip():
+        raise HTTPException(status_code=409, detail={"code": "dependency_cycle", "message": "A goal cannot depend on itself."})
     try:
         memory = MemoryService()
         goals = _goals_from_memory(memory)
@@ -724,12 +727,7 @@ def add_goal_dependency(goal_id: str, request: GoalDependencyRequest):
             if isinstance(item, dict) and isinstance(item.get("goal_id"), str) and not item.get("archived")
         }
         goal = by_id.get(goal_id)
-        dependency_id = str(request.dependency_goal_id).strip()
-        if dependency_id == str(goal_id).strip():
-            raise HTTPException(
-                status_code=409,
-                detail={"code": "dependency_cycle", "message": "A goal cannot depend on itself."},
-            )
+        dependency_id = str(dependency_id)
         if goal is None:
             raise HTTPException(status_code=404, detail="goal not found")
         if dependency_id not in by_id:
