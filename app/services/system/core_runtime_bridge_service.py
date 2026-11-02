@@ -131,6 +131,11 @@ class CoreRuntimeBridgeService:
         }
 
     def context(self, session_id: str | None = None, project_id: str | None = None, goal_id: str | None = None):
+        """Build bounded, read-only cross-feature context for Lumira operations.
+
+        These bridges deliberately expose summaries and explicitly requested
+        records only. They do not dump whole stores into the Brain or workers.
+        """
         context = {
             "session_id": session_id,
             "project_id": project_id,
@@ -141,4 +146,72 @@ class CoreRuntimeBridgeService:
         }
         if session_id:
             context["session"] = self._safe("session", lambda: self.sessions.get_session(session_id))
+        if project_id:
+            context["project"] = self._safe(
+                "project",
+                lambda: self._project_context(project_id),
+            )
+        if goal_id:
+            context["goal"] = self._safe(
+                "goal",
+                lambda: self._goal_context(goal_id),
+            )
+
+        # Five subsystem bridges used by the main execution/agent paths:
+        # projects, goals, recovery, devices, and learning.
+        context["recovery_context"] = self._safe(
+            "recovery", lambda: self._recovery_context(session_id, project_id, goal_id)
+        )
+        context["device_context"] = self._safe("devices", self._device_summary)
+        context["learning_context"] = self._safe("learning", self._learning_context)
         return {"success": True, "context": context}
+
+    def _project_context(self, project_id: str):
+        project = self.projects.get_project(project_id)
+        if project is None:
+            return {"found": False, "project_id": project_id}
+        return {
+            "found": True,
+            "project_id": project_id,
+            "name": project.get("name"),
+            "status": project.get("status"),
+            "version": project.get("version") or project.get("latest_version"),
+        }
+
+    def _goal_context(self, goal_id: str):
+        data = self.memory.get_all()
+        goals = data.get("goals", []) if isinstance(data, dict) else []
+        goal = next((item for item in goals if item.get("goal_id") == goal_id), None)
+        if goal is None:
+            return {"found": False, "goal_id": goal_id}
+        return {
+            "found": True,
+            "goal_id": goal_id,
+            "title": goal.get("title") or goal.get("name"),
+            "status": goal.get("status"),
+            "progress": goal.get("progress"),
+            "priority": goal.get("priority"),
+        }
+
+    def _recovery_context(self, session_id, project_id, goal_id):
+        summary = self.recovery.summary()
+        return {
+            "summary": summary,
+            "scope": {
+                "session_id": session_id,
+                "project_id": project_id,
+                "goal_id": goal_id,
+            },
+        }
+
+    def _learning_context(self):
+        data = self.memory.get_all()
+        records = data.get("learning_records", []) if isinstance(data, dict) else []
+        verified = [
+            item for item in records
+            if isinstance(item, dict) and item.get("verified") is True
+        ]
+        return {
+            "verified_record_count": len(verified),
+            "latest_verified_record": verified[-1].get("learning_id") if verified else None,
+        }
