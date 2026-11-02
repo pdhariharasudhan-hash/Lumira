@@ -1946,9 +1946,10 @@ async function runArtifactVoiceAction(artifactId: string, action: "process" | "t
 							return <article className="message-run" key={message.id}>
 								{message.prompt && <div className="user-message">{message.prompt}</div>}
 								{message.transcript && <div className="assistant-message">{message.transcript}</div>}
-								{message.pending && <div className="assistant-pending">Working through the core…</div>}
+								{message.response && typeof response.message === "string" && response.message.trim() && <div className="assistant-message">{response.message}</div>}
+								{message.pending && <div className="assistant-pending">Lumira is working…</div>}
 								{message.error && <div className="workspace-alert error" role="alert">{message.error}</div>}
-								{message.response && <div className={`result-panel ${successful ? "is-success" : "is-failure"}`}>
+								{message.response && !["greeting", "conversation"].includes(capability) && <div className={`result-panel ${successful ? "is-success" : "is-failure"}`}>
 									<div className="result-panel-heading"><span className="result-icon"><FiCpu /></span><strong>{capability.replaceAll("_", " ")}</strong><span className="status-pill">{status.replaceAll("_", " ")}</span></div>
 									{response.clarification_required && <p className="result-message">{stringValue(response.message, "Additional information is required to continue.")}</p>}
 									{typeof result.message === "string" && result.message && <p className="result-message">{result.message}</p>}

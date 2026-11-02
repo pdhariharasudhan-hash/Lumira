@@ -128,6 +128,49 @@ def command(
             "session_id": session["session_id"],
         }
 
+    # Everyday conversation is a first-class Lumira interaction, not an
+    # unsupported command. Keep this deterministic when no external language
+    # provider is configured; capability work still uses the normal pipeline.
+    conversational_text = request.input.strip().lower()
+    conversational_replies = {
+        "how are you": "I'm doing well and ready to help. What would you like to work on?",
+        "how are u": "I'm doing well and ready to help. What would you like to work on?",
+        "what can you do": "I can help you plan, build and organize projects, manage goals and workflows, search your Lumira workspace, work with saved memory and artifacts, and use the capabilities that are configured on this device.",
+        "who are you": "I'm Lumira, your personal AI. I can talk with you and route practical requests through your local Lumira capabilities.",
+    }
+    normalized_conversation = " ".join(
+        conversational_text.replace("?", " ").replace("!", " ").replace(".", " ").split()
+    )
+    # Accept common keyboard slips in short conversational messages so Lumira
+    # behaves like an assistant rather than exposing an internal parser error.
+    conversational_aliases = {
+        "how arew u": "how are u",
+        "how r u": "how are u",
+        "how r you": "how are you",
+        "hows it going": "how are you",
+        "how's it going": "how are you",
+    }
+    normalized_conversation = conversational_aliases.get(
+        normalized_conversation, normalized_conversation
+    )
+    if normalized_conversation in conversational_replies:
+        message = conversational_replies[normalized_conversation]
+        sessions.append_message(session["session_id"], "user", request.input)
+        sessions.append_message(
+            session["session_id"],
+            "assistant",
+            message,
+            metadata={"capability": "conversation", "success": True},
+        )
+        return {
+            "success": True,
+            "intent": "conversation",
+            "result": {"success": True, "capability": "conversation", "message": message},
+            "message": message,
+            "context": session,
+            "session_id": session["session_id"],
+        }
+
     agent_orchestrator = None
     if parsed.get("success") and parsed.get("capability") == "agent_task":
         payload = parsed.get("payload", {})
