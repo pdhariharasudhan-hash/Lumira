@@ -9,6 +9,11 @@ from app.services.work_items.work_item_service import WorkItemService
 
 router = APIRouter()
 
+def _int_param(value, default, minimum, maximum):
+    if isinstance(value, bool) or not isinstance(value, int):
+        return default
+    return max(minimum, min(maximum, value))
+
 
 def _parse_time(value):
     if not isinstance(value, str) or not value:
@@ -67,6 +72,7 @@ def search_sessions(
     project_id: str | None = Query(default=None, max_length=100),
     limit: int = Query(default=30, ge=1, le=100),
 ):
+    limit = _int_param(limit, 30, 1, 100)
     query = q.strip().casefold()
     if not query:
         raise HTTPException(status_code=422, detail="search query must not be empty")
@@ -103,6 +109,7 @@ def export_sessions(
     include_recent_messages: bool = False,
     limit: int = Query(default=50, ge=1, le=100),
 ):
+    limit = _int_param(limit, 50, 1, 100)
     sessions = _sessions(200)
     if status:
         sessions = [item for item in sessions if item.get("status") == status]
@@ -125,6 +132,7 @@ def export_sessions(
 
 @router.get("/sessions/{session_id}/health")
 def session_health(session_id: str):
+    limit = _int_param(limit, 50, 1, 200)
     try:
         session = SessionManagerService().get_session(session_id)
     except PersistenceIntegrityError as exc:
