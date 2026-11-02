@@ -151,7 +151,7 @@ def playback_voice(request: PlaybackRequest):
 def start_wake_word_listener():
     result = _wake_word_listener.start()
     if not result["success"] and result.get("code") == "provider_unavailable":
-        raise HTTPException(status_code=503, detail=result)
+        raise HTTPException(status_code=501, detail=result)
     return result
 
 
