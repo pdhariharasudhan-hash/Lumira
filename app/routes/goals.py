@@ -425,6 +425,9 @@ def get_goal_readiness(goal_id: str):
         if isinstance(item, dict) and isinstance(item.get("goal_id"), str)
     }
     dependency_status = []
+    # A goal hierarchy can express prerequisites through explicit dependencies
+    # or through unfinished sibling/parent work. Only explicit dependency IDs
+    # are returned as dependency_status records.
     if not isinstance(goal.get("dependencies", []), list):
         dependency_status.append({"goal_id": None, "title": "Invalid dependency data", "status": "invalid", "satisfied": False})
     for dependency_id in (goal.get("dependencies", [])[:50] if isinstance(goal.get("dependencies", []), list) else []):
