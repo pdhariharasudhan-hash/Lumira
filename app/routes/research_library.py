@@ -42,6 +42,22 @@ def recent_research(limit: int = Query(default=20, ge=0, le=100)):
 
 
 
+@router.get("/tags")
+def research_tags():
+    try:
+        return {"success": True, "tags": ResearchLibraryService().tag_counts()}
+    except OSError as exc:
+        raise HTTPException(status_code=503, detail="Research library is unavailable") from exc
+
+
+@router.get("/summary")
+def research_summary():
+    try:
+        return {"success": True, "summary": ResearchLibraryService().summary()}
+    except OSError as exc:
+        raise HTTPException(status_code=503, detail="Research library is unavailable") from exc
+
+
 @router.get("/{research_id}")
 def get_research(research_id: str):
     try:
@@ -84,19 +100,7 @@ def delete_research(research_id: str):
     return {"success": True, "deleted": True, "research_id": research_id}
 
 
-@router.get("/tags")
-def research_tags():
-    try:
-        return {"success": True, "tags": ResearchLibraryService().tag_counts()}
-    except OSError as exc:
-        raise HTTPException(status_code=503, detail="Research library is unavailable") from exc
 
 
-@router.get("/summary")
-def research_summary():
-    try:
-        return {"success": True, "summary": ResearchLibraryService().summary()}
-    except OSError as exc:
-        raise HTTPException(status_code=503, detail="Research library is unavailable") from exc
 
 
