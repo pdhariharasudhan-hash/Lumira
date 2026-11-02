@@ -1,0 +1,55 @@
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.services.recovery.recovery_checkpoint_service import RecoveryCheckpointService
+
+router = APIRouter(prefix="/recovery/checkpoints")
+
+
+class CheckpointRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    workflow_id: str = Field(min_length=1, max_length=200)
+    stage: str = Field(min_length=1, max_length=128)
+    state: dict = Field(default_factory=dict)
+
+
+@router.post("", status_code=201)
+def save_checkpoint(request: CheckpointRequest):
+    try:
+        checkpoint = RecoveryCheckpointService().save(
+            request.workflow_id, request.stage, request.state
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"success": True, "checkpoint": checkpoint}
+
+
+@router.get("/summary")
+def checkpoint_summary():
+    return {"success": True, "summary": RecoveryCheckpointService().summary()}
+
+
+@router.get("")
+def list_checkpoints(limit: int = 20):
+    if limit < 0 or limit > 100:
+        raise HTTPException(status_code=422, detail="limit must be between 0 and 100")
+    return {"success": True, "checkpoints": RecoveryCheckpointService().list_recent(limit)}
+
+
+@router.delete("/{workflow_id}")
+def discard_checkpoint(workflow_id: str):
+    try:
+        deleted = RecoveryCheckpointService().discard(workflow_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if not deleted:
+        raise HTTPException(status_code=404, detail="checkpoint not found")
+    return {"success": True, "deleted": True, "workflow_id": workflow_id}
+
+
+@router.get("/{workflow_id}")
+def get_checkpoint(workflow_id: str):
+    checkpoint = RecoveryCheckpointService().resume(workflow_id)
+    if checkpoint is None:
+        raise HTTPException(status_code=404, detail="checkpoint not found")
+    return {"success": True, "checkpoint": checkpoint}

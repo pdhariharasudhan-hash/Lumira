@@ -32,11 +32,8 @@ from app.services.sessions.session_manager_service import SessionManagerService
 from app.services.sessions.reference_resolution_service import ReferenceResolutionService
 from app.services.memory.memory_service import MemoryService, MemoryValidationError
 from app.services.brain.public_brain_view import public_brain_state, public_brain_trace
+from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
 from app.services.sessions.session_manager_service import redact_sensitive_text
-from app.services.providers.ollama_chat_provider import OllamaChatProvider
-from app.services.identity.system_prompt_service import SystemPromptService
-from app.services.autonomous_development.autonomous_development_service import AutonomousDevelopmentService
-import os
 
 router = APIRouter()
 
@@ -109,12 +106,6 @@ def command(
         )
 
     parsed = CommandParserService().parse(request.input)
-    greeting_text = request.input.strip().lower().replace(",", "").replace("!", "").replace(".", "")
-    if greeting_text in {"hello", "hello lumira", "hi", "hi lumira"}:
-        intent = IntentClassifierService().classify(request.input)
-        message = "Hello. I am Lumira and I am ready."
-        sessions.append_message(session["session_id"], "assistant", message, metadata={"capability": "greeting", "success": True})
-        return {"success": True, "intent": intent, "parsed": parsed, "result": {"success": True, "capability": "greeting"}, "message": message, "context": session, "session_id": session["session_id"]}
     agent_orchestrator = None
     if parsed.get("success") and parsed.get("capability") == "agent_task":
         payload = parsed.get("payload", {})
@@ -134,6 +125,14 @@ def command(
             }
 
     brain = BrainService()
+    try:
+        shared_core_context = CoreRuntimeBridgeService().context(
+            session_id=session["session_id"],
+            project_id=session.get("active_project"),
+            goal_id=session.get("goal_id"),
+        ).get("context", {})
+    except Exception:
+        shared_core_context = {}
 
     brain_request = BrainRequest(
         message=request.input,
@@ -141,6 +140,7 @@ def command(
         session_id=session["session_id"],
         workspace=request.workspace_id,
         metadata={
+            "core_context": shared_core_context,
             "active_mode": (
                 parsed["payload"]["mode"]
                 if parsed.get("success") and parsed.get("capability") == "activate_mode"
@@ -170,27 +170,24 @@ def command(
 
     intent = IntentClassifierService().classify(request.input)
     if not parsed["success"]:
-        if os.getenv("LUMIRA_OLLAMA_CHAT_ENABLED", "").strip().lower() in {"1", "true", "yes"}:
-            try:
-                response = OllamaChatProvider().chat(request.input)
-                result = {"success": True, "capability": "local_conversation", "status": "completed", "response": response, "provider": "ollama_local"}
-                sessions.append_message(session["session_id"], "assistant", response, metadata={"capability": "local_conversation", "success": True, "provider": "ollama_local"})
-                return {"success": True, "intent": intent, "parsed": parsed, "result": result, "message": response,
-                        "brain": {"state": public_brain_state(brain_response.state), "trace": public_brain_trace(brain_response.trace)},
-                        "context": session, "session_id": session["session_id"]}
-            except Exception:
-                message = "Local conversation is currently unavailable. Check that the configured local model is running, then try again."
-                result = {"success": False, "capability": "local_conversation", "status": "provider_unavailable", "code": "provider_unavailable", "message": message}
-                sessions.append_message(session["session_id"], "assistant", message, metadata={"capability": "local_conversation", "success": False, "code": "provider_unavailable"})
-                return {"success": False, "intent": intent, "parsed": parsed, "result": result, "message": message,
-                        "brain": {"state": public_brain_state(brain_response.state), "trace": public_brain_trace(brain_response.trace)},
-                        "context": session, "session_id": session["session_id"]}
-        message = parsed.get("message") if isinstance(parsed.get("message"), str) else "I could not map that request to a supported capability."
-        result = {"success": False, "capability": "command", "status": "unsupported_request", "code": "unsupported_request", "message": message}
-        sessions.append_message(session["session_id"], "assistant", message, metadata={"capability": "command", "success": False, "code": "unsupported_request"})
-        return {"success": False, "intent": intent, "parsed": parsed, "result": result, "message": message,
-                "brain": {"state": public_brain_state(brain_response.state), "trace": public_brain_trace(brain_response.trace)},
-                "context": session, "session_id": session["session_id"]}
+        try:
+            from app.agents.agent_manager import AgentManager
+            agent_recommendation = AgentManager().select_agent(request.input)
+        except Exception:
+            agent_recommendation = {"success": False, "selected_agent": None, "reason": "recommendation_unavailable"}
+        sessions.append_message(session["session_id"], "assistant", "I could not map that request to a supported capability.")
+        return {
+            "success": False,
+            "intent": intent,
+            "parsed": parsed,
+            "agent_recommendation": agent_recommendation,
+            "brain": {
+                "state": public_brain_state(brain_response.state),
+                "trace": public_brain_trace(brain_response.trace),
+            },
+            "context": session,
+            "session_id": session["session_id"],
+        }
 
     mode_state = brain_response.state.mode
 
@@ -215,15 +212,6 @@ def command(
             "capability": capability,
             "mode": mode_state.active_mode,
         }
-    elif capability == "self_upgrade_plan":
-        # Planning is allowed here; source changes still require the bounded development pipeline.
-        goal = parsed.get("payload", {}).get("goal", request.input)
-        result = AutonomousDevelopmentService().create_development_workflow(goal, session_id=session["session_id"])
-        result["capability"] = capability
-        result["execution_state"] = "planned_not_executed"
-    elif capability == "read_system_prompt":
-        prompt_state = SystemPromptService().get()
-        result = {"success": True, "capability": capability, "instructions": prompt_state}
     elif capability == "resume_project":
         project = session.get("active_project")
         version = session.get("active_version")

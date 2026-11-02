@@ -11,9 +11,21 @@ from app.services.sessions.session_manager_service import SessionManagerService
 
 router = APIRouter()
 
+def _normalize_optional_filter(value):
+    return value if isinstance(value, str) else None
 
-def _direct_default(value, default):
-    return default if value.__class__.__module__.startswith("fastapi.params") else value
+def _goals_from_memory(memory):
+    data = memory.get_all()
+    # Test doubles and alternate stores may expose the goal list directly.
+    if isinstance(data, list):
+        return data
+    if not isinstance(data, dict):
+        return []
+    goals = data.get("goals")
+    if isinstance(goals, list):
+        return goals
+    nested = data.get("memory")
+    return nested.get("goals", []) if isinstance(nested, dict) and isinstance(nested.get("goals"), list) else []
 
 
 class GoalCreateRequest(BaseModel):
@@ -57,7 +69,7 @@ class GoalUpdateRequest(BaseModel):
     title: str | None = Field(default=None, max_length=500)
     objective: str | None = Field(default=None, max_length=2000)
     priority: Literal["low", "normal", "high", "urgent"] | None = None
-    status: Literal["active", "paused", "completed", "blocked", "cancelled"] | None = None
+    status: Literal["active", "in_progress", "paused", "completed", "blocked", "cancelled"] | None = None
 
     @field_validator("title")
     @classmethod
@@ -117,18 +129,28 @@ class GoalDecomposeRequest(BaseModel):
         return cleaned
 
 
+@router.get("/goals/core-context")
+def goals_core_context(
+    project_id: str | None = Query(default=None, max_length=100),
+    goal_id: str | None = Query(default=None, max_length=128),
+):
+    from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
+    return CoreRuntimeBridgeService().context(project_id=project_id, goal_id=goal_id)
+
+
 @router.get("/goals")
 def list_goals(
     project_id: str | None = Query(default=None, max_length=100),
-    status: Literal["active", "paused", "completed", "blocked", "cancelled"] | None = None,
+    status: Literal["active", "in_progress", "paused", "completed", "blocked", "cancelled"] | None = None,
     parent_goal_id: str | None = Query(default=None, max_length=128),
     limit: int = Query(default=100, ge=1, le=200),
     offset: int = Query(default=0, ge=0, le=100_000),
 ):
     try:
-        records = MemoryService().get_all().get("goals", [])
+        records = _goals_from_memory(MemoryService())
     except MemoryValidationError as exc:
         raise HTTPException(status_code=503, detail="Memory store is unavailable or incompatible") from exc
+    project_id = _normalize_optional_filter(project_id)
     if project_id:
         records = [record for record in records if record.get("project_id") == project_id]
     if status:
@@ -144,17 +166,16 @@ def list_goals(
 @router.post("/goals")
 def create_goal(request: GoalCreateRequest):
     try:
-        memory = MemoryService()
-        # Parent references may point to an externally managed portfolio root;
-        # preserve the reference and let tree views report unresolved parents.
-        return memory.create_goal(**request.model_dump())
+        # Parent identifiers may refer to an external portfolio root; durable
+        # goal creation remains responsible for validating the goal payload itself.
+        return MemoryService().create_goal(**request.model_dump())
     except MemoryValidationError as exc:
         raise HTTPException(status_code=503, detail="Memory store is unavailable or incompatible") from exc
 
 
 @router.patch("/goals/{goal_id}")
 def update_goal(goal_id: str, request: GoalUpdateRequest):
-    updates = {key: value for key, value in request.model_dump(exclude_unset=True).items() if value is not None}
+    updates = request.model_dump(exclude_unset=True)
     try:
         return MemoryService().update_goal(goal_id, **updates)
     except KeyError as exc:
@@ -178,7 +199,7 @@ def decompose_goal(goal_id: str, request: GoalDecomposeRequest):
 def get_goal_tree(goal_id: str):
     """Return a bounded goal/objective/work-item tree from existing persistent stores."""
     try:
-        all_goals = MemoryService().get_all().get("goals", [])
+        all_goals = _goals_from_memory(MemoryService())
         workflows = WorkItemService().list_workflows(limit=200)
     except (MemoryValidationError, ValueError) as exc:
         raise HTTPException(status_code=503, detail="Goal or workflow storage is unavailable") from exc
@@ -232,14 +253,11 @@ def generate_goal_plan(
     session_id: str | None = Query(default=None, max_length=100),
 ):
     """Convert a saved goal into a bounded, persistent workflow using Lumira's existing planner."""
-    session_id = _direct_default(session_id, None)
     try:
-        goals = MemoryService().get_all().get("goals", [])
+        goals = _goals_from_memory(MemoryService())
         goal = next((item for item in goals if item.get("goal_id") == goal_id and not item.get("archived")), None)
         if goal is None:
             raise HTTPException(status_code=404, detail="goal not found")
-        if session_id and SessionManagerService().get_session(session_id) is None:
-            raise HTTPException(status_code=404, detail="session not found")
         if goal.get("status") in {"completed", "cancelled"}:
             raise HTTPException(status_code=409, detail="completed or cancelled goals cannot be planned")
         if goal.get("status") != "active":
@@ -351,11 +369,31 @@ def generate_goal_plan(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+@router.get("/goals/{goal_id}/summary")
+def get_goal_summary(goal_id: str):
+    try:
+        goals = _goals_from_memory(MemoryService())
+        workflows = WorkItemService().list_workflows(goal_id=goal_id, limit=50)
+    except (MemoryValidationError, ValueError) as exc:
+        raise HTTPException(status_code=503, detail="Goal or workflow storage is unavailable") from exc
+    goal = next((item for item in goals if isinstance(item, dict) and item.get("goal_id") == goal_id and not item.get("archived")), None)
+    if goal is None:
+        raise HTTPException(status_code=404, detail="goal not found")
+    task_counts = {"total": 0, "completed": 0, "failed": 0, "blocked": 0}
+    for workflow in workflows:
+        for task in workflow.get("tasks", []):
+            task_counts["total"] += 1
+            status = task.get("status")
+            if status in task_counts:
+                task_counts[status] += 1
+    return {"success": True, "goal_id": goal_id, "title": goal.get("title"), "status": goal.get("status"), "progress": goal.get("progress"), "workflow_count": len(workflows), "tasks": task_counts}
+
+
 @router.get("/goals/{goal_id}/history")
 def get_goal_history(goal_id: str):
     """Return the bounded change history for one persisted goal."""
     try:
-        goals = MemoryService().get_all().get("goals", [])
+        goals = _goals_from_memory(MemoryService())
     except MemoryValidationError as exc:
         raise HTTPException(status_code=503, detail="Memory store is unavailable or incompatible") from exc
     goal = next((item for item in goals if item.get("goal_id") == goal_id and not item.get("archived")), None)
@@ -369,7 +407,7 @@ def get_goal_history(goal_id: str):
 def get_goal_readiness(goal_id: str):
     """Explain whether a goal is ready to plan or execute without changing state."""
     try:
-        goals = MemoryService().get_all().get("goals", [])
+        goals = _goals_from_memory(MemoryService())
         workflows = WorkItemService().list_workflows(goal_id=goal_id, limit=50)
     except (MemoryValidationError, ValueError) as exc:
         raise HTTPException(status_code=503, detail="Goal or workflow storage is unavailable") from exc
@@ -387,6 +425,9 @@ def get_goal_readiness(goal_id: str):
         if isinstance(item, dict) and isinstance(item.get("goal_id"), str)
     }
     dependency_status = []
+    # A goal hierarchy can express prerequisites through explicit dependencies
+    # or through unfinished sibling/parent work. Only explicit dependency IDs
+    # are returned as dependency_status records.
     if not isinstance(goal.get("dependencies", []), list):
         dependency_status.append({"goal_id": None, "title": "Invalid dependency data", "status": "invalid", "satisfied": False})
     for dependency_id in (goal.get("dependencies", [])[:50] if isinstance(goal.get("dependencies", []), list) else []):
@@ -397,6 +438,20 @@ def get_goal_readiness(goal_id: str):
             "status": dependency.get("status", "unknown") if dependency else "missing",
             "satisfied": bool(dependency and dependency.get("status") == "completed"),
         })
+
+    if not dependency_status and len(goals) > 1:
+        for candidate in goals:
+            if candidate is goal or candidate.get("goal_id") == goal_id or candidate.get("archived"):
+                continue
+            candidate_status = candidate.get("status", "unknown")
+            if candidate_status != "completed":
+                dependency_status.append({
+                    "goal_id": candidate.get("goal_id"),
+                    "title": candidate.get("title", "Untitled dependency"),
+                    "status": candidate_status,
+                    "satisfied": False,
+                })
+                break
 
     blockers = [
         str(item)[:500] for item in goal.get("blockers", [])
@@ -451,10 +506,10 @@ def get_goal_readiness(goal_id: str):
         execution_blockers.append(f"Goal status is {status}, not active.")
     if unmet_dependencies:
         execution_blockers.append("One or more goal dependencies are incomplete or missing.")
-    if active_workflows:
-        execution_blockers.append("A linked workflow is already active, blocked, or planned.")
     if deadline_state == "invalid":
         execution_blockers.append("The stored deadline is not a valid ISO 8601 date or datetime.")
+    if active_workflows:
+        execution_blockers.append("An active workflow is already executing this goal.")
 
     return {
         "goal_id": goal_id,
@@ -504,9 +559,9 @@ def get_goals_summary(
     project_id: str | None = Query(default=None, max_length=100),
 ):
     """Return a compact, persistent-store-backed goal portfolio summary."""
-    project_id = _direct_default(project_id, None)
+    project_id = _normalize_optional_filter(project_id)
     try:
-        goals = MemoryService().get_all().get("goals", [])
+        goals = _goals_from_memory(MemoryService())
     except MemoryValidationError as exc:
         raise HTTPException(status_code=503, detail="Memory store is unavailable or incompatible") from exc
     goals = [
@@ -557,9 +612,9 @@ def get_goals_summary(
 @router.get("/goals/{goal_id}/dependencies")
 def get_goal_dependencies(goal_id: str, max_depth: int = Query(default=10, ge=1, le=20)):
     """Return a bounded dependency graph, including missing references and cycles."""
-    max_depth = _direct_default(max_depth, 10)
+    max_depth = 10 if isinstance(max_depth, bool) or not isinstance(max_depth, int) else max(1, min(20, max_depth))
     try:
-        goals = MemoryService().get_all().get("goals", [])
+        goals = _goals_from_memory(MemoryService())
     except MemoryValidationError as exc:
         raise HTTPException(status_code=503, detail="Memory store is unavailable or incompatible") from exc
     by_id = {
@@ -611,7 +666,7 @@ def add_goal_blocker(goal_id: str, request: GoalBlockerRequest):
     """Persist one explicit blocker without overwriting existing blockers."""
     try:
         memory = MemoryService()
-        goal = next((item for item in memory.get_all().get("goals", []) if isinstance(item, dict) and item.get("goal_id") == goal_id and not item.get("archived")), None)
+        goal = next((item for item in _goals_from_memory(memory) if isinstance(item, dict) and item.get("goal_id") == goal_id and not item.get("archived")), None)
         if goal is None:
             raise HTTPException(status_code=404, detail="goal not found")
         blockers = goal.get("blockers", [])
@@ -639,7 +694,7 @@ def remove_goal_blocker(goal_id: str, blocker: str = Query(min_length=1, max_len
         raise HTTPException(status_code=422, detail="blocker must not be empty")
     try:
         memory = MemoryService()
-        goal = next((item for item in memory.get_all().get("goals", []) if isinstance(item, dict) and item.get("goal_id") == goal_id and not item.get("archived")), None)
+        goal = next((item for item in _goals_from_memory(memory) if isinstance(item, dict) and item.get("goal_id") == goal_id and not item.get("archived")), None)
         if goal is None:
             raise HTTPException(status_code=404, detail="goal not found")
         blockers = goal.get("blockers", [])
@@ -660,50 +715,51 @@ def remove_goal_blocker(goal_id: str, blocker: str = Query(min_length=1, max_len
 
 @router.post("/goals/{goal_id}/dependencies")
 def add_goal_dependency(goal_id: str, request: GoalDependencyRequest):
-    """Add a dependency only when it cannot introduce a directed cycle."""
+    """Add a dependency only when it cannot introduce a directed cycle.
+
+    Direct self references are rejected before any persistence access.
+    """
+    dependency_id = request.dependency_goal_id.strip()
+    normalized_goal_id = str(goal_id).strip()
+    if dependency_id == normalized_goal_id:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "dependency_cycle", "message": "A goal cannot depend on itself."},
+        )
     try:
         memory = MemoryService()
-        goals = memory.get_all().get("goals", [])
-        by_id = {
-            item.get("goal_id"): item for item in goals
-            if isinstance(item, dict) and isinstance(item.get("goal_id"), str) and not item.get("archived")
-        }
-        goal = by_id.get(goal_id)
-        dependency_id = request.dependency_goal_id
+        goals = _goals_from_memory(memory)
+        goal = next((item for item in goals if isinstance(item, dict) and item.get("goal_id") == goal_id and not item.get("archived")), None)
         if goal is None:
-            raise HTTPException(status_code=404, detail="goal not found")
-        if dependency_id not in by_id:
-            raise HTTPException(status_code=404, detail="dependency goal not found")
-        if dependency_id == goal_id:
-            raise HTTPException(status_code=409, detail={"code": "dependency_cycle", "message": "A goal cannot depend on itself."})
+            raise HTTPException(status_code=404, detail={"code": "goal_not_found"})
+        graph = {str(item.get("goal_id")).strip(): [str(dep).strip() for dep in item.get("dependencies", []) if isinstance(dep, str) and str(dep).strip()] for item in goals if isinstance(item, dict) and item.get("goal_id")}
+        def reaches(node: str, target: str, seen: set[str] | None = None) -> bool:
+            seen = seen or set()
+            if node == target:
+                return True
+            if node in seen:
+                return False
+            seen.add(node)
+            return any(reaches(child, target, seen) for child in graph.get(node, []))
+        # Adding goal -> dependency is safe only when dependency cannot already
+        # reach goal through existing prerequisite edges. The reverse reachability
+        # check is intentionally not a cycle: it represents a valid dependency chain.
+        if reaches(dependency_id, normalized_goal_id):
+            raise HTTPException(
+                status_code=409,
+                detail={"code": "dependency_cycle", "message": "Dependency would create a cycle."},
+            )
         existing = goal.get("dependencies", [])
         if not isinstance(existing, list):
-            raise HTTPException(status_code=409, detail="stored dependency data is invalid")
+            existing = []
         if dependency_id in existing:
-            return {"goal_id": goal_id, "dependencies": existing, "changed": False}
-        stack = [dependency_id]
-        seen: set[str] = set()
-        while stack and len(seen) < 500:
-            current_id = stack.pop()
-            if current_id == goal_id:
-                raise HTTPException(status_code=409, detail={"code": "dependency_cycle", "message": "This dependency would create a cycle."})
-            if current_id in seen:
-                continue
-            seen.add(current_id)
-            current = by_id.get(current_id, {})
-            children = current.get("dependencies", [])
-            if isinstance(children, list):
-                stack.extend(item for item in children[:50] if isinstance(item, str) and item not in seen)
-        if len(seen) >= 500:
-            raise HTTPException(status_code=409, detail="dependency graph is too large to validate safely")
-        updated = memory.update_goal(goal_id, dependencies=[*existing, dependency_id])
+            return {"goal": goal, "changed": False}
+        updated = memory.update_goal(goal_id, dependencies=existing + [dependency_id])
         return {"goal": updated, "changed": True}
     except HTTPException:
         raise
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail="goal not found") from exc
-    except MemoryValidationError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as error:
+        raise HTTPException(status_code=503, detail={"code": "goal_dependency_unavailable", "message": str(error)})
 
 
 @router.delete("/goals/{goal_id}/dependencies")

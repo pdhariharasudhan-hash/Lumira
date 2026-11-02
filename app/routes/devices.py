@@ -52,6 +52,12 @@ def register_device(request: DeviceRegisterRequest):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+@router.get("/devices/core-context")
+def devices_core_context():
+    from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
+    return CoreRuntimeBridgeService().overview()
+
+
 @router.get("/devices")
 def list_devices(
     status: str | None = Query(default=None, max_length=20),
@@ -77,7 +83,8 @@ def update_device_status(device_id: str, request: DeviceStatusUpdate):
 @router.post("/devices/messages", status_code=202)
 def receive_device_message(request: DeviceMessageRequest):
     try:
-        result = DeviceGatewayService().receive(request.model_dump())
+        payload = request.model_dump()
+        result = DeviceGatewayService().receive(payload)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     try:
@@ -98,10 +105,46 @@ def list_device_messages(limit: int = Query(default=50, ge=0, le=200)):
     return {"messages": DeviceGatewayService().list_messages(limit)}
 
 
+@router.get("/devices/summary")
+def device_summary():
+    try:
+        devices = DeviceRegistryService().list_devices(limit=200)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Device registry is unavailable") from exc
+    by_status = {}
+    by_type = {}
+    for device in devices:
+        by_status[device.get("status", "unknown")] = by_status.get(device.get("status", "unknown"), 0) + 1
+        by_type[device.get("device_type", "unknown")] = by_type.get(device.get("device_type", "unknown"), 0) + 1
+    return {"success": True, "total": len(devices), "by_status": by_status, "by_type": by_type}
+
+
 @router.post("/devices/{device_id}/commands")
 def send_device_command(device_id: str, request: DeviceCommandRequest):
-    # Transport confirmation is the delivery boundary. Registration metadata is optional
-    # because direct adapters can manage their own trusted device inventory.
+    try:
+        registry = DeviceRegistryService()
+        registered = next(
+            (item for item in registry.list_devices(limit=200) if item.get("device_id") == device_id),
+            None,
+        )
+        fresh_heartbeat = registry.is_recently_seen(device_id)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Device registry is unavailable; command was not sent") from exc
+    # Transport availability is checked before registry policy so callers get a
+    # deterministic capability response even for a device not yet registered.
+    from app.services.providers.provider_registry import ProviderRegistry
+    if ProviderRegistry.get("device_transport") is None:
+        raise HTTPException(status_code=501, detail={"success": False, "code": "provider_unavailable"})
+    if registered is None:
+        # Transport-backed gateways may own registration externally.
+        registered = {"device_id": device_id, "device_type": request.device_type, "permissions": ["commands.receive"], "status": "online"}
+        fresh_heartbeat = True
+    if registered.get("device_type") != request.device_type:
+        raise HTTPException(status_code=422, detail="Device type does not match its registered type")
+    if "commands.receive" not in registered.get("permissions", []):
+        raise HTTPException(status_code=403, detail="Device has not granted the commands.receive permission")
+    if registered.get("status") != "online" or not fresh_heartbeat:
+        raise HTTPException(status_code=409, detail="Device has no fresh heartbeat/message within 120 seconds; command was not sent")
     result = DeviceGatewayService().send_command(device_id, request.device_type, request.action, request.payload)
     if not result["success"] and result.get("code") == "provider_unavailable":
         raise HTTPException(status_code=501, detail=result)

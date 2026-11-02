@@ -10,10 +10,10 @@ from app.services.persistence.atomic_json_store import PersistenceIntegrityError
 
 router = APIRouter()
 
-
-def _direct_default(value, default):
-    """Use FastAPI defaults when a route function is invoked directly in tests/services."""
-    return default if value.__class__.__module__.startswith("fastapi.params") else value
+def _int_param(value, default, minimum, maximum):
+    if isinstance(value, bool) or not isinstance(value, int):
+        return default
+    return max(minimum, min(maximum, value))
 
 
 class BulkGoalUpdate(BaseModel):
@@ -57,6 +57,9 @@ class MilestoneCreate(BaseModel):
 
 
 def _memory_and_goals(project_id: str | None = None, include_archived: bool = False):
+    # Direct function calls receive FastAPI Query defaults rather than None.
+    if not isinstance(project_id, str):
+        project_id = None
     memory = MemoryService()
     goals = memory.get_all().get("goals", [])
     goals = [
@@ -80,12 +83,11 @@ def get_goal_intelligence(
     stale_days: int = Query(default=14, ge=1, le=365),
 ):
     """A deterministic 28-signal goal portfolio intelligence report; no model guesses."""
-    project_id = _direct_default(project_id, None)
-    stale_days = _direct_default(stale_days, 14)
     try:
         _, goals = _memory_and_goals(project_id)
     except MemoryValidationError as exc:
         raise HTTPException(status_code=503, detail="Goal memory is unavailable") from exc
+    stale_days = _int_param(stale_days, 14, 1, 365)
     now = datetime.now(UTC)
     def parse_date(value):
         if not isinstance(value, str) or not value.strip():
@@ -215,8 +217,7 @@ def search_goals(
     status: Literal["active", "paused", "completed", "blocked", "cancelled"] | None = None,
     limit: int = Query(default=30, ge=1, le=100),
 ):
-    project_id = _direct_default(project_id, None)
-    limit = _direct_default(limit, 30)
+    limit = _int_param(limit, 30, 1, 100)
     query = q.strip().casefold()
     if not query:
         raise HTTPException(status_code=422, detail="search query must not be empty")
@@ -241,13 +242,12 @@ def get_goal_timeline(
     days: int = Query(default=30, ge=1, le=365),
     limit: int = Query(default=100, ge=1, le=300),
 ):
-    project_id = _direct_default(project_id, None)
-    days = _direct_default(days, 30)
-    limit = _direct_default(limit, 100)
     try:
         _, goals = _memory_and_goals(project_id)
     except MemoryValidationError as exc:
         raise HTTPException(status_code=503, detail="Goal memory is unavailable") from exc
+    days = _int_param(days, 30, 1, 365)
+    limit = _int_param(limit, 100, 1, 300)
     cutoff = datetime.now(UTC) - timedelta(days=days)
     events = []
     for goal in goals:
@@ -275,12 +275,11 @@ def get_goal_next_actions(
     project_id: str | None = Query(default=None, max_length=100),
     limit: int = Query(default=10, ge=1, le=50),
 ):
-    project_id = _direct_default(project_id, None)
-    limit = _direct_default(limit, 10)
     try:
         _, goals = _memory_and_goals(project_id)
     except MemoryValidationError as exc:
         raise HTTPException(status_code=503, detail="Goal memory is unavailable") from exc
+    limit = _int_param(limit, 10, 1, 50)
     by_id = {g.get("goal_id"): g for g in goals}
     now = datetime.now(UTC)
     scored = []

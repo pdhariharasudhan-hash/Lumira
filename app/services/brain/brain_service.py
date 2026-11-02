@@ -524,6 +524,23 @@ class BrainService:
                 error=error,
             )
 
+        # A verification rejection is terminal and must not be converted into success.
+        if final_state.status == "rejected":
+            error = redact_sensitive_text("Verification rejected execution")
+            self._record_pipeline(
+                state=final_state,
+                success=False,
+                trace=trace,
+                error=error,
+            )
+            self._persist_run(final_state, session, success=False, error=error)
+            return BrainResponse(
+                success=False,
+                state=final_state,
+                trace=trace,
+                error=error,
+            )
+
         # ----------------------------------
         # Final validation
         # ----------------------------------
@@ -572,6 +589,26 @@ class BrainService:
             state=final_state,
             trace=trace,
         )
+
+    def _publish_execution_outcome(self, state, session: dict, success: bool) -> None:
+        """Publish a compact execution outcome when event integrations are available."""
+        if self.core_events is None or self.notifications is None:
+            return
+        event_name = "brain_execution_completed" if success else "brain_execution_failed"
+        try:
+            recorded = self.core_events.record(
+                event_name,
+                "brain",
+                session_id=session.get("session_id"),
+                project_id=session.get("active_project"),
+                goal_id=session.get("goal_id"),
+                execution_id=getattr(state.execution_context, "execution_id", None),
+            )
+            event = recorded.get("event_record", recorded) if isinstance(recorded, dict) else recorded
+            self.notifications.create_from_core_event(event)
+        except Exception:
+            # Event delivery is secondary and must not break the brain result.
+            return
 
     def _restore_session_state(self, state: BrainState, session: dict) -> None:
         conversation = session.get("conversation", {})

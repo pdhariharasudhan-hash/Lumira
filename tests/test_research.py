@@ -141,3 +141,47 @@ def test_external_research_rejects_empty_and_oversized_requests_before_provider_
     service = ResearchCapabilityService(MustNotRunProvider())
     assert service.web_research(" ")["code"] == "invalid_research_request"
     assert service.technical_research("x" * 10_001)["code"] == "invalid_research_request"
+
+
+def test_validated_external_research_is_bridged_into_research_library():
+    class Provider:
+        def research(self, request, research_type):
+            return {
+                "success": True,
+                "findings": ["Supported finding."],
+                "sources": [{"url": "https://example.test/evidence"}],
+            }
+
+    class Library:
+        def __init__(self):
+            self.calls = []
+        def add(self, **kwargs):
+            self.calls.append(kwargs)
+            return {"research_id": "research-1"}
+
+    library = Library()
+    result = ResearchCapabilityService(Provider(), library=library).web_research("battery research")
+    assert result["success"] is True
+    assert result["storage_status"] == "stored"
+    assert result["research_id"] == "research-1"
+    assert library.calls[0]["source"] == "https://example.test/evidence"
+    assert library.calls[0]["tags"] == ["web_research"]
+
+
+def test_research_storage_failure_does_not_fake_a_saved_record():
+    class Provider:
+        def research(self, request, research_type):
+            return {
+                "success": True,
+                "findings": "Supported finding.",
+                "sources": [{"source": "source-1"}],
+            }
+
+    class BrokenLibrary:
+        def add(self, **kwargs):
+            raise OSError("storage unavailable")
+
+    result = ResearchCapabilityService(Provider(), library=BrokenLibrary()).technical_research("battery")
+    assert result["success"] is True
+    assert result["storage_status"] == "failed"
+    assert "research_id" not in result

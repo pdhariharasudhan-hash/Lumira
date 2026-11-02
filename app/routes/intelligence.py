@@ -23,6 +23,12 @@ class SelectModeRequest(BaseModel):
     mode_id: str = Field(min_length=1, max_length=50)
 
 
+@router.get("/intelligence/core-bridge")
+def intelligence_core_bridge():
+    from app.services.system.core_feature_bridge_service import CoreFeatureBridgeService
+    return CoreFeatureBridgeService().overview()
+
+
 @router.get("/intelligence/status")
 def intelligence_status():
     """Expose the existing brain pipeline and capability readiness in one place."""
@@ -51,6 +57,37 @@ def intelligence_status():
             "project_terminal_execution": "disabled",
             "sandbox_verification": "not_implemented",
         },
+    }
+
+
+@router.get("/intelligence/capabilities")
+def intelligence_capabilities():
+    summary = FeatureActivationService().list_features()
+    return {
+        "success": True,
+        "feature_count": summary["count"],
+        "enabled": summary["enabled"],
+        "available": summary["available"],
+        "activation_blocked": summary["activation_blocked"],
+        "providers": {name: ProviderRegistry.get(name) is not None for name in PROVIDER_STATUS_NAMES},
+    }
+
+
+@router.get("/intelligence/summary")
+def intelligence_summary():
+    features = FeatureActivationService().list_features()
+    history = PipelineHistoryService().stats()
+    modes = ModeRegistryService().count()
+    return {
+        "success": True,
+        "features": {
+            "total": features["count"],
+            "enabled": len(features["enabled"]),
+            "available": len(features["available"]),
+            "failed": len(features["failed"]),
+        },
+        "modes": modes,
+        "pipeline_history": history,
     }
 
 

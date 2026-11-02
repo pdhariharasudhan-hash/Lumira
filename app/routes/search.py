@@ -20,6 +20,12 @@ def _hide_internal_paths(value):
     return value
 
 
+@router.get("/search/counts")
+def search_counts(q: str = Query(min_length=1, max_length=500)):
+    normalized_query = q.strip()
+    return {"success": True, "query": normalized_query, "counts": UnifiedSearchService().search_counts(normalized_query)}
+
+
 @router.get(
     "/search"
 )

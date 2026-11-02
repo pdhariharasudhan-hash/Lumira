@@ -115,58 +115,6 @@ class UnifiedSearchService:
             return results
         return results
 
-    def search_workspace_files(self, query: str) -> list[dict]:
-        """Search bounded, user-authored source files without indexing runtime data or backups."""
-        if not self._terms(query):
-            return []
-        allowed_roots = (Path("app"), Path("tests"), Path("lumira_desktop/src"), Path("docs"))
-        results: list[dict] = []
-        scanned = 0
-        for root in allowed_roots:
-            if not root.is_dir():
-                continue
-            resolved_root = root.resolve()
-            for path in root.rglob("*"):
-                if scanned >= 500 or len(results) >= 200:
-                    return results
-                if not path.is_file():
-                    continue
-                # Runtime caches, dependencies, backup snapshots and generated output
-                # are deliberately excluded from workspace search.
-                if any(part.startswith(".") or part in {"__pycache__", "node_modules", "dist", "build", ".pytest-work"} for part in path.parts):
-                    continue
-                if path.name.endswith((".bak", ".backup", ".orig", ".tmp")):
-                    continue
-                if path.suffix.lower() not in self.TEXT_EXTENSIONS:
-                    continue
-                scanned += 1
-                try:
-                    resolved = path.resolve()
-                    if resolved_root not in resolved.parents:
-                        continue
-                    content = self._read_text(resolved, max_bytes=250_000)
-                except (OSError, ValueError):
-                    continue
-                if content is None:
-                    continue
-                relative = path.as_posix()
-                searchable = f"{relative} {content}"
-                if not self._matches(searchable, query):
-                    continue
-                kind = "code" if path.suffix.lower() in self.CODE_EXTENSIONS else "documentation"
-                results.append({
-                    "type": "source_file",
-                    "title": relative,
-                    "path": relative,
-                    "source": "workspace",
-                    "kind": kind,
-                    "timestamp": None,
-                    "reference": relative,
-                    "snippet": self._safe_snippet(content),
-                    "relevance": sum(1 for term in self._terms(query) if term in searchable.lower()),
-                })
-        return results
-
     def search_documentation(self, query: str) -> list[dict]:
         root = Path("docs")
         results = []
@@ -234,6 +182,15 @@ class UnifiedSearchService:
             return []
         return [record for record in records
                 if cls._matches(json.dumps(record, ensure_ascii=False), query)][:200]
+
+    def search_notes(self, query: str) -> list[dict]:
+        if not self._terms(query):
+            return []
+        try:
+            from app.services.notepad_service import NotepadService
+            return NotepadService().search_notes(query, limit=100)
+        except (ValueError, OSError):
+            return []
 
     def search_workflows(self, query: str) -> list[dict]:
         """Search durable workflows and their task metadata."""
@@ -351,27 +308,38 @@ class UnifiedSearchService:
                 results.append(conversation)
         return results
 
+    def search_overview(self, query: str) -> dict:
+        results = self.search_all(query)
+        counts = {key: len(value) for key, value in results.items() if isinstance(value, (list, dict)) and key != "items"}
+        return {"query": query, "total_categories": sum(1 for value in counts.values() if value), "total_matches": sum(counts.values()), "counts": counts}
+
+    def search_counts(self, query: str) -> dict[str, int]:
+        results = self.search_all(query)
+        return {key: len(value) for key, value in results.items() if isinstance(value, (list, dict)) and key != "items"}
+
+    def search_research(self, query: str) -> list[dict]:
+        try:
+            from app.services.research.research_library_service import ResearchLibraryService
+            return ResearchLibraryService().search(query, limit=100)
+        except (ValueError, OSError):
+            return []
+
     def search_all(self, query: str) -> dict[str, Any]:
         if not self._terms(query):
             return {key: [] for key in (
-                "projects", "project_versions", "files", "source_files", "code", "documentation",
+                "projects", "project_versions", "files", "code", "documentation",
                 "voice_ideas", "images", "artifacts", "memory", "feature_history",
                 "pipeline_history", "sessions", "conversations", "goals", "decisions",
-                "experiences", "learning", "memory_links", "workflows", "devices", "items",
+                "experiences", "learning", "memory_links", "notes", "workflows", "devices", "items",
             )}
         memory = self.memory.get_all()
         artifacts = self.search_artifacts(query)
         files = self.search_project_files(query)
-        workspace_files = self.search_workspace_files(query)
-        return MemoryService._redact_nested({
+        grouped = {
             "projects": self.search_projects(query),
             "project_versions": self.search_project_versions(query),
             "files": files,
-            "source_files": workspace_files,
-            "code": (
-                [item for item in files if item["kind"] == "code"]
-                + [item for item in workspace_files if item["kind"] == "code"]
-            )[:200],
+            "code": [item for item in files if item["kind"] == "code"],
             "documentation": self.search_documentation(query),
             "voice_ideas": [item for item in artifacts if item.get("type") in {"audio", "transcripts", "summaries"}],
             "images": [item for item in artifacts if item.get("type") in {"images", "diagrams", "blueprints", "schematics"}],
@@ -386,6 +354,10 @@ class UnifiedSearchService:
             "experiences": self._search_records(memory.get("experiences", []), query),
             "learning": self._search_records(memory.get("learning_records", []), query),
             "memory_links": self._search_records(memory.get("memory_links", []), query),
+            "notes": self.search_notes(query),
             "workflows": self.search_workflows(query),
+            "research": self.search_research(query),
             "devices": self.search_devices(query),
-        })
+        }
+        grouped["items"] = self._build_unified_items(grouped, query)
+        return MemoryService._redact_nested(grouped)

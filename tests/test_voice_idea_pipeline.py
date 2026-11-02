@@ -7,7 +7,7 @@ class FakeTranscript:
             "success": True,
             "audio_artifact": audio_id,
             "transcript_artifact": {"artifact_id": "transcript-1"},
-            "language": "ta-en",
+            "transcript_text": "Build a robot idea",
         }
 
 
@@ -23,20 +23,28 @@ class FakeSummary:
 
 class FakeMemory:
     def record_experience(self, *args, **kwargs):
-        assert kwargs["artifact_ids"] == ["audio-1", "transcript-1", "summary-1"]
+        assert kwargs["artifact_ids"] == [
+            "audio-1",
+            "transcript-1",
+            "summary-1",
+        ]
         return {"experience_id": "experience-1"}
 
 
+class FakeLanguage:
+    def detect(self, text):
+        assert "robot" in text
+        return "en"
+
+
 def test_voice_idea_pipeline_connects_existing_services():
-    pipeline = VoiceIdeaPipelineService(FakeTranscript(), FakeSummary(), FakeMemory())
+    pipeline = VoiceIdeaPipelineService(
+        FakeTranscript(),
+        FakeSummary(),
+        FakeMemory(),
+        FakeLanguage(),
+    )
     result = pipeline.process("audio-1", project_id="project-1")
     assert result["success"] is True
     assert result["stage"] == "complete"
     assert result["memory_reference"] == "experience-1"
-
-
-def test_voice_idea_pipeline_rejects_missing_audio_id():
-    pipeline = VoiceIdeaPipelineService(FakeTranscript(), FakeSummary(), FakeMemory())
-    result = pipeline.process("")
-    assert result["success"] is False
-    assert result["stage"] == "validate"

@@ -1,4 +1,4 @@
-"""End-to-end voice idea processing using Lumira's existing services."""
+"""End-to-end voice idea processing using existing Lumira services."""
 
 from app.services.language.language_detection_service import LanguageDetectionService
 from app.services.memory.memory_service import MemoryService
@@ -7,21 +7,57 @@ from app.services.voice.transcript_service import TranscriptService
 
 
 class VoiceIdeaPipelineService:
-    """Connect audio -> transcript -> language -> summary -> memory.
+    """Connect audio -> transcript -> language -> summary -> memory."""
 
-    The pipeline never deletes source artifacts when an optional downstream
-    provider is unavailable or defers work.
-    """
-
-    def __init__(self, transcript_service=None, summary_service=None, memory_service=None, language_service=None):
+    def __init__(
+        self,
+        transcript_service=None,
+        summary_service=None,
+        memory_service=None,
+        language_service=None,
+    ):
         self.transcripts = transcript_service or TranscriptService()
         self.summaries = summary_service or SummaryService()
         self.memory = memory_service or MemoryService()
         self.languages = language_service or LanguageDetectionService()
 
-    def process(self, audio_artifact_id: str, project_id: str | None = None, goal_id: str | None = None) -> dict:
+    def inspect_transcript(self, transcript_artifact_id: str) -> dict:
+        if not isinstance(transcript_artifact_id, str) or not transcript_artifact_id.strip():
+            return {"success": False, "code": "invalid_transcript_artifact"}
+        summary = self.summaries.generate_summary(transcript_artifact_id.strip())
+        return {
+            "success": bool(summary.get("success")),
+            "stage": "complete" if summary.get("success") else "summary",
+            "transcript_artifact": transcript_artifact_id.strip(),
+            "summary": summary,
+            "recoverable": not bool(summary.get("success")),
+        }
+
+    def retry(self, audio_artifact_id: str, project_id: str | None = None, goal_id: str | None = None) -> dict:
+        """Retry the complete pipeline while preserving explicit context."""
+        return self.process(audio_artifact_id, project_id=project_id, goal_id=goal_id)
+
+    def retry_summary(self, transcript_artifact_id: str) -> dict:
+        return self.inspect_transcript(transcript_artifact_id)
+
+    def inspect(self, audio_artifact_id: str) -> dict:
         if not isinstance(audio_artifact_id, str) or not audio_artifact_id.strip():
-            return {"success": False, "stage": "validate", "code": "invalid_audio_artifact"}
+            return {"success": False, "code": "invalid_audio_artifact"}
+        transcript = self.transcripts.generate_transcript(audio_artifact_id.strip())
+        return {"success": bool(transcript.get("success")), "stage": "transcript", "audio_artifact": audio_artifact_id, "transcript": transcript}
+
+    def process(
+        self,
+        audio_artifact_id: str,
+        project_id: str | None = None,
+        goal_id: str | None = None,
+    ) -> dict:
+        if not isinstance(audio_artifact_id, str) or not audio_artifact_id.strip():
+            return {
+                "success": False,
+                "stage": "validate",
+                "code": "invalid_audio_artifact",
+            }
 
         transcript = self.transcripts.generate_transcript(audio_artifact_id.strip())
         if not transcript.get("success"):
@@ -33,15 +69,35 @@ class VoiceIdeaPipelineService:
             }
 
         transcript_record = transcript.get("transcript_artifact", {})
-        transcript_id = transcript_record.get("artifact_id") if isinstance(transcript_record, dict) else None
+        transcript_id = (
+            transcript_record.get("artifact_id")
+            if isinstance(transcript_record, dict)
+            else None
+        )
         if not transcript_id:
-            return {"success": False, "stage": "transcript", "code": "missing_transcript_artifact"}
+            return {
+                "success": False,
+                "stage": "transcript",
+                "code": "missing_transcript_artifact",
+            }
 
         transcript_text = transcript.get("transcript_text", "")
         if not isinstance(transcript_text, str):
             transcript_text = ""
         language = self.languages.detect(transcript_text)
         summary = self.summaries.generate_summary(transcript_id)
+
+        core_context = {}
+        try:
+            from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
+            core_context = CoreRuntimeBridgeService().execution_context(
+                "voice_idea_process",
+                project_id=project_id,
+                goal_id=goal_id,
+            )
+        except Exception:
+            core_context = {"success": False, "error": "core_context_unavailable"}
+
         result = {
             "success": bool(summary.get("success")),
             "stage": "complete" if summary.get("success") else "summary",
@@ -49,19 +105,26 @@ class VoiceIdeaPipelineService:
             "transcript": transcript,
             "language": language,
             "summary": summary,
+            "core_context": core_context,
         }
 
         artifact_ids = [audio_artifact_id, transcript_id]
-        summary_record = summary.get("summary_artifact") if isinstance(summary, dict) else None
+        if not summary.get("success"):
+            result["recoverable"] = True
+            result["preserved_artifacts"] = artifact_ids.copy()
+            return result
+        summary_record = summary.get("summary_artifact")
         if isinstance(summary_record, dict) and summary_record.get("artifact_id"):
             artifact_ids.append(summary_record["artifact_id"])
 
-        # Persist a compact execution lesson only after a complete voice idea.
         if summary.get("success"):
             experience = self.memory.record_experience(
                 "voice_idea",
                 summary=str(summary.get("summary_text", ""))[:4000],
-                outcome="voice idea captured, transcribed, summarized and linked to artifacts",
+                outcome=(
+                    "Voice idea captured, transcribed, summarized "
+                    "and linked to artifacts"
+                ),
                 project_id=project_id,
                 goal_id=goal_id,
                 artifact_ids=artifact_ids,

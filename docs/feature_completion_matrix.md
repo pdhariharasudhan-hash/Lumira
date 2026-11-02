@@ -1,6 +1,6 @@
 # Lumira — 28-Feature Completion Matrix
 
-**Purpose:** source-level completion inventory for the 28 catalog entries. This is not a claim that every feature passed runtime tests. Selected backend tests and frontend build/lint have run in Windows Sandbox, but fresh full verification is still pending; Lumira's own generated-project terminal remains disabled until its per-run OS isolation is implemented and verified.
+**Purpose:** authoritative completion inventory for the 28 catalog entries. The latest consolidated GitHub verification workflow passed backend and desktop checks on the current audited baseline. This matrix does not treat automated tests as proof that external providers, microphones, hardware, or deployment-only capabilities work in every environment; those operational gates remain explicit below.
 
 | # | Feature | Implementation surface found | Current state / remaining gate |
 |---:|---|---|---|
@@ -33,13 +33,18 @@
 | 27 | `security` | Local auth boundary, strict local/generated bearer-token claim validation, bearer-header size bounds, secret redaction, feature lifecycle guards | Token claim shape and timestamp types plus oversized generated bearer headers are rejected at source level; deployment still needs deliberate key provisioning, shared transactional user storage, shared rate limiting, and app-specific authorization. New auth regression tests remain unrun. |
 | 28 | `observability` | Pipeline history and `/intelligence/status`, `/intelligence/history` | Status/history surfaces exist; runtime verification remains. |
 
-## Cross-feature blockers
+## Remaining operational completion gates
 
-1. **Behavioral verification:** isolated Windows Sandbox runs have succeeded for selected checks, but the current worktree still needs a fresh complete verification. The focused recovery/agent suites passed 43 tests in isolation. The recorded full backend run was 355 passed / 1 failed because the copied workspace's earlier provider-startup subprocess hit a 60-second timeout. The provider-startup test has since been rewritten to exercise registration in-process and cover invalid optional-provider configuration, but that revision has not been rerun. The desktop build and lint passed in an earlier sandbox run; Vitest did not run because that harness passed an unsupported `--minWorkers` option. The harness was corrected to `--maxWorkers=1`, but Vitest has not yet been rerun. Static checks do not substitute for fresh behavioral verification.
-2. **Terminal execution:** remains disabled until a real OS sandbox is implemented and independently verified. Do not bypass this with environment variables or UI changes.
-3. **Optional providers:** remote transcription, speech synthesis, image generation, remote image understanding, summarization, research, and wake-word detection require explicit local configuration. Optional local transcription uses faster-whisper and a separately downloaded model; optional local image understanding uses Ollama and a separately pulled vision model. No live provider call was made during this work.
-4. **Generated project security:** before deployment, provision signing keys and users deliberately, use shared rate limiting if multi-worker, and validate authorization within each generated application.
-5. **Hardware:** device records and interfaces do not establish that a physical device was connected or tested.
+The repository-level implementation and consolidated CI baseline are complete. The following gates require a real Lumira environment and cannot be honestly closed by source inspection alone:
+
+1. **Optional providers:** configure and perform at least one successful real operation for the providers you choose to support (for example transcription, speech, image generation, vision, summarization, or research). Missing or invalid providers must continue to report explicit unavailable states.
+2. **Tamil and mixed-language use:** validate real Tamil Unicode, romanized Tamil, and Tamil-English commands against the workflows you actually use. Language classification exists; complete semantic understanding is an operational quality gate.
+3. **Reliability:** perform restart, interrupted-workflow, persistence, recovery, and repeated-use checks in a running environment.
+4. **Terminal execution:** remains intentionally fail-closed. It is not complete as an execution capability until a concrete per-run OS-level sandbox is installed, explicitly supplied, and independently verified. Do not weaken this gate to close the checklist.
+5. **Direct web fetch:** remains a local experimental capability until its connect-time DNS-pinning transport is verified in an isolated runtime and deployment assumptions are accepted. Do not expose arbitrary fetch to untrusted remote callers.
+6. **Hardware:** wake-word and device features require the actual microphone/device environment and device-specific testing.
+
+See `docs/operational_completion_checklist.md` for the evidence required to close these gates.
 
 ## Latest changes in this session
 

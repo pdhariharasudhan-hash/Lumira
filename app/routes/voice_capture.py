@@ -31,6 +31,12 @@ class ArtifactRequest(BaseModel):
     artifact_id: str = Field(min_length=1, max_length=128)
 
 
+class VoiceCoreProcessRequest(BaseModel):
+    audio_artifact_id: str = Field(min_length=1, max_length=128)
+    project_id: str | None = Field(default=None, max_length=100)
+    goal_id: str | None = Field(default=None, max_length=128)
+
+
 class PlaybackRequest(BaseModel):
     text: str = Field(min_length=1, max_length=1_000_000)
     language: str = Field(default="en", pattern=r"^(en|ta|ta-en)$")
@@ -83,12 +89,22 @@ async def upload_voice(
     }
 
 
+@router.post("/voice/core-process")
+def process_voice_through_core(request: VoiceCoreProcessRequest):
+    from app.services.voice.voice_idea_pipeline_service import VoiceIdeaPipelineService
+    result = VoiceIdeaPipelineService().process(
+        request.audio_artifact_id,
+        project_id=request.project_id,
+        goal_id=request.goal_id,
+    )
+    _raise_for_voice_readiness(result)
+    return result
+
+
 @router.post("/voice/transcript")
 def transcribe_voice(request: ArtifactRequest):
     result = TranscriptService().generate_transcript(request.artifact_id)
-    # A missing transcription provider is a declared unavailable capability,
-    # not a temporary service outage. Preserve 503 for retryable resource pressure.
-    if result.get("code") == "provider_unavailable":
+    if not result.get("success") and result.get("code") == "provider_unavailable":
         raise HTTPException(status_code=501, detail=result)
     _raise_for_voice_readiness(result)
     return result
@@ -110,6 +126,16 @@ def activate_voice(request: ArtifactRequest):
     if not result["success"] and result.get("code") == "audio_artifact_not_found":
         raise HTTPException(status_code=404, detail=result)
     return result
+
+
+@router.get("/voice/artifacts/{artifact_id}/availability")
+def voice_artifact_availability(artifact_id: str):
+    from app.services.voice.audio_playback_service import AudioPlaybackService
+    result = AudioPlaybackService().resolve(artifact_id)
+    if not result.get("success"):
+        status = 404 if result.get("code") in {"audio_not_found", "audio_unavailable"} else 422
+        raise HTTPException(status_code=status, detail=result)
+    return {"success": True, "artifact_id": artifact_id, "available": True}
 
 
 @router.post("/voice/playback")
@@ -135,13 +161,22 @@ def start_wake_word_listener():
 def stop_wake_word_listener():
     result = _wake_word_listener.stop()
     if not result["success"]:
-        raise HTTPException(status_code=503, detail=result)
+        raise HTTPException(status_code=501, detail=result)
     return result
 
 
 @router.get("/voice/wake-word/status")
 def get_wake_word_listener_status():
     return _wake_word_listener.status()
+
+@router.post("/voice/wake-word/consume")
+def consume_wake_word_activation():
+    """Hand one background wake-word activation to the main Lumira runtime."""
+    result = _wake_word_listener.consume_activation()
+    if result.get("activated"):
+        event = result.get("event") if isinstance(result.get("event"), dict) else {}
+        result["main_core"] = event.get("core_context", {})
+    return result
 
 
 class VoiceProcessRequest(BaseModel):
@@ -187,16 +222,40 @@ def _persist_voice_capture_memory(audio_artifact_id: str, transcript_artifact_id
         return {"success": False, "code": "memory_persistence_failed", "message": "Voice artifacts are preserved, but memory persistence did not complete. Retry from the saved artifacts."}
 
 
-@router.post("/voice/idea-pipeline")
-def process_voice_idea_pipeline(request: VoiceProcessRequest):
-    """Run the canonical voice idea pipeline with transcript, summary and memory linking."""
-    from app.services.voice.voice_idea_pipeline_service import VoiceIdeaPipelineService
 
-    result = VoiceIdeaPipelineService().process(request.audio_artifact_id)
+
+@router.get("/voice/idea-pipeline/{artifact_id}/status")
+def voice_pipeline_status(artifact_id: str):
+    from app.services.voice.voice_idea_pipeline_service import VoiceIdeaPipelineService
+    return VoiceIdeaPipelineService().inspect(artifact_id)
+
+
+class VoiceIdeaPipelineRequest(BaseModel):
+    audio_artifact_id: str = Field(min_length=1, max_length=128)
+    project_id: str | None = Field(default=None, max_length=128)
+    goal_id: str | None = Field(default=None, max_length=128)
+
+
+@router.post("/voice/idea-pipeline/linked")
+def process_linked_voice_idea_pipeline(request: VoiceIdeaPipelineRequest):
+    from app.services.voice.voice_idea_pipeline_service import VoiceIdeaPipelineService
+    result = VoiceIdeaPipelineService().process(request.audio_artifact_id, request.project_id, request.goal_id)
+    _raise_for_voice_readiness(result)
     if not result.get("success") and result.get("stage") == "validate":
         raise HTTPException(status_code=422, detail=result)
     return result
 
+
+@router.post("/voice/idea-pipeline")
+def process_voice_idea_pipeline(request: ArtifactRequest):
+    """Run the canonical voice idea pipeline with transcript, summary and memory."""
+    from app.services.voice.voice_idea_pipeline_service import VoiceIdeaPipelineService
+
+    result = VoiceIdeaPipelineService().process(request.artifact_id)
+    _raise_for_voice_readiness(result)
+    if not result.get("success") and result.get("stage") == "validate":
+        raise HTTPException(status_code=422, detail=result)
+    return result
 
 @router.post("/voice/process")
 def process_voice_capture(request: VoiceProcessRequest):
@@ -257,65 +316,17 @@ def process_voice_capture(request: VoiceProcessRequest):
 
 
 
-class VoiceMemoryRetryRequest(BaseModel):
-    """Identifiers for retrying memory persistence from already-saved voice artifacts."""
-    audio_artifact_id: str = Field(min_length=1, max_length=128)
+class VoicePipelineSummaryRetryRequest(BaseModel):
     transcript_artifact_id: str = Field(min_length=1, max_length=128)
-    summary_artifact_id: str | None = Field(default=None, max_length=128)
 
 
-@router.post("/voice/retry-memory")
-def retry_voice_memory(request: VoiceMemoryRetryRequest):
-    """Recover a failed voice-memory write without recording or transcribing again."""
-    from app.services.artifacts.artifact_manager_service import ArtifactManagerService
-
-    artifacts = ArtifactManagerService()
-    audio = artifacts.get_artifact(request.audio_artifact_id)
-    if not audio or audio.get("type") != "audio":
-        raise HTTPException(status_code=404, detail="audio artifact not found")
-
-    transcript = artifacts.get_artifact(request.transcript_artifact_id)
-    if not transcript or transcript.get("type") != "transcripts":
-        raise HTTPException(status_code=404, detail="transcript artifact not found")
-    if transcript.get("source") != request.audio_artifact_id:
-        raise HTTPException(status_code=409, detail="transcript artifact does not belong to this voice capture")
-
-    def read_text_artifact(artifact_id: str, label: str) -> str:
-        path = artifacts.get_artifact_path(artifact_id)
-        if path is None or not path.is_file():
-            raise HTTPException(status_code=404, detail=f"{label} content not found")
-        try:
-            if path.stat().st_size > artifacts.MAX_CONTENT_LENGTH:
-                raise HTTPException(status_code=413, detail=f"{label} exceeds the processing limit")
-            content = path.read_text(encoding="utf-8").strip()
-        except (OSError, UnicodeError) as error:
-            raise HTTPException(status_code=422, detail=f"{label} content could not be read") from error
-        if not content:
-            raise HTTPException(status_code=422, detail=f"{label} is empty")
-        return content
-
-    transcript_text = read_text_artifact(request.transcript_artifact_id, "transcript")
-    transcription = {"success": True, "transcript_text": transcript_text, "transcript_artifact": transcript}
-    summary = None
-    if request.summary_artifact_id:
-        summary_record = artifacts.get_artifact(request.summary_artifact_id)
-        if not summary_record or summary_record.get("type") != "summaries":
-            raise HTTPException(status_code=404, detail="summary artifact not found")
-        if summary_record.get("source") != request.transcript_artifact_id:
-            raise HTTPException(status_code=409, detail="summary artifact does not belong to this transcript")
-        summary = {"success": True, "summary_text": read_text_artifact(request.summary_artifact_id, "summary"), "summary_artifact": summary_record}
-
-    result = _persist_voice_capture_memory(request.audio_artifact_id, request.transcript_artifact_id, transcription, summary)
-    if result.get("success") and result.get("state") == "already_exists" and request.summary_artifact_id:
-        try:
-            linked = MemoryService().attach_artifacts_to_experience(request.transcript_artifact_id, [request.summary_artifact_id])
-            result["experience_id"] = linked.get("experience_id", result.get("experience_id"))
-            result["state"] = "updated"
-            result["message"] = "Existing voice memory was updated with the summary artifact."
-        except KeyError:
-            pass
-        except Exception:
-            return {"success": False, "code": "memory_update_failed", "message": "Saved voice artifacts remain available, but the existing memory record could not be updated."}
+@router.post("/voice/idea-pipeline/retry-summary")
+def retry_pipeline_summary(request: VoicePipelineSummaryRetryRequest):
+    from app.services.voice.voice_idea_pipeline_service import VoiceIdeaPipelineService
+    result = VoiceIdeaPipelineService().retry_summary(request.transcript_artifact_id)
+    _raise_for_voice_readiness(result)
+    if not result.get("success") and result.get("code") == "invalid_transcript_artifact":
+        raise HTTPException(status_code=422, detail=result)
     return result
 
 

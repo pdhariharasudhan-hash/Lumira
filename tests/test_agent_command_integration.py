@@ -173,3 +173,21 @@ def test_primary_command_rejects_non_boolean_brain_success_before_agent_dispatch
 
     assert response.status_code == 200
     assert response.json()["success"] is False
+
+
+def test_agent_selection_recommends_without_executing(monkeypatch):
+    from app.agents.agent_manager import AgentManager
+
+    manager = AgentManager()
+    called = {"run": False}
+
+    def fail_run(*args, **kwargs):
+        called["run"] = True
+        raise AssertionError("select_agent must not execute an agent")
+
+    monkeypatch.setattr(manager, "run", fail_run)
+    result = manager.select_agent("research and compare two robotics architectures")
+
+    assert result["success"] is True
+    assert result["selected_agent"] == "research_agent"
+    assert called["run"] is False

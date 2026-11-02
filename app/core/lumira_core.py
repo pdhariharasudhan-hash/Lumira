@@ -12,30 +12,46 @@ class LumiraCore:
     def plan(self, goal: str):
         return self.registry.get("planner").create_plan(goal)
 
-    def understand(self, request: str, session_id: str = "", project: str = "", metadata: dict | None = None):
-        """Run a request through Lumira's full intelligence pipeline.
+    def core_context(self, session_id: str = "", project_id: str = "", goal_id: str = ""):
+        from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
+        return CoreRuntimeBridgeService().context(
+            session_id or None,
+            project_id or None,
+            goal_id or None,
+        )
 
-        This is the bridge between the legacy deterministic core and the
-        modular Brain architecture. Existing build/run behavior remains
-        unchanged while callers that need intent, goals, context, reasoning,
-        planning and learning can use the same public core.
-        """
+    def understand(
+        self,
+        request: str,
+        session_id: str = "",
+        project: str = "",
+        metadata: dict | None = None,
+    ):
+        """Run a request through Lumira's modular intelligence pipeline."""
         if not isinstance(request, str) or not request.strip() or len(request) > self.MAX_GOAL_LENGTH:
             return self._stopped(
                 "validate",
                 None,
-                error={"code": "invalid_input", "message": "Request must contain 1 to 10000 characters."},
+                error={
+                    "code": "invalid_input",
+                    "message": "Request must contain 1 to 10000 characters.",
+                },
             )
 
         from app.services.brain.brain_request import BrainRequest
         from app.services.brain.brain_service import BrainService
 
+        request_metadata = dict(metadata or {})
+        request_metadata.setdefault(
+            "core_context",
+            self.core_context(session_id=session_id, project_id=project).get("context", {}),
+        )
         response = BrainService().execute(
             BrainRequest(
                 message=request.strip(),
                 session_id=session_id,
                 project=project,
-                metadata=dict(metadata or {}),
+                metadata=request_metadata,
             )
         )
         state = response.state.model_dump(mode="json") if response.state is not None else None

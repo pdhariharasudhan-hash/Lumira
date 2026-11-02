@@ -265,7 +265,8 @@ class OpenAICompatibleDevelopmentProvider(DevelopmentProvider):
                 try:
                     raw_bytes = response.read(self.MAX_RESPONSE_BYTES + 1)
                 except TypeError:
-                    # Some test/deterministic response adapters expose only read().
+                    # Compatibility with lightweight response doubles and providers
+                    # that expose read() without a size argument.
                     raw_bytes = response.read()
                 if len(raw_bytes) > self.MAX_RESPONSE_BYTES:
                     return {

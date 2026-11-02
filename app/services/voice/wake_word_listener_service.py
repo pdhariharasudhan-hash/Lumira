@@ -21,6 +21,7 @@ class WakeWordListenerService:
         self._activated = False
         self._last_detected_at: str | None = None
         self._last_error: str | None = None
+        self._activation_events: list[dict[str, Any]] = []
 
     def _provider(self) -> Any | None:
         return self._provider_override or ProviderRegistry.get("wake_word")
@@ -36,6 +37,7 @@ class WakeWordListenerService:
                 "wake_word": "Lumira" if self._activated else None,
                 "last_detected_at": self._last_detected_at,
                 "error": self._last_error,
+                "pending_activations": len(self._activation_events),
             }
 
     def start(self) -> dict[str, Any]:
@@ -56,6 +58,7 @@ class WakeWordListenerService:
             self._last_detected_at = None
             self._last_error = None
             self._state = "starting"
+            self._emit_core_event("wake_word_start")
             self._thread = threading.Thread(
                 target=self._listen,
                 args=(provider, self._stop_event),
@@ -116,6 +119,25 @@ class WakeWordListenerService:
     def wait_for_detection(self, timeout_seconds: float = 0.0) -> bool:
         return self._detected_event.wait(max(0.0, min(float(timeout_seconds), 5.0)))
 
+    def consume_activation(self) -> dict[str, Any]:
+        """Consume one wake-word activation without allowing direct command execution."""
+        with self._lock:
+            if not self._activation_events:
+                return {"success": True, "activated": False, "event": None}
+            event = self._activation_events.pop(0)
+            if not self._activation_events:
+                self._detected_event.clear()
+            return {"success": True, "activated": True, "event": event}
+
+    def _emit_core_event(self, operation: str) -> None:
+        try:
+            from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
+            context = CoreRuntimeBridgeService().execution_context(operation)
+            with self._lock:
+                self._core_context = context
+        except Exception:
+            return
+
     def _listen(self, provider: Any, stop_event: threading.Event) -> None:
         detector = None
         recorder = None
@@ -143,6 +165,16 @@ class WakeWordListenerService:
                         self._activated = True
                         self._last_detected_at = datetime.now(timezone.utc).isoformat()
                         self._state = "activated"
+                    self._emit_core_event("wake_word_detected")
+                    with self._lock:
+                        event = {
+                            "event": "wake_word_detected",
+                            "timestamp": self._last_detected_at,
+                            "core_context": getattr(self, "_core_context", {}),
+                        }
+                        self._activation_events.append(event)
+                        if len(self._activation_events) > 20:
+                            del self._activation_events[:-20]
                     self._detected_event.set()
         except Exception as error:
             # Only expose a stable error category; never leak SDK details or credentials.

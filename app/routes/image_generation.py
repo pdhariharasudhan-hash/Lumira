@@ -13,13 +13,20 @@ class ImageGenerationRequest(BaseModel):
 
 @router.post("/images/generate")
 def generate_image(request: ImageGenerationRequest):
-    """Generate an image and persist successful output through Artifact Manager."""
+    """Generate an image and persist successful output as an artifact."""
     result = ImageGenerationService().generate(request.prompt, request.image_type)
     if result.get("success"):
         return result
+
     code = result.get("code")
     if code in {"provider_unavailable", "resource_pressure_deferred"}:
-        raise HTTPException(status_code=503, detail=result, headers={"Retry-After": "30"} if code == "resource_pressure_deferred" else None)
-    if code in {"invalid_prompt", "invalid_provider_output", "invalid_provider_response", "image_size_limit_exceeded"}:
+        headers = {"Retry-After": "30"} if code == "resource_pressure_deferred" else None
+        raise HTTPException(status_code=503, detail=result, headers=headers)
+    if code in {
+        "invalid_prompt",
+        "invalid_provider_output",
+        "invalid_provider_response",
+        "image_size_limit_exceeded",
+    }:
         raise HTTPException(status_code=422, detail=result)
     raise HTTPException(status_code=502, detail=result)

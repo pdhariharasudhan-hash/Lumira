@@ -412,6 +412,56 @@ class ArtifactManagerService:
         self.memory.remove_artifact(artifact_id)
         return deleted
 
+    def availability_summary(self) -> dict:
+        total = 0
+        available = 0
+        for item in self.get_all_artifacts():
+            total += 1
+            try:
+                path = self.get_artifact_path(item["artifact_id"])
+                if path is not None and path.is_file():
+                    available += 1
+            except (ValueError, KeyError):
+                continue
+        return {"total": total, "available": available, "unavailable": total - available}
+
+    def integrity_report(self, limit: int = 1000) -> dict:
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 0 <= limit <= self.MAX_ARTIFACTS:
+            raise ValueError("limit is out of range")
+        checked = 0
+        missing = []
+        invalid_paths = []
+        for item in self.get_all_artifacts()[-limit:]:
+            checked += 1
+            artifact_id = item.get("artifact_id", "")
+            try:
+                path = self.get_artifact_path(artifact_id)
+                if path is None or not path.is_file():
+                    missing.append(artifact_id)
+            except (ValueError, KeyError):
+                invalid_paths.append(artifact_id)
+        return {
+            "checked": checked,
+            "missing_count": len(missing),
+            "invalid_path_count": len(invalid_paths),
+            "missing": missing[:100],
+            "invalid_paths": invalid_paths[:100],
+            "healthy": not missing and not invalid_paths,
+        }
+
+    def type_counts(self) -> dict:
+        counts = {}
+        for item in self.get_all_artifacts():
+            key = item.get("type", "unknown")
+            counts[key] = counts.get(key, 0) + 1
+        return counts
+
+    def recent_artifacts(self, limit: int = 20, include_archived: bool = False) -> list[dict]:
+        if not isinstance(limit, int) or isinstance(limit, bool) or limit < 0 or limit > 100:
+            raise ValueError("limit must be between 0 and 100")
+        items = self.search(include_archived=include_archived)
+        return sorted(items, key=lambda item: item.get("timestamp", ""), reverse=True)[:limit]
+
     def stats(self) -> dict:
         artifacts = self.get_all_artifacts()
         counts = {artifact_type: 0 for artifact_type in SUPPORTED_ARTIFACT_TYPES}

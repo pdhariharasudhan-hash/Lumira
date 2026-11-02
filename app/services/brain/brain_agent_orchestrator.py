@@ -7,6 +7,7 @@ from app.agents.agent_manager import AgentManager
 from app.services.brain.brain_request import BrainRequest
 from app.services.brain.brain_service import BrainService
 from app.services.sessions.session_manager_service import redact_sensitive_text
+from app.services.resources.resource_budget_service import ResourceBudgetService
 from threading import Lock
 
 
@@ -49,17 +50,32 @@ class BrainAgentOrchestrator:
             }
         return None
 
-    def execute(self, task: str, agent_name: str | None = None) -> dict:
+    def execute(self, task: str, agent_name: str | None = None, session_id: str | None = None, project_id: str | None = None, goal_id: str | None = None) -> dict:
         rejected = self._preflight(task, agent_name)
         if rejected:
             return rejected
 
         if self.brain_service is None:
             self.brain_service = BrainService()
-        brain = self.brain_service.execute(BrainRequest(message=task.strip()))
+        metadata = {}
+        try:
+            from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
+            metadata["core_context"] = CoreRuntimeBridgeService().context(
+                session_id, project_id, goal_id
+            ).get("context", {})
+        except Exception:
+            metadata = {}
+        brain = self.brain_service.execute(
+            BrainRequest(
+                message=task.strip(),
+                session_id=session_id or "",
+                project=project_id or "",
+                metadata=metadata,
+            )
+        )
         return self.execute_after_brain(task, brain, agent_name=agent_name)
 
-    def execute_after_brain(self, task: str, brain_response, agent_name: str | None = None) -> dict:
+    def execute_after_brain(self, task: str, brain_response, agent_name: str | None = None, core_context: dict | None = None) -> dict:
         """Dispatch only after the caller's primary-brain pass succeeded."""
         rejected = self._preflight(task, agent_name)
         if rejected:
@@ -80,7 +96,21 @@ class BrainAgentOrchestrator:
             }
 
         task = task.strip()
-        # Agent dispatch is serialized below. Resource pressure is enforced by heavy provider consumers rather than rejecting deterministic agent routing before dispatch.
+        try:
+            resource_snapshot = ResourceBudgetService().snapshot()
+            pressure = resource_snapshot.get("resource_pressure", "unknown")
+        except Exception:
+            pressure = "unknown"
+
+        if pressure == "critical":
+            return {
+                "success": False,
+                "state": "deferred",
+                "code": "resource_pressure_critical",
+                "message": "Agent dispatch was deferred because available system memory is critically low. Close unused applications and retry.",
+                "orchestration": {"brain_gate": "passed", "agent_execution_started": False},
+            }
+
         if not self._dispatch_lock.acquire(blocking=False):
             return {
                 "success": False,
@@ -117,13 +147,24 @@ class BrainAgentOrchestrator:
         execution_context = getattr(state, "execution_context", None)
         agent_state = result.get("state")
         normalized_agent_state = agent_state.strip().lower() if isinstance(agent_state, str) else ""
+        if core_context is not None:
+            result["core_context"] = core_context
+        elif execution_context is not None and isinstance(
+            getattr(execution_context, "metadata", None), dict
+        ):
+            result["core_context"] = execution_context.metadata.get("core_context", {})
+        else:
+            result["core_context"] = {}
         result["orchestration"] = {
             "brain_gate": "passed",
             "brain_execution_id": getattr(execution_context, "execution_id", None),
             "brain_last_completed_stage": getattr(state, "last_completed_stage", None),
-            "agent_execution_started": (
-                normalized_agent_state in {"planned", "started", "running", "in_progress", "in-progress", "working", "executing", "timed_out", "completed"}
-                or (result.get("success") is True and not normalized_agent_state)
-            ),
+            # Only states that positively indicate a launched/running/completed
+            # execution count as started. Generic failure is ambiguous (for example,
+            # process creation can fail before the agent begins), so fail closed.
+            "agent_execution_started": normalized_agent_state in {
+                "started", "running", "in_progress", "in-progress", "working",
+                "executing", "timed_out", "completed", "planned",
+            },
         }
         return result

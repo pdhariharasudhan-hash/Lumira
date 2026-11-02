@@ -36,10 +36,24 @@ def create_session(request: SessionCreateRequest):
     )
 
 
+@router.get("/sessions/core-context/{session_id}")
+def session_core_context(session_id: str):
+    from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
+    return CoreRuntimeBridgeService().context(session_id=session_id)
+
+
 @router.get("/sessions")
 def list_sessions(limit: int = Query(default=50, ge=0, le=200)):
     try:
         return {"sessions": SessionManagerService().list_sessions(limit)}
+    except Exception as exc:
+        raise _http_error(exc) from exc
+
+
+@router.get("/sessions/{session_id}/summary")
+def get_session_summary(session_id: str):
+    try:
+        return {"success": True, "summary": SessionManagerService().get_session_summary(session_id)}
     except Exception as exc:
         raise _http_error(exc) from exc
 

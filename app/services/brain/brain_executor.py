@@ -20,6 +20,8 @@ from app.services.brain.brain_state import (
     BrainState,
 )
 
+from app.services.brain.pipeline_guard import PipelineGuard
+
 from app.services.brain.recovery import (
     RecoveryController,
     RecoveryPolicy,
@@ -112,6 +114,13 @@ class BrainExecutor:
 
                     if result is not None:
                         state = result
+
+                    state.last_completed_stage = module_name
+                    if PipelineGuard.should_stop(module_name, state):
+                        state.status = "rejected"
+                        state.current_stage = ""
+                        self.last_recovery_state = recovery_state
+                        return state
 
                     if recovery_state.failures:
 
@@ -236,6 +245,14 @@ class BrainExecutor:
 
                     trace_entry["status"] = "completed"
                     state.last_completed_stage = module_name
+
+                    if PipelineGuard.should_stop(module_name, state):
+                        state.status = "rejected"
+                        state.current_stage = ""
+                        trace_entry["status"] = "rejected"
+                        trace_entry["reason"] = "verification_gate"
+                        self.last_recovery_state = recovery_state
+                        return {"state": state, "trace": trace}
 
                     if recovery_state.failures:
 

@@ -1,6 +1,7 @@
 from typing import Any, Protocol
 
 from app.services.search.unified_search_service import UnifiedSearchService
+from app.services.research.research_library_service import ResearchLibraryService
 
 
 class ResearchProvider(Protocol):
@@ -11,13 +12,14 @@ class ResearchProvider(Protocol):
 class ResearchCapabilityService:
     """Provider-backed research plus retrieval from Lumira's local index."""
 
-    def __init__(self, provider: ResearchProvider | None = None):
+    def __init__(self, provider: ResearchProvider | None = None, library: ResearchLibraryService | None = None):
         if provider is None:
             from app.services.providers.provider_registry import ProviderRegistry
 
             provider = ProviderRegistry.get("research")
         self.provider = provider
         self.search = UnifiedSearchService()
+        self.library = library or ResearchLibraryService()
 
     def _provider_research(self, request: str, research_type: str) -> dict[str, Any]:
         if not isinstance(request, str) or not request.strip() or len(request) > 10_000:
@@ -83,13 +85,43 @@ class ResearchCapabilityService:
                 "research_type": research_type,
                 "message": "The research provider must return bounded findings with source references.",
             }
-        return {
+        result = {
             "success": True,
             "status": "completed",
             "research_type": research_type,
             "findings": findings,
             "sources": sources,
         }
+        # Accepted external research is kept in Lumira's research library so it
+        # becomes searchable later. Provider output is never written to durable
+        # memory unless it passed the findings/source validation above.
+        try:
+            primary_source = next(
+                (
+                    str(item.get("url") or item.get("source")).strip()
+                    for item in sources
+                    if isinstance(item, dict) and str(item.get("url") or item.get("source") or "").strip()
+                ),
+                "",
+            )
+            summary = findings if isinstance(findings, str) else "\n".join(findings)
+            saved = self.library.add(
+                title=request[:300],
+                source=primary_source,
+                summary=summary,
+                tags=[research_type],
+            )
+            research_id = saved.get("research_id") if isinstance(saved, dict) else None
+            if isinstance(research_id, str) and research_id:
+                result["research_id"] = research_id
+                result["storage_status"] = "stored"
+            else:
+                result["storage_status"] = "failed"
+        except Exception:
+            # Research itself remains usable when optional library persistence
+            # fails; never claim a durable record was created.
+            result["storage_status"] = "failed"
+        return result
 
     @classmethod
     def _bound_local_value(cls, value: Any, *, depth: int = 0) -> Any:

@@ -33,7 +33,19 @@ class LumiraIdentityService:
         "memory",
 
         "voice input":
-        "voice_input"
+        "voice_input",
+
+        "audio playback":
+        "audio_playback",
+
+        "transcript generation":
+        "voice_transcript",
+
+        "voice transcript":
+        "voice_transcript",
+
+        "idea summarization":
+        "idea_summarization"
     }
 
     def parse(

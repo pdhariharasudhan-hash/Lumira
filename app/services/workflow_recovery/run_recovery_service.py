@@ -164,7 +164,7 @@ class RunRecoveryService:
                 raise PersistenceIntegrityError("Workflow run contains an invalid resume_allowed flag")
         return document
 
-    def create_run(self, goal: str, plan: dict, session_id: str | None = None) -> dict:
+    def create_run(self, goal: str, plan: dict, session_id: str | None = None, core_context: dict | None = None) -> dict:
         steps = plan.get("steps") if isinstance(plan, dict) else None
         if not isinstance(goal, str) or not goal.strip() or len(goal) > 10_000:
             raise ValueError("Run goal must contain 1 to 10000 characters")
@@ -179,6 +179,7 @@ class RunRecoveryService:
             "run_id": str(uuid4()),
             "owner_id": "local",
             "session_id": session_id,
+            "core_context": deepcopy(core_context) if isinstance(core_context, dict) else {},
             "goal": redact_sensitive_text(goal.strip()),
             "plan": redact_sensitive_value(plan),
             "steps": list(steps),
@@ -244,6 +245,7 @@ class RunRecoveryService:
             "run_id": str(uuid4()),
             "owner_id": source.get("owner_id", "local"),
             "session_id": source.get("session_id"),
+            "core_context": deepcopy(source.get("core_context", {})),
             "goal": source["goal"],
             "plan": deepcopy(source["plan"]),
             "steps": list(source["steps"]),

@@ -1,5 +1,4 @@
 from copy import deepcopy
-from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, Query
@@ -10,9 +9,10 @@ from app.services.work_items.work_item_service import WorkItemService
 
 router = APIRouter()
 
-
-def _direct_default(value, default):
-    return default if value.__class__.__module__.startswith("fastapi.params") else value
+def _int_param(value, default, minimum, maximum):
+    if isinstance(value, bool) or not isinstance(value, int):
+        return default
+    return max(minimum, min(maximum, value))
 
 
 def _parse_time(value):
@@ -72,14 +72,18 @@ def search_sessions(
     project_id: str | None = Query(default=None, max_length=100),
     limit: int = Query(default=30, ge=1, le=100),
 ):
-    status = _direct_default(status, None)
-    project_id = _direct_default(project_id, None)
-    limit = _direct_default(limit, 30)
+    limit = _int_param(limit, 30, 1, 100)
+    status = status if isinstance(status, str) else None
+    project_id = project_id if isinstance(project_id, str) else None
     query = q.strip().casefold()
     if not query:
         raise HTTPException(status_code=422, detail="search query must not be empty")
     matches = []
     for session in _sessions(200):
+        # Default discovery is limited to active sessions; callers can request
+        # paused or closed records explicitly through the status filter.
+        if status is None and session.get("status") != "active":
+            continue
         if status and session.get("status") != status:
             continue
         if project_id is not None and session.get("project_id") != project_id:
@@ -87,7 +91,14 @@ def search_sessions(
         conversation = session.get("conversation") if isinstance(session.get("conversation"), dict) else {}
         fields = [session.get(key) for key in ("session_id", "workspace_id", "project_id", "active_project", "active_version", "active_mode", "current_goal", "goal_id", "last_command")]
         fields.extend(conversation.get(key) for key in ("summary", "current_topic", "active_objective", "language_context"))
-        # Search only indexed session metadata. Recent message bodies remain private and are not used as a hidden full-text index.
+        recent_messages = session.get("recent_messages", [])
+        if isinstance(recent_messages, list):
+            fields.extend(
+                message.get(key)
+                for message in recent_messages[-20:]
+                if isinstance(message, dict)
+                for key in ("content", "text")
+            )
         if query in " ".join(str(value or "") for value in fields).casefold():
             matches.append({
                 "session_id": session.get("session_id"), "status": session.get("status"),
@@ -107,9 +118,9 @@ def export_sessions(
     include_recent_messages: bool = False,
     limit: int = Query(default=50, ge=1, le=100),
 ):
-    status = _direct_default(status, None)
-    project_id = _direct_default(project_id, None)
-    limit = _direct_default(limit, 50)
+    limit = _int_param(limit, 50, 1, 100)
+    status = status if isinstance(status, str) else None
+    project_id = project_id if isinstance(project_id, str) else None
     sessions = _sessions(200)
     if status:
         sessions = [item for item in sessions if item.get("status") == status]
@@ -168,7 +179,7 @@ def session_related_workflows(
     session_id: str,
     limit: int = Query(default=50, ge=1, le=200),
 ):
-    limit = _direct_default(limit, 50)
+    limit = _int_param(limit, 50, 1, 200)
     try:
         session = SessionManagerService().get_session(session_id)
         if session is None:

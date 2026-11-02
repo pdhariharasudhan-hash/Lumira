@@ -126,19 +126,21 @@ class GoalService:
 
         lowered = text.lower()
 
-        software_terms = ("api", "website", "app", "software", "backend", "frontend", "code")
-        hardware_terms = ("drone", "robot", "circuit", "pcb", "esp32", "arduino", "raspberry pi")
-        business_terms = ("business", "revenue", "customer", "market", "startup", "sales")
-        learning_terms = ("learn", "study", "exam", "course", "school", "physics", "math")
-
-        if any(term in lowered for term in software_terms):
+        if any(term in lowered for term in ("api", "website", "app", "software", "python", "code", "backend")):
             return "software"
-        if any(term in lowered for term in hardware_terms):
+
+        if any(term in lowered for term in ("drone", "robot", "esp32", "arduino", "raspberry pi", "circuit", "pcb", "sensor", "electronics")):
             return "hardware"
-        if any(term in lowered for term in business_terms):
+
+        if any(term in lowered for term in ("business", "startup", "revenue", "market", "sales", "customer", "product")):
             return "business"
-        if any(term in lowered for term in learning_terms):
-            return "learning"
+
+        if any(term in lowered for term in ("study", "exam", "school", "physics", "chemistry", "mathematics", "math", "learn", "class", "revision")):
+            return "education"
+
+        if any(term in lowered for term in ("health", "fitness", "workout", "exercise", "diet", "sleep")):
+            return "personal"
+
         return "general"
 
     def _detect_priority(

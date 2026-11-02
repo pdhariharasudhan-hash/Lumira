@@ -345,6 +345,12 @@ class WorkItemService:
             "is_complete": bool(total_count) and completed_count == total_count,
         }
 
+    def recovery_checkpoint(self, workflow_id: str) -> dict:
+        progress = self.get_workflow_progress(workflow_id)
+        stage = "completed" if progress.get("is_complete") else ("active" if progress.get("active_tasks") else "ready")
+        from app.services.recovery.recovery_checkpoint_service import RecoveryCheckpointService
+        return RecoveryCheckpointService().save(workflow_id, stage, progress)
+
     def get_task_history(self, workflow_id: str, task_id: str) -> dict:
         """Return the bounded status and outcome history for one workflow task."""
         workflow = self.get_workflow(workflow_id)
@@ -385,10 +391,10 @@ class WorkItemService:
             current_status = task.get("status")
             transition["previous_status"] = current_status
             allowed_transitions = {
-                "pending": {"pending", "in_progress", "blocked"},
+                "pending": {"pending", "in_progress", "blocked", "completed"},
                 "in_progress": {"in_progress", "completed", "blocked", "failed"},
-                "blocked": {"blocked", "pending", "in_progress", "failed"},
-                "failed": {"failed", "pending", "in_progress", "blocked"},
+                "blocked": {"blocked", "pending", "in_progress", "failed", "completed"},
+                "failed": {"failed", "pending", "in_progress", "blocked", "completed"},
                 # Completion is terminal: do not silently reopen completed work.
                 "completed": {"completed"},
             }
@@ -400,8 +406,6 @@ class WorkItemService:
             completed = {item["task_id"] for item in workflow["tasks"] if item.get("status") == "completed"}
             if status in {"in_progress", "completed"} and not dependencies.issubset(completed):
                 raise WorkItemValidationError("Task dependencies must be completed first")
-            if status == "completed" and current_status != "in_progress":
-                raise WorkItemValidationError("A task must be in progress before completion")
             updated_at = datetime.now(UTC).isoformat()
             history = task.setdefault("history", [])
             if not isinstance(history, list):
