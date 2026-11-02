@@ -258,12 +258,12 @@ def generate_goal_plan(
         goal = next((item for item in goals if item.get("goal_id") == goal_id and not item.get("archived")), None)
         if goal is None:
             raise HTTPException(status_code=404, detail="goal not found")
-        if session_id and SessionManagerService().get_session(session_id) is None:
-            raise HTTPException(status_code=404, detail="session not found")
         if goal.get("status") in {"completed", "cancelled"}:
             raise HTTPException(status_code=409, detail="completed or cancelled goals cannot be planned")
         if goal.get("status") != "active":
             raise HTTPException(status_code=409, detail={"code": "goal_not_active", "message": "Only active goals can be planned.", "status": goal.get("status")})
+        if session_id and SessionManagerService().get_session(session_id) is None:
+            raise HTTPException(status_code=404, detail="session not found")
         blockers = [item.strip()[:500] for item in goal.get("blockers", []) if isinstance(item, str) and item.strip()] if isinstance(goal.get("blockers", []), list) else []
         if blockers:
             raise HTTPException(status_code=409, detail={"code": "goal_blockers_present", "message": "Resolve the goal blockers before planning.", "blockers": blockers[:20]})
