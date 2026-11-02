@@ -10,7 +10,7 @@ export type ChatSession = {
 	current_goal?: string | null;
 	created_at?: string;
 	updated_at?: string;
-	recent_messages?: Array<{ role: string; content: string }>;
+	recent_messages?: Array<{ role: string; content: string; metadata?: Record<string, unknown> }>;
 };
 
 type Props = {
