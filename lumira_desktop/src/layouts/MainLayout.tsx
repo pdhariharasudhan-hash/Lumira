@@ -106,12 +106,26 @@ function formatError(error: unknown): { message: string; response: ApiResponse }
 }
 
 function renderOutput(output: OutputDescriptor | undefined) {
-	if (!output || output.type === "json") return null;
-	if (output.type === "text") return null; // response.message is already rendered as the assistant message
-	if (!output.url) return null;
-	if (output.type === "image") return <img className="assistant-output-media" src={output.url} alt="Lumira generated output" />;
-	if (output.type === "video") return <video className="assistant-output-media" src={output.url} controls />;
-	return <audio className="assistant-output-media" src={output.url} controls />;
+	if (!output) return null;
+	if (output.type === "json") {
+		if (typeof output.content !== "string" || !output.content.trim()) return null;
+		try {
+			const parsed: unknown = JSON.parse(output.content);
+			return <pre className="assistant-structured-output">{JSON.stringify(safeDisplay(parsed), null, 2)}</pre>;
+		} catch {
+			return <pre className="assistant-structured-output">{output.content}</pre>;
+		}
+	}
+	if (output.type === "text") {
+		return output.content?.trim()
+			? <div className="assistant-message">{output.content}</div>
+			: null;
+	}
+	const source = output.url;
+	if (!source) return null;
+	if (output.type === "image") return <img className="assistant-output-media" src={source} alt="Lumira generated output" />;
+	if (output.type === "video") return <video className="assistant-output-media" src={source} controls />;
+	return <audio className="assistant-output-media" src={source} controls />;
 }
 
 function modeFromSession(value?: string | null): LumiraMode | null {
@@ -346,9 +360,13 @@ function MainLayout() {
 				setSession(loaded);
 				setActiveMode(modeFromSession(loaded.active_mode) ?? "auto");
 				if (loaded.active_project) setSelectedProject(loaded.active_project, loaded.active_version ?? null);
-				setMessages((loaded.recent_messages ?? []).map((item, index) => item.role === "user"
-					? { id: `restored-${index}`, prompt: item.content }
-					: { id: `restored-${index}`, transcript: item.content }));
+				setMessages((loaded.recent_messages ?? []).map((item, index) => {
+					const metadata = object(item.metadata);
+					if (item.role === "user") return { id: `restored-${index}`, prompt: item.content };
+					const storedResponse = object(metadata.response);
+					if (Object.keys(storedResponse).length) return { id: `restored-${index}`, response: storedResponse as ApiResponse };
+					return { id: `restored-${index}`, transcript: item.content };
+				}));
 				void loadSessions();
 			})
 			.catch(() => {
@@ -638,7 +656,13 @@ function MainLayout() {
 			setSession(loaded);
 			setActiveMode(modeFromSession(loaded.active_mode) ?? "auto");
 			if (loaded.active_project) setSelectedProject(loaded.active_project, loaded.active_version ?? null);
-			setMessages((loaded.recent_messages ?? []).map((item, index) => item.role === "user" ? { id: `restored-${Date.now()}-${index}`, prompt: item.content } : { id: `restored-${Date.now()}-${index}`, transcript: item.content }));
+			setMessages((loaded.recent_messages ?? []).map((item, index) => {
+			const metadata = object(item.metadata);
+			if (item.role === "user") return { id: `restored-${Date.now()}-${index}`, prompt: item.content };
+			const storedResponse = object(metadata.response);
+			if (Object.keys(storedResponse).length) return { id: `restored-${Date.now()}-${index}`, response: storedResponse as ApiResponse };
+			return { id: `restored-${Date.now()}-${index}`, transcript: item.content };
+		}));
 			setActionNotice("Saved session restored.");
 			await loadSessions();
 		} catch (error) {
