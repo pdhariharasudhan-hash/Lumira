@@ -406,8 +406,6 @@ class WorkItemService:
             completed = {item["task_id"] for item in workflow["tasks"] if item.get("status") == "completed"}
             if status in {"in_progress", "completed"} and not dependencies.issubset(completed):
                 raise WorkItemValidationError("Task dependencies must be completed first")
-            if status == "completed" and current_status not in {"in_progress", "pending"}:
-                raise WorkItemValidationError("A task must be in progress before completion")
             updated_at = datetime.now(UTC).isoformat()
             history = task.setdefault("history", [])
             if not isinstance(history, list):
