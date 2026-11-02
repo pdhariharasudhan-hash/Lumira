@@ -33,7 +33,11 @@ def _manager() -> ArtifactManagerService:
 
 def _public_artifact(record: dict) -> dict:
     """Return artifact metadata without exposing internal filesystem paths."""
-    return {key: value for key, value in record.items() if key != "file"}
+    public = {key: value for key, value in record.items() if key != "file"}
+    filename = record.get("file")
+    if isinstance(filename, str) and "." in filename:
+        public["extension"] = filename.rsplit(".", 1)[-1].lower()
+    return public
 
 
 @router.post("/artifacts", status_code=201)

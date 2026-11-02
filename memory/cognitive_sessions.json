@@ -1,4 +1,246 @@
 {
   "schema_version": 1,
-  "sessions": []
+  "sessions": [
+    {
+      "session_id": "b668b37a-3143-4f9e-a42f-f2da3c126543",
+      "owner_id": "local",
+      "conversation_id": "20571793-95c6-4bb3-900d-a550838d5edb",
+      "created_at": "2026-11-02T11:15:02.661040+00:00",
+      "updated_at": "2026-11-02T11:15:02.787865+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": "random casual sentence",
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "6712dbb2-0cd2-447f-abcb-5effd06de18b",
+          "role": "user",
+          "content": "random casual sentence",
+          "metadata": {},
+          "created_at": "2026-11-02T11:15:02.724794+00:00"
+        },
+        {
+          "message_id": "6fafc8d8-04ba-448f-b8fb-5a8b14a8acf9",
+          "role": "assistant",
+          "content": "I'm Lumira, your personal AI. I can help you think through ideas, plan projects, organize your work, and use the capabilities available on this device. Tell me what you want to do, and I'll help you take the next step.",
+          "metadata": {
+            "capability": "conversation",
+            "success": true
+          },
+          "created_at": "2026-11-02T11:15:02.764270+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "2120616f-9d23-42d1-91fa-8c88038bb662",
+      "owner_id": "local",
+      "conversation_id": "2d7b669f-0dff-4e47-838e-7e4c58f859e9",
+      "created_at": "2026-11-02T11:42:31.771375+00:00",
+      "updated_at": "2026-11-02T11:42:32.075178+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "34dbb91b-b47f-4100-8adf-6a332cb0bde4",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true
+          },
+          "created_at": "2026-11-02T11:42:32.026381+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "750effd1-a948-453e-b36d-8e243d4894fe",
+      "owner_id": "local",
+      "conversation_id": "9518c289-3455-4609-a1ac-3a0e4f476bde",
+      "created_at": "2026-11-02T11:46:38.267754+00:00",
+      "updated_at": "2026-11-02T11:46:38.834789+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "827959b3-ea05-4a4a-8010-a8913f734306",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true
+          },
+          "created_at": "2026-11-02T11:46:38.372586+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "1c4b9dc0-028e-4d59-8c47-06970e3b07e4",
+      "owner_id": "local",
+      "conversation_id": "5f66722e-a6d9-45d4-80ab-16bda21fdedd",
+      "created_at": "2026-11-02T11:51:46.631834+00:00",
+      "updated_at": "2026-11-02T11:51:46.761328+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "7e4586ec-c4c5-40b6-a109-8fb7cbf19ebd",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true
+          },
+          "created_at": "2026-11-02T11:51:46.705768+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "735246f4-c818-45c5-a998-ef6df3f6b304",
+      "owner_id": "local",
+      "conversation_id": "5ffea288-3265-46a1-88ed-2c85632e9e81",
+      "created_at": "2026-11-02T11:52:19.714721+00:00",
+      "updated_at": "2026-11-02T11:52:19.809648+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "4550c627-79bb-4066-9c8c-846b5692285c",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true
+          },
+          "created_at": "2026-11-02T11:52:19.785942+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "0ded5f20-4dc4-4d8c-9e19-226fa8f9179b",
+      "owner_id": "local",
+      "conversation_id": "6ce069a7-619d-4520-a18b-4ee2d12454cf",
+      "created_at": "2026-11-02T11:53:29.571377+00:00",
+      "updated_at": "2026-11-02T11:53:29.670608+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "f1b179a8-6313-4ba2-866a-f1c0a1c23bbf",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true
+          },
+          "created_at": "2026-11-02T11:53:29.641553+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    }
+  ]
 }

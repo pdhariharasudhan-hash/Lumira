@@ -32,6 +32,16 @@ type ApiResponse = JsonObject & {
 	clarification_required?: boolean;
 	result?: JsonObject;
 	context?: JsonObject;
+	output?: OutputDescriptor;
+	attachments?: Array<{ artifact_id: string; kind: string; title?: string; url: string }>;
+};
+
+type OutputDescriptor = {
+	type: "text" | "image" | "video" | "audio" | "json";
+	mime?: string;
+	content?: string;
+	url?: string;
+	artifact_id?: string;
 };
 
 type Message = {
@@ -90,8 +100,18 @@ function formatError(error: unknown): { message: string; response: ApiResponse }
 		const result = Object.keys(detail).length ? detail : { status: "failed", code: `http_${error.status}`, message: error.message };
 		return { message: error.message, response: { success: false, result } };
 	}
+
 	const message = error instanceof Error ? error.message : "The request failed.";
 	return { message, response: { success: false, result: { status: "failed", code: "request_failed", message } } };
+}
+
+function renderOutput(output: OutputDescriptor | undefined) {
+	if (!output || output.type === "json") return null;
+	if (output.type === "text") return null; // response.message is already rendered as the assistant message
+	if (!output.url) return null;
+	if (output.type === "image") return <img className="assistant-output-media" src={output.url} alt="Lumira generated output" />;
+	if (output.type === "video") return <video className="assistant-output-media" src={output.url} controls />;
+	return <audio className="assistant-output-media" src={output.url} controls />;
 }
 
 function modeFromSession(value?: string | null): LumiraMode | null {
@@ -1947,16 +1967,24 @@ async function runArtifactVoiceAction(artifactId: string, action: "process" | "t
 								{message.prompt && <div className="user-message">{message.prompt}</div>}
 								{message.transcript && <div className="assistant-message">{message.transcript}</div>}
 								{message.response && typeof response.message === "string" && response.message.trim() && <div className="assistant-message">{response.message}</div>}
+								{message.response && renderOutput(response.output)}
+								{Array.isArray(response.attachments) && response.attachments.filter((item) => item.artifact_id !== response.output?.artifact_id).map((item) => <div key={item.artifact_id}>
+									{item.kind === "image" && <img className="assistant-output-media" src={item.url} alt={item.title ?? "Lumira generated image"} />}
+									{item.kind === "video" && <video className="assistant-output-media" src={item.url} controls />}
+									{item.kind === "audio" && <audio className="assistant-output-media" src={item.url} controls />}
+									{item.kind === "pdf" && <iframe className="assistant-output-media" title={item.title ?? "PDF"} src={item.url} style={{ width: "100%", height: 480, border: 0 }} />}
+									{(item.kind === "file" || item.kind === "text") && <a className="text-link" href={item.url} target="_blank" rel="noreferrer">Open {item.title ?? "file"}</a>}
+								</div>)}
 								{message.pending && <div className="assistant-pending">Lumira is working…</div>}
 								{message.error && <div className="workspace-alert error" role="alert">{message.error}</div>}
 								{message.response && !["greeting", "conversation"].includes(capability) && <div className={`result-panel ${successful ? "is-success" : "is-failure"}`}>
 									<div className="result-panel-heading"><span className="result-icon"><FiCpu /></span><strong>{capability.replaceAll("_", " ")}</strong><span className="status-pill">{status.replaceAll("_", " ")}</span></div>
 									{response.clarification_required && <p className="result-message">{stringValue(response.message, "Additional information is required to continue.")}</p>}
-									{typeof result.message === "string" && result.message && <p className="result-message">{result.message}</p>}
+									{typeof result.message === "string" && result.message && result.message !== response.message && <p className="result-message">{result.message}</p>}
 									{isProjectResult && <section className="project-result-card"><div><span className="eyebrow">PROJECT RESULT</span><h3>{projectName}</h3><p>{stringValue(metadata.description ?? metadata.idea ?? result.idea ?? result.request, "Project files were saved by Lumira.")}</p></div><dl><div><dt>Version</dt><dd>{stringValue(metadata.version, stringValue(result.version, "Latest"))}</dd></div><div><dt>Status</dt><dd>{stringValue(metadata.status, status)}</dd></div><div><dt>Created</dt><dd>{stringValue(metadata.created_at ?? result.created_at, "Recorded by the project service")}</dd></div></dl><div className="project-card-actions"><button type="button" onClick={() => openProjectFiles(projectName)}>View Files</button><button type="button" onClick={() => void projectAction(projectName, "run")}>Run Project</button><button type="button" onClick={() => void projectAction(projectName, "edit")}>Open in Editor</button><button type="button" onClick={() => void projectAction(projectName, "modify")}>Modify Project</button><button type="button" onClick={() => void projectAction(projectName, "frontend")}>Add Frontend</button><button type="button" onClick={() => void projectAction(projectName, "database")}>Add Database</button><button type="button" onClick={() => void projectAction(projectName, "deploy")}>Create Deployment Plan</button><button type="button" onClick={() => void projectAction(projectName, "docs")}>Show Documentation</button></div></section>}
 									{capability === "voice_capture" && stringValue(object(result.artifact).artifact_id) && object(result.transcript).success !== true && <button className="secondary-action" type="button" onClick={() => void retryVoiceTranscriptionForMessage(message.id, stringValue(object(result.artifact).artifact_id))}>Retry transcription from saved audio</button>}
 									{capability === "voice_capture" && stringValue(object(object(result.transcript).transcript_artifact).artifact_id) && <button className="secondary-action" type="button" onClick={() => void retryVoiceSummaryForMessage(message.id, stringValue(object(object(result.transcript).transcript_artifact).artifact_id))}>Retry summary from saved transcript</button>}
-									<details className="result-details"><summary>Structured result</summary><pre>{JSON.stringify(safeResult, null, 2)}</pre></details>
+									<details className="result-details"><summary>Technical details (raw JSON)</summary><pre>{JSON.stringify(safeResult, null, 2)}</pre></details>
 								</div>}
 							</article>;
 						})}</div>}

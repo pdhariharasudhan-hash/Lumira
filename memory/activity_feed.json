@@ -103,5 +103,59 @@
       "project": "company_api"
     },
     "timestamp": "2026-06-18 22:10:10"
+  },
+  {
+    "event": "session_created",
+    "source": "session_manager",
+    "data": {
+      "session_id": "b668b37a-3143-4f9e-a42f-f2da3c126543",
+      "workspace_id": "default"
+    },
+    "timestamp": "2026-11-02 16:45:02"
+  },
+  {
+    "event": "session_created",
+    "source": "session_manager",
+    "data": {
+      "session_id": "2120616f-9d23-42d1-91fa-8c88038bb662",
+      "workspace_id": "default"
+    },
+    "timestamp": "2026-11-02 17:12:31"
+  },
+  {
+    "event": "session_created",
+    "source": "session_manager",
+    "data": {
+      "session_id": "750effd1-a948-453e-b36d-8e243d4894fe",
+      "workspace_id": "default"
+    },
+    "timestamp": "2026-11-02 17:16:38"
+  },
+  {
+    "event": "session_created",
+    "source": "session_manager",
+    "data": {
+      "session_id": "1c4b9dc0-028e-4d59-8c47-06970e3b07e4",
+      "workspace_id": "default"
+    },
+    "timestamp": "2026-11-02 17:21:46"
+  },
+  {
+    "event": "session_created",
+    "source": "session_manager",
+    "data": {
+      "session_id": "735246f4-c818-45c5-a998-ef6df3f6b304",
+      "workspace_id": "default"
+    },
+    "timestamp": "2026-11-02 17:22:19"
+  },
+  {
+    "event": "session_created",
+    "source": "session_manager",
+    "data": {
+      "session_id": "0ded5f20-4dc4-4d8c-9e19-226fa8f9179b",
+      "workspace_id": "default"
+    },
+    "timestamp": "2026-11-02 17:23:29"
   }
 ]

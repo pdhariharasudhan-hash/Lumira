@@ -34,6 +34,8 @@ from app.services.memory.memory_service import MemoryService, MemoryValidationEr
 from app.services.brain.public_brain_view import public_brain_state, public_brain_trace
 from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
 from app.services.sessions.session_manager_service import redact_sensitive_text
+from app.services.output.user_output_adapter import adapt as adapt_user_output
+from app.services.providers.ollama_chat_provider import OllamaChatProvider
 
 router = APIRouter()
 
@@ -63,6 +65,13 @@ def _command_result_success(result) -> bool:
     "/command"
 )
 def command(
+    request: GenericInput
+):
+    # Single boundary: capability output (internal JSON) -> user-facing message + attachments.
+    return adapt_user_output(_command_impl(request))
+
+
+def _command_impl(
     request: GenericInput
 ):
     sessions = SessionManagerService()
@@ -149,12 +158,48 @@ def command(
         "how r you": "how are you",
         "hows it going": "how are you",
         "how's it going": "how are you",
+        "who are u": "who are you",
+        "what r u": "who are you",
+        "what are u": "who are you",
     }
     normalized_conversation = conversational_aliases.get(
         normalized_conversation, normalized_conversation
     )
     if normalized_conversation in conversational_replies:
         message = conversational_replies[normalized_conversation]
+        sessions.append_message(session["session_id"], "user", request.input)
+        sessions.append_message(
+            session["session_id"],
+            "assistant",
+            message,
+            metadata={"capability": "conversation", "success": True},
+        )
+        return {
+            "success": True,
+            "intent": "conversation",
+            "result": {"success": True, "capability": "conversation", "message": message},
+            "message": message,
+            "context": session,
+            "session_id": session["session_id"],
+        }
+
+    # If this is not an explicit Lumira capability, keep it on the normal
+    # conversation path. Do this before the execution pipeline so casual chat
+    # can never fall through and expose parser or brain diagnostics.
+    if not parsed.get("success"):
+        # Reuse Lumira's existing local Ollama chat provider for open-ended
+        # conversation. The command parser is only for actions; it must not be
+        # the intelligence layer for normal chat.
+        try:
+            message = OllamaChatProvider().chat(request.input)
+        except Exception:
+            # Provider availability must never leak internal exceptions or JSON
+            # into the normal conversation surface.
+            message = (
+                "I'm Lumira, your personal AI. I can help you think through ideas, "
+                "plan projects, organize your work, and use the capabilities available "
+                "on this device. Tell me what you want to do, and I'll help you take the next step."
+            )
         sessions.append_message(session["session_id"], "user", request.input)
         sessions.append_message(
             session["session_id"],
@@ -235,21 +280,26 @@ def command(
 
     intent = IntentClassifierService().classify(request.input)
     if not parsed["success"]:
-        try:
-            from app.agents.agent_manager import AgentManager
-            agent_recommendation = AgentManager().select_agent(request.input)
-        except Exception:
-            agent_recommendation = {"success": False, "selected_agent": None, "reason": "recommendation_unavailable"}
-        sessions.append_message(session["session_id"], "assistant", "I could not map that request to a supported capability.")
+        # Never expose parser, agent-selection, or brain internals to the
+        # normal chat surface. Unsupported natural language remains a
+        # conversation, while explicit capability commands continue below.
+        message = (
+            "I'm Lumira, your personal AI. I can help you think through ideas, "
+            "plan projects, organize your work, and use the capabilities available "
+            "on this device. Tell me what you want to do, and I'll help you take the next step."
+        )
+        sessions.append_message(session["session_id"], "user", request.input)
+        sessions.append_message(
+            session["session_id"],
+            "assistant",
+            message,
+            metadata={"capability": "conversation", "success": True},
+        )
         return {
-            "success": False,
-            "intent": intent,
-            "parsed": parsed,
-            "agent_recommendation": agent_recommendation,
-            "brain": {
-                "state": public_brain_state(brain_response.state),
-                "trace": public_brain_trace(brain_response.trace),
-            },
+            "success": True,
+            "intent": "conversation",
+            "result": {"success": True, "capability": "conversation", "message": message},
+            "message": message,
             "context": session,
             "session_id": session["session_id"],
         }

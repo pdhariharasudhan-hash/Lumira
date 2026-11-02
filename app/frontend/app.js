@@ -7,6 +7,26 @@ const output =
         "output"
     );
 
+function renderTypedOutput(data) {
+    const descriptor = data && data.output;
+    output.replaceChildren();
+    if (!descriptor || descriptor.type === "json") {
+        output.textContent = data && data.message
+            ? data.message
+            : "Structured response received.";
+        return;
+    }
+    if (descriptor.type === "text") {
+        output.textContent = descriptor.content || "";
+        return;
+    }
+    const media = document.createElement(descriptor.type);
+    media.src = descriptor.url;
+    if (descriptor.type !== "image") media.controls = true;
+    media.alt = descriptor.type === "image" ? "Lumira generated output" : "";
+    output.appendChild(media);
+}
+
 
 async function loadProjects() {
 
@@ -332,13 +352,7 @@ document
         const data =
             await response.json();
 
-        output.textContent =
-
-            JSON.stringify(
-                data,
-                null,
-                4
-            );
+        renderTypedOutput(data);
 
         loadProjects();
 

@@ -1,12 +1,14 @@
 from pathlib import Path
 from urllib.parse import urlsplit
 import ipaddress
+import json
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.router_registry import register_routes
+from app.core.output import annotate_json_payload
 from app.services.auth.local_auth_service import LocalAuthService
 from app.services.providers.startup_registration import register_configured_providers
 
@@ -20,10 +22,25 @@ app = FastAPI(
 register_configured_providers()
 
 
+def _annotate_response(response):
+    content_type = response.headers.get("content-type", "")
+    if "application/json" not in content_type or not getattr(response, "body", None):
+        return response
+    try:
+        payload = json.loads(response.body)
+    except (TypeError, ValueError):
+        return response
+    annotated = annotate_json_payload(payload)
+    if annotated != payload:
+        response.body = json.dumps(annotated, ensure_ascii=False).encode("utf-8")
+        response.headers["content-length"] = str(len(response.body))
+    return response
+
+
 @app.middleware("http")
 async def local_auth_boundary(request: Request, call_next):
     if request.url.path == "/health":
-        return await call_next(request)
+        return _annotate_response(await call_next(request))
 
     origin = request.headers.get("origin")
     if origin:
@@ -80,7 +97,7 @@ async def local_auth_boundary(request: Request, call_next):
         "owner_id": "local",
         "authentication": "loopback",
     }
-    return await call_next(request)
+    return _annotate_response(await call_next(request))
 
 
 app.mount(

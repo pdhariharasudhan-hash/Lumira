@@ -596,3 +596,15 @@
 }
 .voice-recording-status { background: var(--surface-subtle, rgba(100, 116, 139, 0.12)); }
 .voice-recording-error { color: var(--color-danger, #c62828); background: var(--surface-subtle, rgba(198, 40, 40, 0.08)); }
+.assistant-output-media {
+	max-width: min(100%, 720px);
+	max-height: 480px;
+	border-radius: 12px;
+	object-fit: contain;
+	background: var(--surface-muted, #f3f4f6);
+}
+
+audio.assistant-output-media {
+	width: min(100%, 420px);
+	height: 40px;
+}
