@@ -747,7 +747,7 @@ def add_goal_dependency(goal_id: str, request: GoalDependencyRequest):
             existing = []
         if dependency_id in existing:
             return {"goal": goal, "changed": False}
-        updated = memory.update_goal(goal_id, {"dependencies": existing + [dependency_id]})
+        updated = memory.update_goal(goal_id, dependencies=existing + [dependency_id])
         return {"goal": updated, "changed": True}
     except HTTPException:
         raise
