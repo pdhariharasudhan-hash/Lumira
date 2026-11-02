@@ -42,7 +42,7 @@ class NotificationService:
             "notification_create", session_id, project_id, goal_id
         )
         item = {
-            "id": f"notification-{datetime.now(timezone.utc).timestamp_ns()}",
+            "id": f"notification-{int(datetime.now(timezone.utc).timestamp() * 1_000_000_000)}",
             "message": message.strip(),
             "level": level,
             "status": "unread",
