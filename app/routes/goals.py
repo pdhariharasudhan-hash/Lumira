@@ -707,7 +707,10 @@ def add_goal_dependency(goal_id: str, request: GoalDependencyRequest):
             if isinstance(item, dict) and isinstance(item.get("goal_id"), str) and not item.get("archived")
         }
         goal = by_id.get(goal_id)
-        dependency_id = request.dependency_goal_id
+        dependency_id = getattr(request, "dependency_goal_id", None)
+        if not isinstance(dependency_id, str):
+            raise HTTPException(status_code=422, detail="dependency_goal_id must be text")
+        dependency_id = dependency_id.strip()
         if goal is None:
             raise HTTPException(status_code=404, detail="goal not found")
         if dependency_id not in by_id:
