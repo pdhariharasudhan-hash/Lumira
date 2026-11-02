@@ -24,7 +24,7 @@ def _raise_for_voice_readiness(result: dict) -> None:
     if code not in {"provider_unavailable", "resource_pressure_deferred"}:
         return
     headers = {"Retry-After": "30"} if code == "resource_pressure_deferred" else None
-    raise HTTPException(status_code=503, detail=result, headers=headers)
+    raise HTTPException(status_code=501 if code == "provider_unavailable" else 503, detail=result, headers=headers)
 
 
 class ArtifactRequest(BaseModel):
@@ -151,7 +151,7 @@ def playback_voice(request: PlaybackRequest):
 def start_wake_word_listener():
     result = _wake_word_listener.start()
     if not result["success"] and result.get("code") == "provider_unavailable":
-        raise HTTPException(status_code=503, detail=result)
+        raise HTTPException(status_code=501 if code == "provider_unavailable" else 503, detail=result)
     return result
 
 
@@ -159,7 +159,7 @@ def start_wake_word_listener():
 def stop_wake_word_listener():
     result = _wake_word_listener.stop()
     if not result["success"]:
-        raise HTTPException(status_code=503, detail=result)
+        raise HTTPException(status_code=501 if code == "provider_unavailable" else 503, detail=result)
     return result
 
 
