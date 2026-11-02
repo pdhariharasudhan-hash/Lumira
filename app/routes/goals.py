@@ -175,7 +175,7 @@ def create_goal(request: GoalCreateRequest):
 
 @router.patch("/goals/{goal_id}")
 def update_goal(goal_id: str, request: GoalUpdateRequest):
-    updates = {key: value for key, value in request.model_dump(exclude_unset=True).items() if value is not None}
+    updates = request.model_dump(exclude_unset=True)
     try:
         return MemoryService().update_goal(goal_id, **updates)
     except KeyError as exc:
