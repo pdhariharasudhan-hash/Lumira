@@ -98,6 +98,7 @@ from app.routes.task_recovery_plan import router as task_recovery_plan_router
 from app.routes.recovery_resume import router as recovery_resume_router
 from app.routes.recovery_transition import router as recovery_transition_router
 from app.routes.multi_model import router as multi_model_router
+from app.routes.system_prompt import router as system_prompt_router
 
 
 ROUTERS = [
@@ -113,6 +114,7 @@ ROUTERS = [
     (goals_router, ["Goals"]), (goal_intelligence_router, ["Goal Intelligence"]), (agents_router, ["Agents"]),
     (workflow_insights_router, ["Workflow Insights"]), (workflows_router, ["Workflows"]),
     (auth_router, ["Authentication"]), (devices_router, ["Device Gateway"]), (device_profiles_router, ["Device Profiles"]), (ai_modes_router, ["AI Modes"]), (personal_preferences_router, ["Personal Preferences"]),
+    (system_prompt_router, ["System Prompt"]),
     (project_terminal_router, ["Project Terminal"]), (project_preview_router, ["Project Preview"]),
     (web_router, ["Web Access"]), (recovery_router, ["Workflow Recovery"]), (features_router, ["Features"]),
     (intelligence_router, ["Intelligence and Modes"]), (notepad_router, ["Notepad"]),
