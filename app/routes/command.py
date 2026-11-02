@@ -106,6 +106,28 @@ def command(
         )
 
     parsed = CommandParserService().parse(request.input)
+    greeting_text = (
+        request.input.strip().lower().replace(",", "").replace("!", "").replace(".", "")
+    )
+    if greeting_text in {"hello", "hello lumira", "hi", "hi lumira"}:
+        intent = IntentClassifierService().classify(request.input)
+        message = "Hello. I am Lumira and I am ready."
+        sessions.append_message(
+            session["session_id"],
+            "assistant",
+            message,
+            metadata={"capability": "greeting", "success": True},
+        )
+        return {
+            "success": True,
+            "intent": intent,
+            "parsed": parsed,
+            "result": {"success": True, "capability": "greeting"},
+            "message": message,
+            "context": session,
+            "session_id": session["session_id"],
+        }
+
     agent_orchestrator = None
     if parsed.get("success") and parsed.get("capability") == "agent_task":
         payload = parsed.get("payload", {})
