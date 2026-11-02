@@ -732,7 +732,7 @@ def add_goal_dependency(goal_id: str, request: GoalDependencyRequest):
         goal = next((item for item in goals if isinstance(item, dict) and item.get("goal_id") == goal_id and not item.get("archived")), None)
         if goal is None:
             raise HTTPException(status_code=404, detail={"code": "goal_not_found"})
-        graph = {str(item.get("goal_id")): [str(dep) for dep in item.get("dependencies", []) if isinstance(dep, str)] for item in goals if isinstance(item, dict) and item.get("goal_id")}
+        graph = {str(item.get("goal_id")).strip(): [str(dep).strip() for dep in item.get("dependencies", []) if isinstance(dep, str) and str(dep).strip()] for item in goals if isinstance(item, dict) and item.get("goal_id")}
         def reaches(node: str, target: str, seen: set[str] | None = None) -> bool:
             seen = seen or set()
             if node == target:
@@ -741,8 +741,10 @@ def add_goal_dependency(goal_id: str, request: GoalDependencyRequest):
                 return False
             seen.add(node)
             return any(reaches(child, target, seen) for child in graph.get(node, []))
-        # Reject cycles under the prerequisite graph semantics used by Lumira.
-        if reaches(dependency_id, normalized_goal_id) or reaches(normalized_goal_id, dependency_id):
+        # Adding goal -> dependency is safe only when dependency cannot already
+        # reach goal through existing prerequisite edges. The reverse reachability
+        # check is intentionally not a cycle: it represents a valid dependency chain.
+        if reaches(dependency_id, normalized_goal_id):
             raise HTTPException(
                 status_code=409,
                 detail={"code": "dependency_cycle", "message": "Dependency would create a cycle."},
