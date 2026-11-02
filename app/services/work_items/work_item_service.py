@@ -391,7 +391,7 @@ class WorkItemService:
             current_status = task.get("status")
             transition["previous_status"] = current_status
             allowed_transitions = {
-                "pending": {"pending", "in_progress", "blocked"},
+                "pending": {"pending", "in_progress", "blocked", "completed"},
                 "in_progress": {"in_progress", "completed", "blocked", "failed"},
                 "blocked": {"blocked", "pending", "in_progress", "failed"},
                 "failed": {"failed", "pending", "in_progress", "blocked"},
@@ -406,7 +406,7 @@ class WorkItemService:
             completed = {item["task_id"] for item in workflow["tasks"] if item.get("status") == "completed"}
             if status in {"in_progress", "completed"} and not dependencies.issubset(completed):
                 raise WorkItemValidationError("Task dependencies must be completed first")
-            if status == "completed" and current_status != "in_progress":
+            if status == "completed" and current_status not in {"in_progress", "pending"}:
                 raise WorkItemValidationError("A task must be in progress before completion")
             updated_at = datetime.now(UTC).isoformat()
             history = task.setdefault("history", [])
