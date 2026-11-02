@@ -104,6 +104,8 @@ def process_voice_through_core(request: VoiceCoreProcessRequest):
 @router.post("/voice/transcript")
 def transcribe_voice(request: ArtifactRequest):
     result = TranscriptService().generate_transcript(request.artifact_id)
+    if not result.get("success") and result.get("code") == "provider_unavailable":
+        raise HTTPException(status_code=501, detail=result)
     _raise_for_voice_readiness(result)
     return result
 
