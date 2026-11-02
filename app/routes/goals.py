@@ -725,10 +725,19 @@ def add_goal_dependency(goal_id: str, request: GoalDependencyRequest):
     try:
         memory = MemoryService()
         goals = _goals_from_memory(memory)
-        goal = _find_goal(goals, goal_id)
+        goal = next((item for item in goals if isinstance(item, dict) and item.get("goal_id") == goal_id and not item.get("archived")), None)
         if goal is None:
             raise HTTPException(status_code=404, detail={"code": "goal_not_found"})
-        if _dependency_would_cycle(goals, goal_id, dependency_id):
+        graph = {str(item.get("goal_id")): [str(dep) for dep in item.get("dependencies", []) if isinstance(dep, str)] for item in goals if isinstance(item, dict) and item.get("goal_id")}
+        def reaches(node: str, target: str, seen: set[str] | None = None) -> bool:
+            seen = seen or set()
+            if node == target:
+                return True
+            if node in seen:
+                return False
+            seen.add(node)
+            return any(reaches(child, target, seen) for child in graph.get(node, []))
+        if reaches(dependency_id, goal_id):
             raise HTTPException(
                 status_code=409,
                 detail={"code": "dependency_cycle", "message": "Dependency would create a cycle."},
