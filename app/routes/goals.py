@@ -677,7 +677,7 @@ def remove_goal_blocker(goal_id: str, blocker: str = Query(min_length=1, max_len
         raise HTTPException(status_code=422, detail="blocker must not be empty")
     try:
         memory = MemoryService()
-        goal = next((item for item in memory.get_all().get("goals", []) if isinstance(item, dict) and item.get("goal_id") == goal_id and not item.get("archived")), None)
+        goal = next((item for item in _goals_from_memory(memory) if isinstance(item, dict) and item.get("goal_id") == goal_id and not item.get("archived")), None)
         if goal is None:
             raise HTTPException(status_code=404, detail="goal not found")
         blockers = goal.get("blockers", [])
