@@ -33,7 +33,17 @@ function runtimeBackendRoot() {
   const bundled = path.join(process.resourcesPath, 'backend');
   const runtime = path.join(app.getPath('userData'), 'backend');
   const marker = path.join(runtime, '.lumira-runtime-version');
-  const version = app.getVersion();
+  const backendSignaturePath = path.join(bundled, 'app', 'routes', 'command.py');
+  const backendSignature = fs.existsSync(backendSignaturePath)
+    ? fs.statSync(backendSignaturePath)
+    : null;
+  // Replace stale user-data copies when bundled backend code changes, even if
+  // the Electron application version has not changed.
+  const version = [
+    app.getVersion(),
+    backendSignature ? backendSignature.size : 0,
+    backendSignature ? Math.trunc(backendSignature.mtimeMs) : 0,
+  ].join('-');
 
   try {
     const installedVersion = fs.existsSync(marker) ? fs.readFileSync(marker, 'utf8').trim() : '';
