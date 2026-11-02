@@ -393,8 +393,8 @@ class WorkItemService:
             allowed_transitions = {
                 "pending": {"pending", "in_progress", "blocked", "completed"},
                 "in_progress": {"in_progress", "completed", "blocked", "failed"},
-                "blocked": {"blocked", "pending", "in_progress", "failed"},
-                "failed": {"failed", "pending", "in_progress", "blocked"},
+                "blocked": {"blocked", "pending", "in_progress", "failed", "completed"},
+                "failed": {"failed", "pending", "in_progress", "blocked", "completed"},
                 # Completion is terminal: do not silently reopen completed work.
                 "completed": {"completed"},
             }
