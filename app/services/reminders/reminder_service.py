@@ -39,7 +39,7 @@ class ReminderService:
 
         from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
         core_context = CoreRuntimeBridgeService().execution_context(
-            "reminder_create", session_id, project_id, goal_id
+            "reminder_create", session_id=session_id, project_id=project_id, goal_id=goal_id
         )
         item = {
             "id": f"reminder-{int(datetime.now(timezone.utc).timestamp() * 1_000_000_000)}",
