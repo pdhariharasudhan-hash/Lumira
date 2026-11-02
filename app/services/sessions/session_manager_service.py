@@ -356,6 +356,29 @@ class SessionManagerService:
         self._mutate_session(session_id, append)
         return deepcopy(message)
 
+    def update_message_metadata(
+        self,
+        session_id: str,
+        message_id: str | None,
+        metadata: dict,
+    ) -> dict:
+        """Safely update metadata on one persisted conversation message."""
+        if not isinstance(message_id, str) or not message_id:
+            raise ValueError("message_id is required")
+        if not isinstance(metadata, dict):
+            raise ValueError("message metadata must be an object")
+        safe_metadata = redact_sensitive_value(metadata)
+
+        def update(session):
+            recent = session.setdefault("recent_messages", [])
+            for message in recent:
+                if isinstance(message, dict) and message.get("message_id") == message_id:
+                    message["metadata"] = safe_metadata
+                    return deepcopy(message)
+            raise KeyError("message not found")
+
+        return self._mutate_session(session_id, update)
+
     def save_cognitive_state(
         self,
         session_id: str,
