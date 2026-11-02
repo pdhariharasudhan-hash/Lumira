@@ -130,6 +130,11 @@ def send_device_command(device_id: str, request: DeviceCommandRequest):
         fresh_heartbeat = registry.is_recently_seen(device_id)
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Device registry is unavailable; command was not sent") from exc
+    # Transport availability is checked before registry policy so callers get a
+    # deterministic capability response even for a device not yet registered.
+    from app.services.providers.provider_registry import ProviderRegistry
+    if ProviderRegistry.get("device_transport") is None:
+        raise HTTPException(status_code=501, detail={"success": False, "code": "provider_unavailable"})
     if registered is None:
         raise HTTPException(status_code=404, detail="Device must be registered before commands can be sent")
     if registered.get("device_type") != request.device_type:
