@@ -14,7 +14,9 @@ def workflow_insights(project_id: str | None = Query(default=None, max_length=12
     return _svc().summary(project_id, goal_id)
 
 def _workflows(**filters):
-    return _svc().workflow_service.list_workflows(limit=200, **filters) if getattr(_svc(), "workflow_service", None) else WorkItemService().list_workflows(limit=200, **filters)
+    svc = _svc()
+    target = getattr(svc, "workflow_service", None) or svc
+    return target.list_workflows(limit=200, **filters)
 
 def workflow_summary(category=None, project_id=None):
     items=_workflows(category=category, project_id=project_id)
