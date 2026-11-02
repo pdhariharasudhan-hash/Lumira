@@ -330,6 +330,86 @@ def retry_pipeline_summary(request: VoicePipelineSummaryRetryRequest):
     return result
 
 
+class VoiceMemoryRetryRequest(BaseModel):
+    """Identifiers for retrying memory persistence from saved voice artifacts."""
+    audio_artifact_id: str = Field(min_length=1, max_length=128)
+    transcript_artifact_id: str = Field(min_length=1, max_length=128)
+    summary_artifact_id: str | None = Field(default=None, max_length=128)
+
+
+@router.post("/voice/retry-memory")
+def retry_voice_memory(request: VoiceMemoryRetryRequest):
+    """Recover a failed voice-memory write without recording or transcribing again."""
+    from app.services.artifacts.artifact_manager_service import ArtifactManagerService
+
+    artifacts = ArtifactManagerService()
+    audio = artifacts.get_artifact(request.audio_artifact_id)
+    if not audio or audio.get("type") != "audio":
+        raise HTTPException(status_code=404, detail="audio artifact not found")
+    transcript = artifacts.get_artifact(request.transcript_artifact_id)
+    if not transcript or transcript.get("type") != "transcripts":
+        raise HTTPException(status_code=404, detail="transcript artifact not found")
+    if transcript.get("source") != request.audio_artifact_id:
+        raise HTTPException(status_code=409, detail="transcript artifact does not belong to this voice capture")
+
+    def read_text_artifact(artifact_id: str, label: str) -> str:
+        path = artifacts.get_artifact_path(artifact_id)
+        if path is None or not path.is_file():
+            raise HTTPException(status_code=404, detail=f"{label} content not found")
+        try:
+            if path.stat().st_size > artifacts.MAX_CONTENT_LENGTH:
+                raise HTTPException(status_code=413, detail=f"{label} exceeds the processing limit")
+            content = path.read_text(encoding="utf-8").strip()
+        except (OSError, UnicodeError) as error:
+            raise HTTPException(status_code=422, detail=f"{label} content could not be read") from error
+        if not content:
+            raise HTTPException(status_code=422, detail=f"{label} is empty")
+        return content
+
+    transcription = {
+        "success": True,
+        "transcript_text": read_text_artifact(request.transcript_artifact_id, "transcript"),
+        "transcript_artifact": transcript,
+    }
+    summary = None
+    if request.summary_artifact_id:
+        summary_record = artifacts.get_artifact(request.summary_artifact_id)
+        if not summary_record or summary_record.get("type") != "summaries":
+            raise HTTPException(status_code=404, detail="summary artifact not found")
+        if summary_record.get("source") != request.transcript_artifact_id:
+            raise HTTPException(status_code=409, detail="summary artifact does not belong to this transcript")
+        summary = {
+            "success": True,
+            "summary_text": read_text_artifact(request.summary_artifact_id, "summary"),
+            "summary_artifact": summary_record,
+        }
+
+    result = _persist_voice_capture_memory(
+        request.audio_artifact_id,
+        request.transcript_artifact_id,
+        transcription,
+        summary,
+    )
+    if result.get("success") and result.get("state") == "already_exists" and request.summary_artifact_id:
+        try:
+            linked = MemoryService().attach_artifacts_to_experience(
+                request.transcript_artifact_id,
+                [request.summary_artifact_id],
+            )
+            result["experience_id"] = linked.get("experience_id", result.get("experience_id"))
+            result["state"] = "updated"
+            result["message"] = "Existing voice memory was updated with the summary artifact."
+        except KeyError:
+            pass
+        except (OSError, ValueError):
+            return {
+                "success": False,
+                "code": "memory_update_failed",
+                "message": "Saved voice artifacts remain available, but the existing memory record could not be updated.",
+            }
+    return result
+
+
 class VoiceSummaryRetryRequest(BaseModel):
     transcript_artifact_id: str = Field(min_length=1, max_length=128)
 

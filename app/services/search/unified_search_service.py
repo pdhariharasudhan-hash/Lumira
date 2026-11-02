@@ -115,6 +115,57 @@ class UnifiedSearchService:
             return results
         return results
 
+    def search_workspace_files(self, query: str) -> list[dict]:
+        """Search bounded user-authored source files, excluding runtime data and backups."""
+        if not self._terms(query):
+            return []
+        allowed_roots = (Path("app"), Path("tests"), Path("lumira_desktop/src"), Path("docs"))
+        results: list[dict] = []
+        scanned = 0
+        for root in allowed_roots:
+            if not root.is_dir():
+                continue
+            resolved_root = root.resolve()
+            for path in root.rglob("*"):
+                if scanned >= 500 or len(results) >= 200:
+                    return results
+                if not path.is_file():
+                    continue
+                if any(part.startswith(".") or part in {"__pycache__", "node_modules", "dist", "build", ".pytest-work"}
+                       for part in path.parts):
+                    continue
+                if path.name.endswith((".bak", ".backup", ".orig", ".tmp")):
+                    continue
+                if path.suffix.lower() not in self.TEXT_EXTENSIONS:
+                    continue
+                scanned += 1
+                try:
+                    resolved = path.resolve()
+                    if resolved_root not in resolved.parents:
+                        continue
+                    content = self._read_text(resolved, max_bytes=250_000)
+                except (OSError, ValueError):
+                    continue
+                if content is None:
+                    continue
+                relative = path.as_posix()
+                searchable = f"{relative} {content}"
+                if not self._matches(searchable, query):
+                    continue
+                kind = "code" if path.suffix.lower() in self.CODE_EXTENSIONS else "documentation"
+                results.append({
+                    "type": "source_file",
+                    "title": relative,
+                    "path": relative,
+                    "source": "workspace",
+                    "kind": kind,
+                    "timestamp": None,
+                    "reference": relative,
+                    "snippet": self._safe_snippet(content),
+                    "relevance": sum(1 for term in self._terms(query) if term in searchable.lower()),
+                })
+        return results
+
     def search_documentation(self, query: str) -> list[dict]:
         root = Path("docs")
         results = []
@@ -327,7 +378,7 @@ class UnifiedSearchService:
     def search_all(self, query: str) -> dict[str, Any]:
         if not self._terms(query):
             return {key: [] for key in (
-                "projects", "project_versions", "files", "code", "documentation",
+                "projects", "project_versions", "files", "source_files", "code", "documentation",
                 "voice_ideas", "images", "artifacts", "memory", "feature_history",
                 "pipeline_history", "sessions", "conversations", "goals", "decisions",
                 "experiences", "learning", "memory_links", "notes", "workflows", "devices", "items",
@@ -335,11 +386,16 @@ class UnifiedSearchService:
         memory = self.memory.get_all()
         artifacts = self.search_artifacts(query)
         files = self.search_project_files(query)
+        workspace_files = self.search_workspace_files(query)
         grouped = {
             "projects": self.search_projects(query),
             "project_versions": self.search_project_versions(query),
             "files": files,
-            "code": [item for item in files if item["kind"] == "code"],
+            "source_files": workspace_files,
+            "code": (
+                [item for item in files if item["kind"] == "code"]
+                + [item for item in workspace_files if item["kind"] == "code"]
+            )[:200],
             "documentation": self.search_documentation(query),
             "voice_ideas": [item for item in artifacts if item.get("type") in {"audio", "transcripts", "summaries"}],
             "images": [item for item in artifacts if item.get("type") in {"images", "diagrams", "blueprints", "schematics"}],
