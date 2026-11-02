@@ -27,7 +27,7 @@ class CoreEventLogService:
         if not event or not source:
             return {"success": False, "error": "invalid_event"}
         from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
-        item={"id":f"event-{datetime.now(timezone.utc).timestamp_ns()}","event":event,
+        item={"id":f"event-{int(datetime.now(timezone.utc).timestamp() * 1_000_000_000)}","event":event,
               "source":source,"data":data or {},"timestamp":datetime.now(timezone.utc).isoformat(),
               "core_context":CoreRuntimeBridgeService().execution_context(
                   "core_event_record",session_id,project_id,goal_id)}
