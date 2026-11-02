@@ -266,8 +266,6 @@ def generate_goal_plan(
             raise HTTPException(status_code=409, detail="completed or cancelled goals cannot be planned")
         if goal.get("status") != "active":
             raise HTTPException(status_code=409, detail={"code": "goal_not_active", "message": "Only active goals can be planned.", "status": goal.get("status")})
-        if session_id and SessionManagerService().get_session(session_id) is None:
-            raise HTTPException(status_code=404, detail="session not found")
         blockers = [item.strip()[:500] for item in goal.get("blockers", []) if isinstance(item, str) and item.strip()] if isinstance(goal.get("blockers", []), list) else []
         if blockers:
             raise HTTPException(status_code=409, detail={"code": "goal_blockers_present", "message": "Resolve the goal blockers before planning.", "blockers": blockers[:20]})
@@ -546,6 +544,7 @@ def get_goals_summary(
     project_id: str | None = Query(default=None, max_length=100),
 ):
     """Return a compact, persistent-store-backed goal portfolio summary."""
+    project_id = _normalize_optional_filter(project_id)
     try:
         goals = _goals_from_memory(MemoryService())
     except MemoryValidationError as exc:
