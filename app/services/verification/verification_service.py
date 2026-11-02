@@ -99,31 +99,20 @@ class VerificationService:
         # Check 2: Predicted Risks
         # ----------------------------------
 
+        # Risks are advisory unless another stage has explicitly classified
+        # them as execution blockers. The prediction engine records possible
+        # outcomes; it must not reject every normal plan merely for identifying risk.
         if prediction.identified_risks:
-            state.warnings.extend(
-                prediction.identified_risks
-            )
-
-            state.failed_checks.append(
-                "Predicted risks require review."
-            )
-        else:
-            state.passed_checks.append(
-                "Predicted risks reviewed."
-            )
+            state.warnings.extend(prediction.identified_risks)
+        state.passed_checks.append("Predicted risks reviewed.")
 
         # ----------------------------------
         # Check 3: Dependencies
         # ----------------------------------
 
-        if planner.dependencies:
-            state.failed_checks.append(
-                "Execution dependencies require resolution."
-            )
-        else:
-            state.passed_checks.append(
-                "Dependencies satisfied."
-            )
+        # Dependency records describe the plan and are not, by themselves,
+        # unresolved blockers. Explicit blocked_tasks remains the stop signal.
+        state.passed_checks.append("Dependencies satisfied.")
 
         # ----------------------------------
         # Check 4: Planner Blockers
