@@ -14,6 +14,16 @@ router = APIRouter()
 def _normalize_optional_filter(value):
     return value if isinstance(value, str) else None
 
+def _goals_from_memory(memory):
+    data = memory.get_all()
+    if not isinstance(data, dict):
+        return []
+    goals = data.get("goals")
+    if isinstance(goals, list):
+        return goals
+    nested = data.get("memory")
+    return nested.get("goals", []) if isinstance(nested, dict) and isinstance(nested.get("goals"), list) else []
+
 
 class GoalCreateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=500)
@@ -134,7 +144,7 @@ def list_goals(
     offset: int = Query(default=0, ge=0, le=100_000),
 ):
     try:
-        records = MemoryService().get_all().get("goals", [])
+        records = _goals_from_memory(MemoryService())
     except MemoryValidationError as exc:
         raise HTTPException(status_code=503, detail="Memory store is unavailable or incompatible") from exc
     if project_id:
@@ -189,7 +199,7 @@ def decompose_goal(goal_id: str, request: GoalDecomposeRequest):
 def get_goal_tree(goal_id: str):
     """Return a bounded goal/objective/work-item tree from existing persistent stores."""
     try:
-        all_goals = MemoryService().get_all().get("goals", [])
+        all_goals = _goals_from_memory(MemoryService())
         workflows = WorkItemService().list_workflows(limit=200)
     except (MemoryValidationError, ValueError) as exc:
         raise HTTPException(status_code=503, detail="Goal or workflow storage is unavailable") from exc
@@ -244,7 +254,7 @@ def generate_goal_plan(
 ):
     """Convert a saved goal into a bounded, persistent workflow using Lumira's existing planner."""
     try:
-        goals = MemoryService().get_all().get("goals", [])
+        goals = _goals_from_memory(MemoryService())
         goal = next((item for item in goals if item.get("goal_id") == goal_id and not item.get("archived")), None)
         if goal is None:
             raise HTTPException(status_code=404, detail="goal not found")
@@ -364,7 +374,7 @@ def generate_goal_plan(
 @router.get("/goals/{goal_id}/summary")
 def get_goal_summary(goal_id: str):
     try:
-        goals = MemoryService().get_all().get("goals", [])
+        goals = _goals_from_memory(MemoryService())
         workflows = WorkItemService().list_workflows(goal_id=goal_id, limit=50)
     except (MemoryValidationError, ValueError) as exc:
         raise HTTPException(status_code=503, detail="Goal or workflow storage is unavailable") from exc
@@ -385,7 +395,7 @@ def get_goal_summary(goal_id: str):
 def get_goal_history(goal_id: str):
     """Return the bounded change history for one persisted goal."""
     try:
-        goals = MemoryService().get_all().get("goals", [])
+        goals = _goals_from_memory(MemoryService())
     except MemoryValidationError as exc:
         raise HTTPException(status_code=503, detail="Memory store is unavailable or incompatible") from exc
     goal = next((item for item in goals if item.get("goal_id") == goal_id and not item.get("archived")), None)
@@ -399,7 +409,7 @@ def get_goal_history(goal_id: str):
 def get_goal_readiness(goal_id: str):
     """Explain whether a goal is ready to plan or execute without changing state."""
     try:
-        goals = MemoryService().get_all().get("goals", [])
+        goals = _goals_from_memory(MemoryService())
         workflows = WorkItemService().list_workflows(goal_id=goal_id, limit=50)
     except (MemoryValidationError, ValueError) as exc:
         raise HTTPException(status_code=503, detail="Goal or workflow storage is unavailable") from exc
@@ -533,7 +543,7 @@ def get_goals_summary(
 ):
     """Return a compact, persistent-store-backed goal portfolio summary."""
     try:
-        goals = MemoryService().get_all().get("goals", [])
+        goals = _goals_from_memory(MemoryService())
     except MemoryValidationError as exc:
         raise HTTPException(status_code=503, detail="Memory store is unavailable or incompatible") from exc
     goals = [
@@ -586,7 +596,7 @@ def get_goal_dependencies(goal_id: str, max_depth: int = Query(default=10, ge=1,
     """Return a bounded dependency graph, including missing references and cycles."""
     max_depth = 10 if isinstance(max_depth, bool) or not isinstance(max_depth, int) else max(1, min(20, max_depth))
     try:
-        goals = MemoryService().get_all().get("goals", [])
+        goals = _goals_from_memory(MemoryService())
     except MemoryValidationError as exc:
         raise HTTPException(status_code=503, detail="Memory store is unavailable or incompatible") from exc
     by_id = {
