@@ -30,7 +30,7 @@ class QuickTaskService:
         if not isinstance(title, str) or not title.strip():
             return {"success": False, "error": "invalid_title"}
         from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
-        item = {"id": f"task-{datetime.now(timezone.utc).timestamp_ns()}",
+        item = {"id": f"task-{int(datetime.now(timezone.utc).timestamp() * 1_000_000_000)}",
                 "title": title.strip(), "status": "pending",
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "core_context": CoreRuntimeBridgeService().execution_context(
