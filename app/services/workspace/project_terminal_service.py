@@ -13,20 +13,17 @@ from app.services.workspace.container_sandbox_provider import ContainerSandboxPr
 class ProjectTerminalService:
     """Allowlisted validation runner; not an operating-system sandbox."""
 
-    # Keep this false until execution is isolated by a real OS security boundary.
-    # The flag alone is never proof that an OS sandbox exists.
+    # Execution requires a concrete isolation provider to verify itself.
+    # This flag is only a kill switch; it is never proof of isolation.
     OS_SANDBOX_ENABLED = True
 
     def __init__(self, root: str | Path = "memory/project_terminal_runs.json", sandbox=None):
         self.store = AtomicJsonStore(root)
-        self._sandbox_explicit = sandbox is not None
         self.sandbox = sandbox or ContainerSandboxProvider()
 
     def _os_sandbox_verified(self) -> bool:
         """Execution is enabled only when a concrete isolation provider verifies itself."""
         try:
-            if not self._sandbox_explicit:
-                return False
             status = self.sandbox.status()
             return bool(getattr(status, "available", False))
         except Exception:
@@ -69,10 +66,9 @@ class ProjectTerminalService:
                 "code": "project_execution_disabled",
                 "sandbox_reason": sandbox_reason,
                 "message": (
-                    "Project command execution is disabled because no OS-level sandbox "
-                    "is configured. Environment flags and UI confirmation cannot provide "
-                    "process isolation. This feature will remain disabled until a real "
-                    "sandbox is implemented and verified."
+                    "Project command execution is disabled because no verified isolation "
+                    "provider is currently available. Environment flags and UI confirmation "
+                    "cannot provide process isolation."
                 ),
             }
         if trusted_project is not True:
