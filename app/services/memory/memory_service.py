@@ -516,7 +516,7 @@ class MemoryService:
                 raise MemoryValidationError("priority must be low, normal, high, or urgent")
         if "status" in fields:
             value = fields["status"]
-            if not isinstance(value, str) or value not in {"active", "paused", "completed", "blocked", "cancelled"}:
+            if not isinstance(value, str) or value not in {"active", "paused", "completed", "blocked", "cancelled", "in_progress"}:
                 raise MemoryValidationError("invalid goal status")
 
         if "progress" in fields:
