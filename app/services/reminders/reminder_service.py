@@ -42,7 +42,7 @@ class ReminderService:
             "reminder_create", session_id, project_id, goal_id
         )
         item = {
-            "id": f"reminder-{datetime.now(timezone.utc).timestamp_ns()}",
+            "id": f"reminder-{int(datetime.now(timezone.utc).timestamp() * 1_000_000_000)}",
             "message": message.strip(),
             "due_at": due.astimezone(timezone.utc).isoformat(),
             "status": "pending",
