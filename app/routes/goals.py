@@ -703,7 +703,7 @@ def add_goal_dependency(goal_id: str, request: GoalDependencyRequest):
     """Add a dependency only when it cannot introduce a directed cycle."""
     try:
         memory = MemoryService()
-        goals = memory.get_all().get("goals", [])
+        goals = _goals_from_memory(memory)
         by_id = {
             item.get("goal_id"): item for item in goals
             if isinstance(item, dict) and isinstance(item.get("goal_id"), str) and not item.get("archived")
