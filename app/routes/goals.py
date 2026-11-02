@@ -717,6 +717,7 @@ def remove_goal_blocker(goal_id: str, blocker: str = Query(min_length=1, max_len
 def add_goal_dependency(goal_id: str, request: GoalDependencyRequest):
     """Add a dependency only when it cannot introduce a directed cycle."""
     dependency_id = request.dependency_goal_id.strip()
+    # Reject the direct cycle before entering the persistence/error boundary.
     if dependency_id == goal_id.strip():
         raise HTTPException(
             status_code=409,
