@@ -262,7 +262,12 @@ class OpenAICompatibleDevelopmentProvider(DevelopmentProvider):
                 )
 
             with response_context as response:
-                raw_bytes = response.read(self.MAX_RESPONSE_BYTES + 1)
+                try:
+                    raw_bytes = response.read(self.MAX_RESPONSE_BYTES + 1)
+                except TypeError:
+                    # Compatibility with lightweight response doubles and providers
+                    # that expose read() without a size argument.
+                    raw_bytes = response.read()
                 if len(raw_bytes) > self.MAX_RESPONSE_BYTES:
                     return {
                         "success": False,
