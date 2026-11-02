@@ -708,9 +708,6 @@ def add_goal_dependency(goal_id: str, request: GoalDependencyRequest):
         }
         goal = by_id.get(goal_id)
         dependency_id = request.dependency_goal_id
-        if not isinstance(dependency_id, str):
-            dependency_id = getattr(dependency_id, "default", dependency_id)
-        dependency_id = str(dependency_id).strip()
         if goal is None:
             raise HTTPException(status_code=404, detail="goal not found")
         if dependency_id not in by_id:
