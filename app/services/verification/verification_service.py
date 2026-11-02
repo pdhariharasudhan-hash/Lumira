@@ -138,8 +138,14 @@ class VerificationService:
         # Execution Readiness
         # ----------------------------------
 
-        state.ready_for_execution = (
-            len(state.failed_checks) == 0
+        # Only hard plan blockers prevent execution. Advisory prediction
+        # signals and descriptive dependencies remain visible as warnings.
+        hard_failures = {
+            "Execution plan does not exist.",
+            "Planner blockers unresolved.",
+        }
+        state.ready_for_execution = not any(
+            failure in hard_failures for failure in state.failed_checks
         )
 
         # ----------------------------------
