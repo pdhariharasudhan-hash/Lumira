@@ -581,6 +581,7 @@ def get_goals_summary(
 @router.get("/goals/{goal_id}/dependencies")
 def get_goal_dependencies(goal_id: str, max_depth: int = Query(default=10, ge=1, le=20)):
     """Return a bounded dependency graph, including missing references and cycles."""
+    max_depth = 10 if isinstance(max_depth, bool) or not isinstance(max_depth, int) else max(1, min(20, max_depth))
     try:
         goals = MemoryService().get_all().get("goals", [])
     except MemoryValidationError as exc:
