@@ -73,6 +73,8 @@ def search_sessions(
     limit: int = Query(default=30, ge=1, le=100),
 ):
     limit = _int_param(limit, 30, 1, 100)
+    status = status if isinstance(status, str) else None
+    project_id = project_id if isinstance(project_id, str) else None
     query = q.strip().casefold()
     if not query:
         raise HTTPException(status_code=422, detail="search query must not be empty")
@@ -110,6 +112,8 @@ def export_sessions(
     limit: int = Query(default=50, ge=1, le=100),
 ):
     limit = _int_param(limit, 50, 1, 100)
+    status = status if isinstance(status, str) else None
+    project_id = project_id if isinstance(project_id, str) else None
     sessions = _sessions(200)
     if status:
         sessions = [item for item in sessions if item.get("status") == status]
