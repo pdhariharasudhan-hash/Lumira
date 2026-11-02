@@ -203,6 +203,13 @@ class FeatureRegistryService:
     def get_all(self) -> Dict[str, Any]:
         return self._read()
 
+    def list_features(self) -> Dict[str, Any]:
+        registry = self._read()
+        enabled = sorted(name for name, item in registry.items() if item.get("status") == "ENABLED")
+        available = sorted(name for name, item in registry.items() if item.get("status") == "AVAILABLE")
+        failed = sorted(name for name, item in registry.items() if item.get("status") == "FAILED")
+        return {"count": len(registry), "enabled": enabled, "available": available, "failed": failed}
+
     def get_feature(self, feature_name: str) -> Dict[str, Any] | None:
         name = self._normalize_name(feature_name)
         return self._read().get(name) if name else None
