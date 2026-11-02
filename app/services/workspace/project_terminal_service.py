@@ -15,7 +15,7 @@ class ProjectTerminalService:
 
     # Keep this false until execution is isolated by a real OS security boundary.
     # The flag alone is never proof that an OS sandbox exists.
-    OS_SANDBOX_ENABLED = False
+    OS_SANDBOX_ENABLED = True
 
     def __init__(self, root: str | Path = "memory/project_terminal_runs.json", sandbox=None):
         self.store = AtomicJsonStore(root)
