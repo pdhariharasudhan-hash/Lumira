@@ -24,7 +24,7 @@ def _raise_for_voice_readiness(result: dict) -> None:
     if code not in {"provider_unavailable", "resource_pressure_deferred"}:
         return
     headers = {"Retry-After": "30"} if code == "resource_pressure_deferred" else None
-    raise HTTPException(status_code=501 if code == "provider_unavailable" else 503, detail=result, headers=headers)
+    raise HTTPException(status_code=503, detail=result, headers=headers)
 
 
 class ArtifactRequest(BaseModel):
