@@ -1,30 +1,40 @@
-# Lumira Desktop Workbench
+# Lumira Desktop Application
 
-The desktop workbench is a React, TypeScript, and Vite interface for the local Lumira FastAPI backend.
+Lumira is a packaged Windows desktop application for the local Lumira Personal AI system. The installed application starts and manages its own local backend; normal use does not require opening a terminal or running `npm run dev`.
 
-## Start
+## Installed application
 
-From the repository root, start the backend first:
+Install the Windows package from the `release` output. Launch **Lumira** from the Start menu or desktop shortcut. The splash screen waits for the local services to become healthy before opening the workspace.
+
+If the backend stops unexpectedly while Lumira is open, the desktop host attempts to restart it automatically. Startup and recovery diagnostics are written to the Lumira user-data folder as `lumira-desktop.log`.
+
+## Development
+
+Development still uses separate backend and Vite processes:
 
 ```powershell
+# repository root
 python run.py
+
+# another terminal
+npm --prefix lumira_desktop run dev
 ```
 
-In a second terminal, start the desktop development server:
+## Quality checks
 
 ```powershell
-npm --prefix lumira_desktop run dev -- --host 127.0.0.1 --port 5000
+npm --prefix lumira_desktop run test
+npm --prefix lumira_desktop run lint
+npm --prefix lumira_desktop run build
+node --check lumira_desktop/electron-main.cjs
 ```
 
-Open `http://127.0.0.1:5000`. Vite proxies the desktop API roots to `http://127.0.0.1:8000`; keep both services on loopback. Do not expose the Vite proxy to a LAN by overriding the host with `0.0.0.0`.
+## Packaging
 
-## Available scripts
+```powershell
+npm --prefix lumira_desktop run dist
+```
 
-- `npm --prefix lumira_desktop run dev` — local development server.
-- `npm --prefix lumira_desktop run test` — Vitest regression suite.
-- `npm --prefix lumira_desktop run build` — TypeScript project build and Vite production bundle.
-- `npm --prefix lumira_desktop run lint` — Oxlint.
+The packaged build bundles the production interface, Lumira backend files, and the configured Python runtime. Optional AI providers remain optional: when a provider is not configured, Lumira reports that state instead of pretending the feature is available.
 
-Behavioral tests, build, and lint have not been re-run in the current work session because verified OS-level isolation is unavailable. Do not treat static parser checks as a replacement for those checks.
-
-See the repository-root `README.md` for backend setup, optional provider configuration, and security notes.
+See the repository-root documentation for backend architecture and provider configuration.
