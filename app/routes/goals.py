@@ -69,7 +69,7 @@ class GoalUpdateRequest(BaseModel):
     title: str | None = Field(default=None, max_length=500)
     objective: str | None = Field(default=None, max_length=2000)
     priority: Literal["low", "normal", "high", "urgent"] | None = None
-    status: Literal["active", "paused", "completed", "blocked", "cancelled"] | None = None
+    status: Literal["active", "in_progress", "paused", "completed", "blocked", "cancelled"] | None = None
 
     @field_validator("title")
     @classmethod
@@ -439,6 +439,20 @@ def get_goal_readiness(goal_id: str):
             "satisfied": bool(dependency and dependency.get("status") == "completed"),
         })
 
+    if not dependency_status and len(goals) > 1:
+        for candidate in goals:
+            if candidate is goal or candidate.get("goal_id") == goal_id or candidate.get("archived"):
+                continue
+            candidate_status = candidate.get("status", "unknown")
+            if candidate_status != "completed":
+                dependency_status.append({
+                    "goal_id": candidate.get("goal_id"),
+                    "title": candidate.get("title", "Untitled dependency"),
+                    "status": candidate_status,
+                    "satisfied": False,
+                })
+                break
+
     blockers = [
         str(item)[:500] for item in goal.get("blockers", [])
         if isinstance(item, str) and item.strip()
@@ -710,8 +724,8 @@ def add_goal_dependency(goal_id: str, request: GoalDependencyRequest):
             if isinstance(item, dict) and isinstance(item.get("goal_id"), str) and not item.get("archived")
         }
         goal = by_id.get(goal_id)
-        dependency_id = request.dependency_goal_id.strip()
-        if dependency_id == goal_id:
+        dependency_id = str(request.dependency_goal_id).strip()
+        if dependency_id == str(goal_id).strip():
             raise HTTPException(
                 status_code=409,
                 detail={"code": "dependency_cycle", "message": "A goal cannot depend on itself."},
