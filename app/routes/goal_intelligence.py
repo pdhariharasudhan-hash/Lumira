@@ -10,6 +10,11 @@ from app.services.persistence.atomic_json_store import PersistenceIntegrityError
 
 router = APIRouter()
 
+def _int_param(value, default, minimum, maximum):
+    if isinstance(value, bool) or not isinstance(value, int):
+        return default
+    return max(minimum, min(maximum, value))
+
 
 class BulkGoalUpdate(BaseModel):
     goal_ids: list[str] = Field(min_length=1, max_length=50)
@@ -79,6 +84,7 @@ def get_goal_intelligence(
         _, goals = _memory_and_goals(project_id)
     except MemoryValidationError as exc:
         raise HTTPException(status_code=503, detail="Goal memory is unavailable") from exc
+    stale_days = _int_param(stale_days, 14, 1, 365)
     now = datetime.now(UTC)
     def parse_date(value):
         if not isinstance(value, str) or not value.strip():
@@ -208,6 +214,7 @@ def search_goals(
     status: Literal["active", "paused", "completed", "blocked", "cancelled"] | None = None,
     limit: int = Query(default=30, ge=1, le=100),
 ):
+    limit = _int_param(limit, 30, 1, 100)
     query = q.strip().casefold()
     if not query:
         raise HTTPException(status_code=422, detail="search query must not be empty")
@@ -236,6 +243,8 @@ def get_goal_timeline(
         _, goals = _memory_and_goals(project_id)
     except MemoryValidationError as exc:
         raise HTTPException(status_code=503, detail="Goal memory is unavailable") from exc
+    days = _int_param(days, 30, 1, 365)
+    limit = _int_param(limit, 100, 1, 300)
     cutoff = datetime.now(UTC) - timedelta(days=days)
     events = []
     for goal in goals:
@@ -267,6 +276,7 @@ def get_goal_next_actions(
         _, goals = _memory_and_goals(project_id)
     except MemoryValidationError as exc:
         raise HTTPException(status_code=503, detail="Goal memory is unavailable") from exc
+    limit = _int_param(limit, 10, 1, 50)
     by_id = {g.get("goal_id"): g for g in goals}
     now = datetime.now(UTC)
     scored = []
