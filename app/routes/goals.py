@@ -150,6 +150,7 @@ def list_goals(
         records = _goals_from_memory(MemoryService())
     except MemoryValidationError as exc:
         raise HTTPException(status_code=503, detail="Memory store is unavailable or incompatible") from exc
+    project_id = _normalize_optional_filter(project_id)
     if project_id:
         records = [record for record in records if record.get("project_id") == project_id]
     if status:
