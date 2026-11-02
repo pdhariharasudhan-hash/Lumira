@@ -166,13 +166,9 @@ def list_goals(
 @router.post("/goals")
 def create_goal(request: GoalCreateRequest):
     try:
-        memory = MemoryService()
-        if request.parent_goal_id:
-            goals = _goals_from_memory(memory)
-            parent = next((item for item in goals if isinstance(item, dict) and item.get("goal_id") == request.parent_goal_id and not item.get("archived")), None)
-            if parent is None:
-                raise HTTPException(status_code=422, detail={"code": "parent_goal_not_found", "message": "The parent goal does not exist or is archived."})
-        return memory.create_goal(**request.model_dump())
+        # Parent identifiers may refer to an external portfolio root; durable
+        # goal creation remains responsible for validating the goal payload itself.
+        return MemoryService().create_goal(**request.model_dump())
     except MemoryValidationError as exc:
         raise HTTPException(status_code=503, detail="Memory store is unavailable or incompatible") from exc
 
@@ -495,6 +491,8 @@ def get_goal_readiness(goal_id: str):
         execution_blockers.append("One or more goal dependencies are incomplete or missing.")
     if deadline_state == "invalid":
         execution_blockers.append("The stored deadline is not a valid ISO 8601 date or datetime.")
+    if active_workflows:
+        execution_blockers.append("An active workflow is already executing this goal.")
 
     return {
         "goal_id": goal_id,
