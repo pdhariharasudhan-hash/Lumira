@@ -718,48 +718,32 @@ def add_goal_dependency(goal_id: str, request: GoalDependencyRequest):
     """Add a dependency only when it cannot introduce a directed cycle."""
     dependency_id = request.dependency_goal_id.strip()
     if dependency_id == goal_id.strip():
-        raise HTTPException(status_code=409, detail={"code": "dependency_cycle", "message": "A goal cannot depend on itself."})
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "dependency_cycle", "message": "A goal cannot depend on itself."},
+        )
     try:
         memory = MemoryService()
         goals = _goals_from_memory(memory)
-        by_id = {
-            item.get("goal_id"): item for item in goals
-            if isinstance(item, dict) and isinstance(item.get("goal_id"), str) and not item.get("archived")
-        }
-        goal = by_id.get(goal_id)
-        dependency_id = str(dependency_id)
+        goal = _find_goal(goals, goal_id)
         if goal is None:
-            raise HTTPException(status_code=404, detail="goal not found")
-        if dependency_id not in by_id:
-            raise HTTPException(status_code=404, detail="dependency goal not found")
+            raise HTTPException(status_code=404, detail={"code": "goal_not_found"})
+        if _dependency_would_cycle(goals, goal_id, dependency_id):
+            raise HTTPException(
+                status_code=409,
+                detail={"code": "dependency_cycle", "message": "Dependency would create a cycle."},
+            )
         existing = goal.get("dependencies", [])
         if not isinstance(existing, list):
-            raise HTTPException(status_code=409, detail="stored dependency data is invalid")
+            existing = []
         if dependency_id in existing:
-            return {"goal_id": goal_id, "dependencies": existing, "changed": False}
-        stack = [dependency_id]
-        seen: set[str] = set()
-        while stack and len(seen) < 500:
-            current_id = stack.pop()
-            if current_id == goal_id:
-                raise HTTPException(status_code=409, detail={"code": "dependency_cycle", "message": "This dependency would create a cycle."})
-            if current_id in seen:
-                continue
-            seen.add(current_id)
-            current = by_id.get(current_id, {})
-            children = current.get("dependencies", [])
-            if isinstance(children, list):
-                stack.extend(item for item in children[:50] if isinstance(item, str) and item not in seen)
-        if len(seen) >= 500:
-            raise HTTPException(status_code=409, detail="dependency graph is too large to validate safely")
-        updated = memory.update_goal(goal_id, dependencies=[*existing, dependency_id])
+            return {"goal": goal, "changed": False}
+        updated = memory.update_goal(goal_id, {"dependencies": existing + [dependency_id]})
         return {"goal": updated, "changed": True}
     except HTTPException:
         raise
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail="goal not found") from exc
-    except MemoryValidationError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as error:
+        raise HTTPException(status_code=503, detail={"code": "goal_dependency_unavailable", "message": str(error)})
 
 
 @router.delete("/goals/{goal_id}/dependencies")
