@@ -19,11 +19,14 @@ class ProjectTerminalService:
 
     def __init__(self, root: str | Path = "memory/project_terminal_runs.json", sandbox=None):
         self.store = AtomicJsonStore(root)
+        self._sandbox_explicit = sandbox is not None
         self.sandbox = sandbox or ContainerSandboxProvider()
 
     def _os_sandbox_verified(self) -> bool:
         """Execution is enabled only when a concrete isolation provider verifies itself."""
         try:
+            if not self._sandbox_explicit:
+                return False
             status = self.sandbox.status()
             return bool(getattr(status, "available", False))
         except Exception:
