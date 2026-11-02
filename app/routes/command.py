@@ -67,8 +67,40 @@ def _command_result_success(result) -> bool:
 def command(
     request: GenericInput
 ):
-    # Single boundary: capability output (internal JSON) -> user-facing message + attachments.
-    return adapt_user_output(_command_impl(request))
+    # Normalize once, then persist the exact user-facing response contract for chat restore.
+    response = adapt_user_output(_command_impl(request))
+    if isinstance(response, dict):
+        session_id = response.get("session_id")
+        message = response.get("message")
+        if isinstance(session_id, str) and session_id and isinstance(message, str) and message.strip():
+            sessions = SessionManagerService()
+            session = sessions.get_session(session_id)
+            recent = session.get("recent_messages", []) if isinstance(session, dict) else []
+            latest = next(
+                (
+                    item for item in reversed(recent)
+                    if isinstance(item, dict) and item.get("role") == "assistant"
+                ),
+                None,
+            )
+            metadata = dict(latest.get("metadata") or {}) if isinstance(latest, dict) else {}
+            metadata["response"] = {
+                "success": response.get("success") is not False,
+                "message": message,
+                "output": response.get("output"),
+                "attachments": response.get("attachments", []),
+                "clarification_required": response.get("clarification_required", False),
+            }
+            if isinstance(response.get("result"), dict):
+                result = response["result"]
+                metadata["response"]["capability"] = result.get("capability")
+            if isinstance(latest, dict):
+                sessions.update_message_metadata(
+                    session_id,
+                    latest.get("message_id"),
+                    metadata,
+                )
+    return response
 
 
 def _command_impl(
