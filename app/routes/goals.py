@@ -708,10 +708,11 @@ def add_goal_dependency(goal_id: str, request: GoalDependencyRequest):
         }
         goal = by_id.get(goal_id)
         dependency_id = request.dependency_goal_id.strip()
-        # Check self-reference before graph/store lookup so direct calls and
-        # API calls have identical cycle semantics.
         if dependency_id == goal_id:
-            raise HTTPException(status_code=409, detail={"code": "dependency_cycle", "message": "A goal cannot depend on itself."})
+            raise HTTPException(
+                status_code=409,
+                detail={"code": "dependency_cycle", "message": "A goal cannot depend on itself."},
+            )
         if goal is None:
             raise HTTPException(status_code=404, detail="goal not found")
         if dependency_id not in by_id:
