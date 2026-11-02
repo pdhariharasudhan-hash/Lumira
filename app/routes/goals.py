@@ -720,8 +720,8 @@ def add_goal_dependency(goal_id: str, request: GoalDependencyRequest):
     Direct self references are rejected before any persistence access.
     """
     dependency_id = request.dependency_goal_id.strip()
-    # Reject the direct cycle before entering the persistence/error boundary.
-    if dependency_id == goal_id.strip():
+    normalized_goal_id = str(goal_id).strip()
+    if dependency_id == normalized_goal_id:
         raise HTTPException(
             status_code=409,
             detail={"code": "dependency_cycle", "message": "A goal cannot depend on itself."},
