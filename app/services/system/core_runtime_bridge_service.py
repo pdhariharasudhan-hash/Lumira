@@ -164,6 +164,16 @@ class CoreRuntimeBridgeService:
         )
         context["device_context"] = self._safe("devices", self._device_summary)
         context["learning_context"] = self._safe("learning", self._learning_context)
+
+        # Additional bounded bridges keep major feature outputs visible to the
+        # same core/agent execution path without exposing whole persistent stores.
+        context["artifact_context"] = self._safe("artifacts", self._artifact_context)
+        context["voice_context"] = self._safe("voice", self._voice_context)
+        context["search_context"] = self._safe("search", self._search_summary)
+        context["agent_context"] = self._safe("agents", self._agent_summary)
+        context["personal_context"] = self._safe(
+            "personal_context", self._personal_context_summary
+        )
         return {"success": True, "context": context}
 
     def _project_context(self, project_id: str):
@@ -206,6 +216,29 @@ class CoreRuntimeBridgeService:
                 "goal_id": goal_id,
             },
         }
+
+    def _artifact_context(self):
+        summary = self.artifacts.availability_summary()
+        return {
+            "total": summary.get("total", 0),
+            "available": summary.get("available", 0),
+            "unavailable": summary.get("unavailable", 0),
+        }
+
+    def _voice_context(self):
+        status = self.wake_word.status()
+        if not isinstance(status, dict):
+            return {"available": False}
+        # Voice runtime status is operational metadata only; transcripts and
+        # recordings remain in their dedicated artifact/memory stores.
+        return {
+            "available": status.get("available", status.get("enabled", False)),
+            "enabled": status.get("enabled", False),
+        }
+
+    def _search_summary(self):
+        # Do not run an empty global search or expose unrelated result data.
+        return {"available": self.search is not None, "engine": "unified_search"}
 
     def _learning_context(self):
         data = self.memory.get_all()
