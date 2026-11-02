@@ -167,13 +167,16 @@ class CoreRuntimeBridgeService:
         return {"success": True, "context": context}
 
     def _project_context(self, project_id: str):
-        project = self.projects.get_project(project_id)
-        if project is None:
+        result = self.projects.get_project(project_id)
+        if not isinstance(result, dict) or result.get("success") is not True:
+            return {"found": False, "project_id": project_id}
+        project = result.get("project")
+        if not isinstance(project, dict):
             return {"found": False, "project_id": project_id}
         return {
             "found": True,
             "project_id": project_id,
-            "name": project.get("name"),
+            "name": project.get("name") or project_id,
             "status": project.get("status"),
             "version": project.get("version") or project.get("latest_version"),
         }
