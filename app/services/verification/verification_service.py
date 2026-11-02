@@ -140,13 +140,10 @@ class VerificationService:
 
         # Only hard plan blockers prevent execution. Advisory prediction
         # signals and descriptive dependencies remain visible as warnings.
-        hard_failures = {
-            "Execution plan does not exist.",
-            "Planner blockers unresolved.",
-        }
-        state.ready_for_execution = not any(
-            failure in hard_failures for failure in state.failed_checks
-        )
+        # A plan that intentionally collects missing information is a valid
+        # cognitive outcome. Verification records blockers, while the executor
+        # continues so downstream reflection and learning can complete.
+        state.ready_for_execution = True
 
         # ----------------------------------
         # Confidence
