@@ -87,16 +87,6 @@ def search_sessions(
         conversation = session.get("conversation") if isinstance(session.get("conversation"), dict) else {}
         fields = [session.get(key) for key in ("session_id", "workspace_id", "project_id", "active_project", "active_version", "active_mode", "current_goal", "goal_id", "last_command")]
         fields.extend(conversation.get(key) for key in ("summary", "current_topic", "active_objective", "language_context"))
-        # Message bodies are searchable for discovery, but are never returned in
-        # search results; this preserves useful recall without exposing content.
-        recent_messages = session.get("recent_messages", [])
-        if isinstance(recent_messages, list):
-            fields.extend(
-                message.get(key)
-                for message in recent_messages[-20:]
-                if isinstance(message, dict)
-                for key in ("content", "text")
-            )
         if query in " ".join(str(value or "") for value in fields).casefold():
             matches.append({
                 "session_id": session.get("session_id"), "status": session.get("status"),
