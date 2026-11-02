@@ -741,7 +741,8 @@ def add_goal_dependency(goal_id: str, request: GoalDependencyRequest):
                 return False
             seen.add(node)
             return any(reaches(child, target, seen) for child in graph.get(node, []))
-        if reaches(dependency_id, normalized_goal_id):
+        # Reject cycles under the prerequisite graph semantics used by Lumira.
+        if reaches(dependency_id, normalized_goal_id) or reaches(normalized_goal_id, dependency_id):
             raise HTTPException(
                 status_code=409,
                 detail={"code": "dependency_cycle", "message": "Dependency would create a cycle."},
