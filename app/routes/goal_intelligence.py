@@ -57,6 +57,9 @@ class MilestoneCreate(BaseModel):
 
 
 def _memory_and_goals(project_id: str | None = None, include_archived: bool = False):
+    # Direct function calls receive FastAPI Query defaults rather than None.
+    if not isinstance(project_id, str):
+        project_id = None
     memory = MemoryService()
     goals = memory.get_all().get("goals", [])
     goals = [
