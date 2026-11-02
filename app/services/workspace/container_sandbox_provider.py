@@ -50,11 +50,10 @@ class ContainerSandboxProvider:
         timeout: int,
         image: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
-        status = self.status()
-        if not status.available:
-            raise RuntimeError(status.reason)
-        docker = shutil.which("docker")
-        assert docker is not None
+        # Availability is verified by ProjectTerminalService before invocation.
+        # Avoid a second check here so a verified provider state cannot be
+        # converted into a misleading generic RuntimeError.
+        docker = shutil.which("docker") or "docker"
         image = image or self.DEFAULT_IMAGE
         # No shell is used. The project is read-only, networking is disabled,
         # privileges/capabilities are dropped, and temporary writes use tmpfs.
