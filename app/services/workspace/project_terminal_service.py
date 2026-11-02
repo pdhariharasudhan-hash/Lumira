@@ -96,6 +96,8 @@ class ProjectTerminalService:
 
         started = datetime.now(UTC).isoformat()
         try:
+            # The provider may wrap subprocess execution; keep the allowlisted
+            # invocation explicit so startup failures are classified accurately.
             result = self.sandbox.run(
                 command, project_path, timeout=self.TIMEOUT_SECONDS
             )
