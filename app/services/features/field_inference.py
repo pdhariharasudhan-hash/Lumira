@@ -34,6 +34,29 @@ class FieldInference:
             "stock":[
                 "symbol",
                 "price"
+            ],
+
+            "task":[
+                "title",
+                "status",
+                "due_date"
+            ],
+
+            "project":[
+                "name",
+                "description",
+                "status"
+            ],
+
+            "contact":[
+                "name",
+                "email"
+            ],
+
+            "idea":[
+                "title",
+                "description",
+                "priority"
             ]
         }
 

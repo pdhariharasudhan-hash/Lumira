@@ -93,13 +93,16 @@ class WakeWordListenerService:
                 self._activated = False
                 return {"success": True, "stopped": True, **self.status()}
             self._stop_event.set()
+            had_error = self._state == "error" or self._last_error is not None
             self._state = "stopping"
         thread.join(timeout=max(0.1, min(float(timeout_seconds), 5.0)))
         with self._lock:
             alive = thread.is_alive()
             if not alive:
                 self._thread = None
-                if self._state != "error":
+                if had_error or self._last_error is not None:
+                    self._state = "error"
+                else:
                     self._state = "stopped"
                 self._activated = False
             return {

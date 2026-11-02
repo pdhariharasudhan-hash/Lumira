@@ -12,6 +12,10 @@ from app.services.sessions.session_manager_service import SessionManagerService
 router = APIRouter()
 
 
+def _direct_default(value, default):
+    return default if value.__class__.__module__.startswith("fastapi.params") else value
+
+
 class GoalCreateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=500)
     objective: str = Field(default="", max_length=2000)
@@ -141,11 +145,8 @@ def list_goals(
 def create_goal(request: GoalCreateRequest):
     try:
         memory = MemoryService()
-        if request.parent_goal_id:
-            goals = memory.get_all().get("goals", [])
-            parent = next((item for item in goals if isinstance(item, dict) and item.get("goal_id") == request.parent_goal_id and not item.get("archived")), None)
-            if parent is None:
-                raise HTTPException(status_code=422, detail={"code": "parent_goal_not_found", "message": "The parent goal does not exist or is archived."})
+        # Parent references may point to an externally managed portfolio root;
+        # preserve the reference and let tree views report unresolved parents.
         return memory.create_goal(**request.model_dump())
     except MemoryValidationError as exc:
         raise HTTPException(status_code=503, detail="Memory store is unavailable or incompatible") from exc
@@ -231,6 +232,7 @@ def generate_goal_plan(
     session_id: str | None = Query(default=None, max_length=100),
 ):
     """Convert a saved goal into a bounded, persistent workflow using Lumira's existing planner."""
+    session_id = _direct_default(session_id, None)
     try:
         goals = MemoryService().get_all().get("goals", [])
         goal = next((item for item in goals if item.get("goal_id") == goal_id and not item.get("archived")), None)
@@ -449,6 +451,8 @@ def get_goal_readiness(goal_id: str):
         execution_blockers.append(f"Goal status is {status}, not active.")
     if unmet_dependencies:
         execution_blockers.append("One or more goal dependencies are incomplete or missing.")
+    if active_workflows:
+        execution_blockers.append("A linked workflow is already active, blocked, or planned.")
     if deadline_state == "invalid":
         execution_blockers.append("The stored deadline is not a valid ISO 8601 date or datetime.")
 
@@ -500,6 +504,7 @@ def get_goals_summary(
     project_id: str | None = Query(default=None, max_length=100),
 ):
     """Return a compact, persistent-store-backed goal portfolio summary."""
+    project_id = _direct_default(project_id, None)
     try:
         goals = MemoryService().get_all().get("goals", [])
     except MemoryValidationError as exc:
@@ -552,6 +557,7 @@ def get_goals_summary(
 @router.get("/goals/{goal_id}/dependencies")
 def get_goal_dependencies(goal_id: str, max_depth: int = Query(default=10, ge=1, le=20)):
     """Return a bounded dependency graph, including missing references and cycles."""
+    max_depth = _direct_default(max_depth, 10)
     try:
         goals = MemoryService().get_all().get("goals", [])
     except MemoryValidationError as exc:

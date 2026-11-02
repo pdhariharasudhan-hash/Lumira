@@ -87,5 +87,12 @@ class IntentClassifierService:
             "personal_context": "personal",
             "notes": "personal",
             "reminders": "personal",
+            "scheduling": "personal",
+            "daily_planning": "plan",
+            "notifications": "personal",
+            "personal_organization": "personal",
+            "email": "personal",
+            "voice": "personal",
+            "project_pipeline": "build",
         }
         return categories.get(capability, "chat")

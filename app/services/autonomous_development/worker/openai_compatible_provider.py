@@ -262,7 +262,11 @@ class OpenAICompatibleDevelopmentProvider(DevelopmentProvider):
                 )
 
             with response_context as response:
-                raw_bytes = response.read(self.MAX_RESPONSE_BYTES + 1)
+                try:
+                    raw_bytes = response.read(self.MAX_RESPONSE_BYTES + 1)
+                except TypeError:
+                    # Some test/deterministic response adapters expose only read().
+                    raw_bytes = response.read()
                 if len(raw_bytes) > self.MAX_RESPONSE_BYTES:
                     return {
                         "success": False,

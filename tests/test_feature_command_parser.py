@@ -22,6 +22,37 @@ def test_feature_status_command_rejects_missing_name():
     assert parsed["success"] is False
 
 
+def test_complete_project_commands_route_to_existing_pipeline():
+    parser = CommandParserService()
+    for command in (
+        "build the complete project for a notes API",
+        "build full project for my personal assistant",
+        "build all features for a task manager",
+    ):
+        parsed = parser.parse(command)
+        assert parsed["success"] is True
+        assert parsed["capability"] == "project_pipeline"
+        assert parsed["payload"]["request"] == command
+
+
+def test_assistant_commands_route_to_existing_capabilities():
+    parser = CommandParserService()
+    cases = {
+        "schedule my study session": "scheduling",
+        "plan my day": "daily_planning",
+        "notify me when work is done": "notifications",
+        "organize my work": "personal_organization",
+        "draft an email to my teacher": "email",
+        "enable voice assistant": "voice",
+    }
+
+    for command, capability in cases.items():
+        parsed = parser.parse(command)
+        assert parsed["success"] is True
+        assert parsed["capability"] == capability
+        assert parsed["payload"]["request"] == command
+
+
 def test_feature_list_phrases_route_to_list_features():
     parser = CommandParserService()
     for command in ("list features", "list all features", "show features", "show me features"):

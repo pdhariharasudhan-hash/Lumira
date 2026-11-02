@@ -78,6 +78,10 @@ class CommandParserService:
         if text in {"features kaatu", "feature list kaatu", "அம்சங்களை காட்டு", "அம்சங்கள் காட்டு"}:
             return {"success": True, "capability": "list_features", "payload": {}}
 
+        complete_project_phrases = ("build the complete project", "build full project", "build all features")
+        if any(phrase in text for phrase in complete_project_phrases):
+            return {"success": True, "capability": "project_pipeline", "payload": {"request": command}}
+
         creation_phrases = (
             "create pannu", "create pannunga", "build pannu", "build pannunga",
             "உருவாக்கு", "உருவாக்குங்கள்", "செயலி உருவாக்கு", "இணையதளம் உருவாக்கு",
@@ -296,6 +300,18 @@ class CommandParserService:
         # OPERATIONS
         # ----------------------------------------------------
 
+        assistant_exact_routes = (
+            ("schedule my study session", "scheduling"),
+            ("plan my day", "daily_planning"),
+            ("notify me when work is done", "notifications"),
+            ("organize my work", "personal_organization"),
+            ("draft an email to my teacher", "email"),
+            ("enable voice assistant", "voice"),
+        )
+        for phrase, capability in assistant_exact_routes:
+            if text == phrase:
+                return {"success": True, "capability": capability, "payload": {"request": command}}
+
         operations_rules = [
             ("automate", "workflow_automation"),
             ("schedule", "scheduled_tasks"),
@@ -391,6 +407,12 @@ class CommandParserService:
                 }
 
         # ----------------------------------------------------
+        if any(phrase in text for phrase in ("upgrade yourself", "improve yourself", "make yourself capable", "add this capability to yourself")):
+            return {"success": True, "capability": "self_upgrade_plan", "payload": {"goal": command}}
+
+        if text in {"read system prompt", "show system prompt", "show your instructions", "what are your instructions"}:
+            return {"success": True, "capability": "read_system_prompt", "payload": {}}
+
         # PERSONAL
         # ----------------------------------------------------
 
@@ -419,4 +441,3 @@ class CommandParserService:
             "success": False,
             "message": "Unknown command",
         }
-

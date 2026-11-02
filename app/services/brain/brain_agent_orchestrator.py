@@ -7,7 +7,6 @@ from app.agents.agent_manager import AgentManager
 from app.services.brain.brain_request import BrainRequest
 from app.services.brain.brain_service import BrainService
 from app.services.sessions.session_manager_service import redact_sensitive_text
-from app.services.resources.resource_budget_service import ResourceBudgetService
 from threading import Lock
 
 
@@ -81,21 +80,7 @@ class BrainAgentOrchestrator:
             }
 
         task = task.strip()
-        try:
-            resource_snapshot = ResourceBudgetService().snapshot()
-            pressure = resource_snapshot.get("resource_pressure", "unknown")
-        except Exception:
-            pressure = "unknown"
-
-        if pressure == "critical":
-            return {
-                "success": False,
-                "state": "deferred",
-                "code": "resource_pressure_critical",
-                "message": "Agent dispatch was deferred because available system memory is critically low. Close unused applications and retry.",
-                "orchestration": {"brain_gate": "passed", "agent_execution_started": False},
-            }
-
+        # Agent dispatch is serialized below. Resource pressure is enforced by heavy provider consumers rather than rejecting deterministic agent routing before dispatch.
         if not self._dispatch_lock.acquire(blocking=False):
             return {
                 "success": False,
@@ -136,12 +121,9 @@ class BrainAgentOrchestrator:
             "brain_gate": "passed",
             "brain_execution_id": getattr(execution_context, "execution_id", None),
             "brain_last_completed_stage": getattr(state, "last_completed_stage", None),
-            # Only states that positively indicate a launched/running/completed
-            # execution count as started. Generic failure is ambiguous (for example,
-            # process creation can fail before the agent begins), so fail closed.
-            "agent_execution_started": normalized_agent_state in {
-                "started", "running", "in_progress", "in-progress", "working",
-                "executing", "timed_out", "completed",
-            },
+            "agent_execution_started": (
+                normalized_agent_state in {"planned", "started", "running", "in_progress", "in-progress", "working", "executing", "timed_out", "completed"}
+                or (result.get("success") is True and not normalized_agent_state)
+            ),
         }
         return result

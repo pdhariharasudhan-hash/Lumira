@@ -109,6 +109,8 @@ from app.routes.features import router as features_router
 from app.routes.intelligence import router as intelligence_router
 from app.routes.notepad import router as notepad_router
 from app.routes.image_understanding import router as image_understanding_router
+from app.routes.image_generation import router as image_generation_router
+from app.routes.system_prompt import router as system_prompt_router
 import ipaddress
 
 from app.services.auth.local_auth_service import LocalAuthService
@@ -369,6 +371,16 @@ app.include_router(
 app.include_router(
     image_understanding_router,
     tags=["Image Understanding"]
+)
+
+app.include_router(
+    image_generation_router,
+    tags=["Image Generation"]
+)
+
+app.include_router(
+    system_prompt_router,
+    tags=["Lumira Identity"]
 )
 
 

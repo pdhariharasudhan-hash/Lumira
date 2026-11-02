@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 from datetime import UTC, datetime, timedelta
@@ -1001,12 +1001,8 @@ class AutonomousDevelopmentService:
                 )
 
             verification["durable_workflow_completed"] = True
-            self.work_items.update_task(
-                workflow_id,
-                verify_task["task_id"],
-                "completed",
-                result=self._serialize_for_work_item(verification),
-            )
+            # The verify task is already durably completed before record closes the workflow.
+            # WorkItemService intentionally rejects a second completed transition.
             completed = self.work_items.get_workflow(workflow_id)
 
             return {

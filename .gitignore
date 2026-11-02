@@ -8,3 +8,15 @@ memory/command_history.json
 memory/pipeline_history.json
 memory/planner_history.json
 memory/execution_sessions.json
+# Generated runtime state and local verification artifacts
+.pytest-work/
+.pytest_cache/
+autodev_review/
+autodev_review.zip
+artifacts/audio/
+lumira_desktop/release/
+lumira_desktop/release_phase1/
+memory/*.json
+data/cognitive_memory.json
+data/project_memory.json
+memory/project_terminal_runs.json

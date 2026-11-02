@@ -67,13 +67,13 @@ def test_dependency_graph_reports_missing_dependency_and_cycle():
 
 
 def test_add_goal_dependency_prevents_self_and_transitive_cycles(monkeypatch):
-    memory = GoalMemory([goal("a"), goal("b", dependencies=["c"]), goal("c")])
+    memory = GoalMemory([goal("a"), goal("b", dependencies=["c"]), goal("c", dependencies=["a"])])
     monkeypatch.setattr(route, "MemoryService", lambda: memory)
     with pytest.raises(HTTPException) as self_cycle:
         route.add_goal_dependency("a", route.GoalDependencyRequest(dependency_goal_id="a"))
     assert self_cycle.value.status_code == 409
     with pytest.raises(HTTPException) as cycle:
-        route.add_goal_dependency("c", route.GoalDependencyRequest(dependency_goal_id="a"))
+        route.add_goal_dependency("c", route.GoalDependencyRequest(dependency_goal_id="b"))
     assert cycle.value.status_code == 409
 
 

@@ -40,7 +40,7 @@ class UnifiedSearchService:
         if not isinstance(query, str) or not query.strip():
             return []
         bounded_query = query[:4000].lower()
-        terms = [term for term in re.findall(r"[a-z0-9_+-]+", bounded_query)
+        terms = [term for term in re.findall(r"[a-z0-9_+\-]+|[\u0B80-\u0BFF]+", bounded_query)
                  if len(term) > 1 and term not in cls.STOP_WORDS]
         # Avoid repeated work on huge or repetitive user-supplied search strings.
         return list(dict.fromkeys(terms))[:32]

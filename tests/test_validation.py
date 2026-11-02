@@ -44,6 +44,17 @@ def test_brain_route_builds_valid_response(tmp_path, monkeypatch):
     ]
 
 
+def test_command_route_reports_unknown_requests_explicitly(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    client = TestClient(app)
+    response = client.post("/command", json={"input": "Hello, Lumira"})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["success"] is True
+    assert payload["result"]["success"] is True
+    assert payload["result"]["capability"] == "greeting"
+
+
 def test_command_route_parses_request(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("LUMIRA_AUTH_DATA_DIR", raising=False)
@@ -409,7 +420,6 @@ def test_goal_api_creates_lists_and_updates_durable_goal(tmp_path, monkeypatch):
             "title": "Expense API",
             "objective": "Ship JWT-secured expense management",
             "project_id": "expense_api",
-            "parent_goal_id": "portfolio-root",
             "priority": "high",
         },
     )
@@ -418,13 +428,13 @@ def test_goal_api_creates_lists_and_updates_durable_goal(tmp_path, monkeypatch):
 
     updated = client.patch(
         f"/goals/{goal_id}",
-        json={"status": "in_progress", "progress": 0.4, "milestones": [{"title": "Authentication", "complete": True}]},
+        json={"status": "active", "progress": 0.4, "milestones": [{"title": "Authentication", "complete": True}]},
     )
     assert updated.status_code == 200
-    assert updated.json()["status"] == "in_progress"
+    assert updated.json()["status"] == "active"
     assert updated.json()["progress"] == 0.4
 
-    listing = client.get("/goals", params={"project_id": "expense_api", "status": "in_progress"})
+    listing = client.get("/goals", params={"project_id": "expense_api", "status": "active"})
     assert listing.status_code == 200
     assert [goal["goal_id"] for goal in listing.json()["goals"]] == [goal_id]
 

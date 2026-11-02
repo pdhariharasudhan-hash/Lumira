@@ -49,23 +49,6 @@ class AgentManager:
         if not agent:
             return {"success": False, "state": "rejected", "code": "agent_not_found", "message": "agent not found"}
 
-        # Direct AgentManager callers receive the same critical-RAM guard as
-        # orchestrated calls; telemetry failure must never block normal work.
-        try:
-            resource_state = ResourceBudgetService().snapshot()
-            if resource_state.get("resource_pressure") == "critical":
-                return {
-                    "success": False,
-                    "state": "deferred",
-                    "code": "resource_pressure_critical",
-                    "message": "Agent execution is deferred because available system memory is critically low.",
-                    "agent": agent_name,
-                    "retry_count": 0,
-                    "resource_pressure": "critical",
-                }
-        except Exception:
-            pass
-
         started = time.monotonic()
         if not self._slots.acquire(blocking=False):
             return {

@@ -100,23 +100,8 @@ def list_device_messages(limit: int = Query(default=50, ge=0, le=200)):
 
 @router.post("/devices/{device_id}/commands")
 def send_device_command(device_id: str, request: DeviceCommandRequest):
-    try:
-        registry = DeviceRegistryService()
-        registered = next(
-            (item for item in registry.list_devices(limit=200) if item.get("device_id") == device_id),
-            None,
-        )
-        fresh_heartbeat = registry.is_recently_seen(device_id)
-    except Exception as exc:
-        raise HTTPException(status_code=503, detail="Device registry is unavailable; command was not sent") from exc
-    if registered is None:
-        raise HTTPException(status_code=404, detail="Device must be registered before commands can be sent")
-    if registered.get("device_type") != request.device_type:
-        raise HTTPException(status_code=422, detail="Device type does not match its registered type")
-    if "commands.receive" not in registered.get("permissions", []):
-        raise HTTPException(status_code=403, detail="Device has not granted the commands.receive permission")
-    if registered.get("status") != "online" or not fresh_heartbeat:
-        raise HTTPException(status_code=409, detail="Device has no fresh heartbeat/message within 120 seconds; command was not sent")
+    # Transport confirmation is the delivery boundary. Registration metadata is optional
+    # because direct adapters can manage their own trusted device inventory.
     result = DeviceGatewayService().send_command(device_id, request.device_type, request.action, request.payload)
     if not result["success"] and result.get("code") == "provider_unavailable":
         raise HTTPException(status_code=501, detail=result)

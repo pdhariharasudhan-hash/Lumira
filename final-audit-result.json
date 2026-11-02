@@ -1,0 +1,335 @@
+{
+  "workspace": ".",
+  "file_count": 908,
+  "findings": [],
+  "checks": {
+    "domain_inventory": {
+      "backend": 309,
+      "core": 28,
+      "agents": 9,
+      "services": 251,
+      "routes": 37,
+      "tests": 49,
+      "desktop": 25,
+      "memory": 27,
+      "sessions": 2,
+      "goals": 4,
+      "projects": 13,
+      "workflows": 3,
+      "recovery": 1,
+      "artifacts": 4,
+      "voice": 6,
+      "search": 4,
+      "providers": 20,
+      "modes": 14,
+      "devices": 3,
+      "authentication": 2,
+      "persistence": 1
+    },
+    "router_registration": {
+      "status": "completed",
+      "router_count": 33,
+      "registered_count": 33,
+      "modules": [
+        {
+          "module": "intelligence",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "devices",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "notepad",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "image_understanding",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "recovery",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "project_preview",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "goals",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "features",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "builder",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "artifacts",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "web",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "continue_project",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "workflows",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "compare",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "execute",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "auth",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "command",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "health",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "run",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "project_terminal",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "voice_capture",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "project_details",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "sessions",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "agents",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "brain",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "project_file_content",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "validate",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "memory",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "search",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "code",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "project_files",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "project_versions",
+          "imported": true,
+          "registered": true
+        },
+        {
+          "module": "projects",
+          "imported": true,
+          "registered": true
+        }
+      ]
+    },
+    "desktop_api_contract": {
+      "status": "completed",
+      "frontend_path_count": 46,
+      "backend_path_count": 77,
+      "unmatched_paths": []
+    },
+    "desktop_capabilities": {
+      "status": "completed",
+      "terminal_ui_present": true,
+      "terminal_available": false,
+      "preview_provider_registered": true
+    },
+    "security_shell_scan": {
+      "status": "completed",
+      "source_files_checked": 302,
+      "unsafe_process_calls": []
+    },
+    "source_integrity": {
+      "status": "completed",
+      "python_files_checked": 284,
+      "source_chars_checked": 998469,
+      "syntax_error_count": 0,
+      "unresolved_local_import_count": 0
+    },
+    "behavioral_gate": {
+      "status": "blocked",
+      "reason": "OS-level sandboxing is not implemented. Audit will not execute project-controlled pytest/npm commands without verified isolation.",
+      "commands": [
+        {
+          "command": [
+            "python",
+            "-m",
+            "pytest",
+            "-q"
+          ],
+          "status": "not_run",
+          "passed": false
+        },
+        {
+          "command": [
+            "npm.cmd",
+            "test",
+            "--",
+            "--run"
+          ],
+          "status": "not_run",
+          "passed": false
+        },
+        {
+          "command": [
+            "npm.cmd",
+            "run",
+            "build"
+          ],
+          "status": "not_run",
+          "passed": false
+        },
+        {
+          "command": [
+            "npm.cmd",
+            "run",
+            "lint"
+          ],
+          "status": "not_run",
+          "passed": false
+        }
+      ],
+      "expected_command_count": 4
+    },
+    "project_terminal_security": {
+      "status": "blocked",
+      "shell": false,
+      "command_allowlist": true,
+      "os_sandbox": false,
+      "sandbox_verification": "not_implemented",
+      "untrusted_project_code_execution_possible": true
+    },
+    "historical_recovery": {
+      "status": "blocked",
+      "count": 2,
+      "runs": [
+        {
+          "workflow_id": "725f0548-1ccc-43a6-aed5-64813f27ccae",
+          "recovery_run_id": "ea5c2759-14a4-48f0-830e-eb729cfc3ac9",
+          "objective": "Implement a sandboxed project terminal provider using only the validation command allowlist.",
+          "reason": "Blocked by the missing verified OS sandbox. Preserve this as a completion blocker instead of retrying provider-generated changes."
+        },
+        {
+          "workflow_id": "3880fd3d-eae9-4979-8aa3-ceba20fe72e2",
+          "recovery_run_id": "fd7ea3d9-0082-4153-85a4-0dcabd5e092e",
+          "objective": "Add a harmless pytest test confirming Lumira autonomous development is operational",
+          "reason": "Provider attempts were exhausted while the behavioral/build/lint gate remains unavailable. Preserve the checkpoint instead of re-queuing work that cannot yet be verified."
+        }
+      ]
+    }
+  },
+  "coverage": {
+    "whole_lumira": false,
+    "domains": [
+      "agents",
+      "artifacts",
+      "authentication",
+      "backend",
+      "core",
+      "desktop",
+      "devices",
+      "goals",
+      "memory",
+      "modes",
+      "persistence",
+      "projects",
+      "providers",
+      "recovery",
+      "routes",
+      "search",
+      "services",
+      "sessions",
+      "tests",
+      "voice",
+      "workflows"
+    ],
+    "source_file_count": 908
+  },
+  "audited_at": "2026-10-20T23:25:14.471286+00:00",
+  "completion_ready": false,
+  "completion_blockers": [
+    "The final behavioral/build/lint gate did not pass all required commands.",
+    "Project terminal commands are allowlisted but are not isolated by an OS sandbox."
+  ],
+  "limits": {
+    "max_source_files": 400,
+    "max_source_chars": 1000000,
+    "max_findings": 10
+  }
+}

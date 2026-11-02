@@ -11,6 +11,10 @@ from app.services.persistence.atomic_json_store import PersistenceIntegrityError
 router = APIRouter()
 
 
+def _direct_default(value, default):
+    return default if value.__class__.__module__.startswith("fastapi.params") else value
+
+
 def _service() -> WorkItemService:
     return WorkItemService()
 
@@ -47,6 +51,7 @@ def workflow_summary(
     project_id: str | None = Query(default=None, max_length=100),
     category: Literal["business", "operations"] | None = None,
 ):
+    project_id = _direct_default(project_id, None)
     workflows = _workflows(project_id=project_id, category=category, limit=200)
     status_counts = {status: 0 for status in ("planned", "in_progress", "blocked", "completed", "failed")}
     task_counts = {status: 0 for status in ("pending", "in_progress", "blocked", "completed", "failed")}
@@ -89,6 +94,8 @@ def workflow_attention(
     project_id: str | None = Query(default=None, max_length=100),
     limit: int = Query(default=20, ge=1, le=100),
 ):
+    project_id = _direct_default(project_id, None)
+    limit = _direct_default(limit, 20)
     now = datetime.now(UTC)
     cutoff = now - timedelta(days=7)
     candidates = []
@@ -118,6 +125,9 @@ def workflow_timeline(
     project_id: str | None = Query(default=None, max_length=100),
     limit: int = Query(default=100, ge=1, le=500),
 ):
+    days = _direct_default(days, 30)
+    project_id = _direct_default(project_id, None)
+    limit = _direct_default(limit, 100)
     cutoff = datetime.now(UTC) - timedelta(days=days)
     events = []
     for workflow in _workflows(project_id=project_id, limit=200):
@@ -147,6 +157,8 @@ def search_workflows(
     category: Literal["business", "operations"] | None = None,
     limit: int = Query(default=30, ge=1, le=100),
 ):
+    project_id = _direct_default(project_id, None)
+    limit = _direct_default(limit, 30)
     query = q.strip().casefold()
     if not query:
         raise HTTPException(status_code=422, detail="search query must not be empty")
@@ -169,6 +181,8 @@ def export_workflows(
     status: Literal["planned", "in_progress", "blocked", "completed", "failed"] | None = None,
     limit: int = Query(default=100, ge=1, le=200),
 ):
+    project_id = _direct_default(project_id, None)
+    limit = _direct_default(limit, 100)
     workflows = _workflows(project_id=project_id, category=category, limit=200)
     if status:
         workflows = [item for item in workflows if item.get("status") == status]

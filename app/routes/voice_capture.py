@@ -86,6 +86,10 @@ async def upload_voice(
 @router.post("/voice/transcript")
 def transcribe_voice(request: ArtifactRequest):
     result = TranscriptService().generate_transcript(request.artifact_id)
+    # A missing transcription provider is a declared unavailable capability,
+    # not a temporary service outage. Preserve 503 for retryable resource pressure.
+    if result.get("code") == "provider_unavailable":
+        raise HTTPException(status_code=501, detail=result)
     _raise_for_voice_readiness(result)
     return result
 
@@ -123,7 +127,7 @@ def playback_voice(request: PlaybackRequest):
 def start_wake_word_listener():
     result = _wake_word_listener.start()
     if not result["success"] and result.get("code") == "provider_unavailable":
-        raise HTTPException(status_code=503, detail=result)
+        raise HTTPException(status_code=501, detail=result)
     return result
 
 
@@ -181,6 +185,17 @@ def _persist_voice_capture_memory(audio_artifact_id: str, transcript_artifact_id
     except Exception:
         # Memory is a downstream sink; never discard the already-saved audio/transcript.
         return {"success": False, "code": "memory_persistence_failed", "message": "Voice artifacts are preserved, but memory persistence did not complete. Retry from the saved artifacts."}
+
+
+@router.post("/voice/idea-pipeline")
+def process_voice_idea_pipeline(request: VoiceProcessRequest):
+    """Run the canonical voice idea pipeline with transcript, summary and memory linking."""
+    from app.services.voice.voice_idea_pipeline_service import VoiceIdeaPipelineService
+
+    result = VoiceIdeaPipelineService().process(request.audio_artifact_id)
+    if not result.get("success") and result.get("stage") == "validate":
+        raise HTTPException(status_code=422, detail=result)
+    return result
 
 
 @router.post("/voice/process")

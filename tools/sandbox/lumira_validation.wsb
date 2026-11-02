@@ -1,0 +1,18 @@
+﻿<Configuration>
+  <VGpu>Disable</VGpu>
+  <Networking>Disable</Networking>
+  <ClipboardRedirection>Disable</ClipboardRedirection>
+  <PrinterRedirection>Disable</PrinterRedirection>
+  <AudioInput>Disable</AudioInput>
+  <VideoInput>Disable</VideoInput>
+  <MappedFolders>
+    <MappedFolder>
+      <HostFolder>E:\Hari\personal_ai_core</HostFolder>
+      <SandboxFolder>C:\LumiraSource</SandboxFolder>
+      <ReadOnly>true</ReadOnly>
+    </MappedFolder>
+  </MappedFolders>
+  <LogonCommand>
+    <Command>powershell.exe -NoExit -ExecutionPolicy Bypass -File C:\LumiraSource\tools\sandbox\prepare_validation_workspace.ps1</Command>
+  </LogonCommand>
+</Configuration>

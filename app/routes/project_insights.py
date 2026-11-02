@@ -9,6 +9,10 @@ from app.services.projects.project_discovery_service import ProjectDiscoveryServ
 from app.services.projects.project_paths import resolve_project_path
 
 router = APIRouter()
+
+
+def _direct_default(value, default):
+    return default if value.__class__.__module__.startswith("fastapi.params") else value
 IGNORED_DIRS = {".git", "node_modules", "__pycache__", ".venv", "dist", "build"}
 MAX_MANIFEST_FILES = 500
 
@@ -60,6 +64,7 @@ def project_summary():
 
 @router.get("/projects/search")
 def search_projects(q: str = Query(min_length=1, max_length=200), limit: int = Query(default=30, ge=1, le=100)):
+    limit = _direct_default(limit, 30)
     query = q.strip().casefold()
     if not query:
         raise HTTPException(status_code=422, detail="search query must not be empty")
@@ -112,6 +117,8 @@ def project_manifest(
     version: str | None = Query(default=None, max_length=40),
     limit: int = Query(default=200, ge=1, le=MAX_MANIFEST_FILES),
 ):
+    version = _direct_default(version, None)
+    limit = _direct_default(limit, 200)
     project_path, project = _project_or_404(project_name)
     version_name = version or ((project.get("latest") or {}).get("version") if isinstance(project.get("latest"), dict) else None)
     if not isinstance(version_name, str) or not version_name:
