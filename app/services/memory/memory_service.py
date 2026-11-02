@@ -563,10 +563,6 @@ class MemoryService:
         }, creating=True)
         now = datetime.now(UTC).isoformat()
         parent_goal_id = fields["parent_goal_id"]
-        if parent_goal_id:
-            existing = self._read_cognitive_memory().get("goals", [])
-            if not any(item.get("goal_id") == parent_goal_id and not item.get("archived") for item in existing):
-                raise MemoryValidationError("parent_goal_id does not reference an existing goal")
         return self._append_record("goals", self._record(
             "goal", parent_goal_id=parent_goal_id, title=self._safe_text(fields["title"].strip()),
             objective=self._safe_text(fields["objective"]), priority=fields["priority"], status=fields["status"],
