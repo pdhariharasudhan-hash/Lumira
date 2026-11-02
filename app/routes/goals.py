@@ -11,6 +11,9 @@ from app.services.sessions.session_manager_service import SessionManagerService
 
 router = APIRouter()
 
+def _normalize_optional_filter(value):
+    return value if isinstance(value, str) else None
+
 
 class GoalCreateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=500)
