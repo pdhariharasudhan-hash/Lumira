@@ -63,7 +63,16 @@ class WorkflowEngine:
     def execute(self, goal: str, session_id: str | None = None, project_id: str | None = None, goal_id: str | None = None):
         if not isinstance(goal, str) or not goal.strip() or len(goal) > self.MAX_GOAL_LENGTH:
             return {"success": False, "state": "rejected", "code": "invalid_goal", "message": "Goal must contain 1 to 10000 characters."}
-        core_context = {}\n        try:\n            from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService\n            core_context = CoreRuntimeBridgeService().execution_context("workflow_execute", session_id, project_id, goal_id)\n        except Exception:\n            core_context = {"success": False, "error": "core_context_unavailable"}\n        try:\n            plan = self.planner.execute(goal)
+        core_context = {}
+        try:
+            from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
+            core_context = CoreRuntimeBridgeService().execution_context(
+                "workflow_execute", session_id, project_id, goal_id
+            )
+        except Exception:
+            core_context = {"success": False, "error": "core_context_unavailable"}
+        try:
+            plan = self.planner.execute(goal)
         except Exception as exc:
             return {
                 "success": False,
