@@ -132,7 +132,6 @@ def export_sessions(
 
 @router.get("/sessions/{session_id}/health")
 def session_health(session_id: str):
-    limit = _int_param(limit, 50, 1, 200)
     try:
         session = SessionManagerService().get_session(session_id)
     except PersistenceIntegrityError as exc:
@@ -169,6 +168,7 @@ def session_related_workflows(
     session_id: str,
     limit: int = Query(default=50, ge=1, le=200),
 ):
+    limit = _int_param(limit, 50, 1, 200)
     try:
         session = SessionManagerService().get_session(session_id)
         if session is None:
