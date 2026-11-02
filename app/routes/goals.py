@@ -16,6 +16,9 @@ def _normalize_optional_filter(value):
 
 def _goals_from_memory(memory):
     data = memory.get_all()
+    # Test doubles and alternate stores may expose the goal list directly.
+    if isinstance(data, list):
+        return data
     if not isinstance(data, dict):
         return []
     goals = data.get("goals")
