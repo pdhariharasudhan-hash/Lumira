@@ -80,6 +80,10 @@ def search_sessions(
         raise HTTPException(status_code=422, detail="search query must not be empty")
     matches = []
     for session in _sessions(200):
+        # Default discovery is limited to active sessions; callers can request
+        # paused or closed records explicitly through the status filter.
+        if status is None and session.get("status") != "active":
+            continue
         if status and session.get("status") != status:
             continue
         if project_id is not None and session.get("project_id") != project_id:
