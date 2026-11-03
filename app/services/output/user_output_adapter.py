@@ -213,7 +213,7 @@ def adapt(response: dict) -> dict:
         else:
             response["message"] = "Done."
 
-    if "attachments" not in response:
+    if not isinstance(response.get("attachments"), list) or not response["attachments"]:
         response["attachments"] = collect_attachments(result) if result is not None else []
 
     # The desktop chat renderer consumes a single primary output descriptor.
