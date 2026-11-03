@@ -608,3 +608,44 @@ audio.assistant-output-media {
 	width: min(100%, 420px);
 	height: 40px;
 }
+
+.assistant-code-output,
+.assistant-document-output pre,
+.assistant-attachment-preview pre {
+	max-width: min(100%, 820px);
+	max-height: 560px;
+	margin: 8px 0;
+	padding: 14px 16px;
+	overflow: auto;
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	background: #08111d;
+	color: #d9e7f5;
+	font: 12px/1.6 "Cascadia Code", Consolas, ui-monospace, monospace;
+	white-space: pre;
+	tab-size: 4;
+}
+.assistant-document-output pre,
+.assistant-attachment-preview.is-document pre {
+	font-family: "Segoe UI", Inter, system-ui, sans-serif;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+.assistant-attachment-preview {
+	width: min(100%, 820px);
+	margin: 10px 0;
+	padding: 10px 12px;
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	background: rgba(8, 17, 29, .72);
+}
+.assistant-attachment-preview header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	color: var(--text);
+	font-size: 11px;
+}
+.assistant-attachment-preview pre { max-width: 100%; }
+.assistant-attachment-status { color: var(--muted); font-size: 11px; }

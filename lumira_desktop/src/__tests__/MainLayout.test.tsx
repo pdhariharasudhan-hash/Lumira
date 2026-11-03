@@ -3,11 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import MainLayout from "../layouts/MainLayout";
 import { initialWorkspaceUiState, useAppStore } from "../store/appStore";
 
-type MockResponse = { ok: boolean; status?: number; json: () => Promise<unknown> };
+type MockResponse = { ok: boolean; status?: number; json: () => Promise<unknown>; text?: () => Promise<string> };
 type FetchHandler = (input: RequestInfo | URL, init?: RequestInit) => MockResponse | Promise<MockResponse>;
 
 function jsonResponse(body: unknown, status = 200): MockResponse {
-	return { ok: status >= 200 && status < 300, status, json: async () => body };
+	return { ok: status >= 200 && status < 300, status, json: async () => body, text: async () => JSON.stringify(body) };
 }
 
 function mockFetch(handler: FetchHandler = defaultResponse) {
@@ -85,7 +85,7 @@ describe("Lumira workspace shell", () => {
 			if (String(input) === "/sessions/session-12345678") return jsonResponse(activeSession({
 				recent_messages: [
 					{ role: "user", content: "Plan my release" },
-					{ role: "assistant", content: "I saved the release plan." },
+					{ role: "assistant", content: "I saved the release plan.", metadata: { response: { success: true, message: "I saved the release plan.", result: { capability: "planning", status: "completed" }, attachments: [{ artifact_id: "restored-image", kind: "image", title: "Release diagram", url: "/artifacts/restored-image/content" }] } } },
 				],
 			}));
 			return defaultResponse(input);
@@ -94,8 +94,40 @@ describe("Lumira workspace shell", () => {
 
 		expect(await screen.findByText("Plan my release")).toBeTruthy();
 		expect(screen.getByText("I saved the release plan.")).toBeTruthy();
+		expect(await screen.findByRole("img", { name: "Release diagram" })).toBeTruthy();
 		expect(fetchMock.mock.calls.some(([input]) => String(input) === "/sessions/session-12345678")).toBe(true);
 		expect(await screen.findByText("CORE READY")).toBeTruthy();
+	});
+
+	it("preserves saved media when switching to another conversation", async () => {
+		setSessionId("session-12345678");
+		const fetchMock = mockFetch((input) => {
+			const path = String(input);
+			if (path === "/sessions?limit=100") return jsonResponse({ sessions: [
+				activeSession({ recent_messages: [{ role: "user", content: "Current conversation" }] }),
+				activeSession({ session_id: "session-2", current_goal: "Other conversation", recent_messages: [{ role: "user", content: "Other conversation" }] }),
+			] });
+			if (path === "/sessions/session-12345678") return jsonResponse(activeSession({ recent_messages: [{ role: "user", content: "Current conversation" }] }));
+			if (path === "/sessions/session-2") return jsonResponse(activeSession({
+				session_id: "session-2",
+				recent_messages: [
+					{ role: "user", content: "Show the diagram again" },
+					{ role: "assistant", content: "Here is the saved diagram.", metadata: { response: {
+						success: true,
+						message: "Here is the saved diagram.",
+						result: { capability: "image_generation", status: "completed" },
+						attachments: [{ artifact_id: "diagram-2", kind: "image", title: "Saved diagram", url: "/artifacts/diagram-2/content" }],
+					} } },
+				],
+			}));
+			return defaultResponse(input);
+		});
+		render(<MainLayout />);
+		fireEvent.click(await screen.findByRole("button", { name: "Open chat Other conversation" }));
+
+		expect(await screen.findByText("Show the diagram again")).toBeTruthy();
+		expect(await screen.findByRole("img", { name: "Saved diagram" })).toBeTruthy();
+		expect(fetchMock.mock.calls.some(([input]) => String(input) === "/sessions/session-2")).toBe(true);
 	});
 
 	it("sends chat prompts through the routed command API with the active session", async () => {
@@ -113,10 +145,67 @@ describe("Lumira workspace shell", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Send request" }));
 
 		expect(await screen.findByText("The plan is ready.")).toBeTruthy();
+		expect(screen.queryByText("Technical details (raw JSON)")).toBeNull();
+		expect(screen.queryByText("JSON response")).toBeNull();
 		const command = fetchMock.mock.calls.find(([input]) => String(input) === "/command");
 		expect(JSON.parse(String(command?.[1]?.body))).toEqual({
 			input: "Plan my week", session_id: "session-12345678", workspace_id: "default",
 		});
+	});
+
+	it("shows structured JSON only when the user explicitly asks for JSON", async () => {
+		setSessionId("session-12345678");
+		mockFetch((input) => {
+			if (String(input) === "/sessions/session-12345678") return jsonResponse(activeSession());
+			if (String(input) === "/command") return jsonResponse({
+				result: { capability: "planning", status: "completed", message: "Here is the requested data.", answer: 42 },
+			});
+			return defaultResponse(input);
+		});
+		render(<MainLayout />);
+		const composer = await screen.findByRole("textbox", { name: "Describe what you want to work on" });
+		fireEvent.change(composer, { target: { value: "Return the result as JSON." } });
+		fireEvent.click(screen.getByRole("button", { name: "Send request" }));
+
+		expect(await screen.findByText("JSON response")).toBeTruthy();
+		expect(await screen.findByText(/"answer": 42/)).toBeTruthy();
+		expect(screen.queryByText("Technical details (raw JSON)")).toBeNull();
+	});
+
+	it("renders image, video, audio, document, and code attachments as usable previews", async () => {
+		setSessionId("session-12345678");
+		const fetchMock = mockFetch((input) => {
+			const path = String(input);
+			if (path === "/sessions/session-12345678") return jsonResponse(activeSession());
+			if (path === "/command") return jsonResponse({
+				success: true,
+				message: "Your generated files are ready.",
+				result: { capability: "media_generation", status: "completed" },
+				attachments: [
+					{ artifact_id: "image-1", kind: "image", title: "Generated image", url: "/artifacts/image-1/content" },
+					{ artifact_id: "video-1", kind: "video", title: "Demo video", url: "/artifacts/video-1/content" },
+					{ artifact_id: "audio-1", kind: "audio", title: "Voice sample", url: "/artifacts/audio-1/content" },
+					{ artifact_id: "doc-1", kind: "document", title: "Project notes", extension: "md", url: "/artifacts/doc-1/content" },
+					{ artifact_id: "code-1", kind: "code", title: "main.py", extension: "py", url: "/artifacts/code-1/content" },
+				],
+			});
+			if (path === "/artifacts/doc-1/content") return { ...jsonResponse({}), text: async () => "# Project Notes\nA readable document." };
+			if (path === "/artifacts/code-1/content") return { ...jsonResponse({}), text: async () => "print('hello')" };
+			return defaultResponse(input);
+		});
+		const { container } = render(<MainLayout />);
+		const composer = await screen.findByRole("textbox", { name: "Describe what you want to work on" });
+		fireEvent.change(composer, { target: { value: "Create a demo with image, video, audio, document and code." } });
+		fireEvent.click(screen.getByRole("button", { name: "Send request" }));
+
+		expect(await screen.findByRole("img", { name: "Generated image" })).toBeTruthy();
+		expect(container.querySelector('video[aria-label="Demo video"]')).toBeTruthy();
+		expect(container.querySelector('audio[aria-label="Voice sample"]')).toBeTruthy();
+		expect(container.querySelectorAll(".assistant-attachment-preview")).toHaveLength(2);
+		expect(await screen.findByText(/# Project Notes/)).toBeTruthy();
+		expect(await screen.findByText("print('hello')")).toBeTruthy();
+		expect(fetchMock.mock.calls.some(([input]) => String(input) === "/artifacts/doc-1/content")).toBe(true);
+		expect(fetchMock.mock.calls.some(([input]) => String(input) === "/artifacts/code-1/content")).toBe(true);
 	});
 
 	it("cycles panel states with keyboard shortcuts, expands the center, and persists preferences", async () => {

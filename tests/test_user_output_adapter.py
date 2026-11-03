@@ -24,6 +24,21 @@ def test_video_and_audio_kinds():
     assert kinds == {"v": "video", "a": "audio"}
 
 
+def test_document_and_source_code_artifacts_get_readable_output_kinds():
+    result = {
+        "items": [
+            {"artifact_id": "doc-1", "type": "documents", "extension": "md", "title": "Project notes"},
+            {"artifact_id": "code-1", "type": "generated_files", "extension": "py", "title": "main.py"},
+            {"artifact_id": "bin-1", "type": "generated_files", "extension": "exe", "title": "installer"},
+        ]
+    }
+    attachments = {item["artifact_id"]: item for item in collect_attachments(result)}
+    assert attachments["doc-1"]["kind"] == "document"
+    assert attachments["code-1"]["kind"] == "code"
+    assert attachments["code-1"]["extension"] == "py"
+    assert attachments["bin-1"]["kind"] == "file"
+
+
 def test_existing_message_is_preserved():
     out = adapt({"success": True, "message": "Hello. I am Lumira and I am ready.", "result": {"capability": "greeting"}})
     assert out["message"] == "Hello. I am Lumira and I am ready."

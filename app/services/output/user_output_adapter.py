@@ -19,11 +19,14 @@ _KIND_BY_TYPE = {
     "audio": "audio", "voice": "audio", "recordings": "audio",
     "video": "video", "videos": "video",
     "pdf": "pdf", "pdfs": "pdf",
-    "transcripts": "text", "summaries": "text", "reports": "text",
-    "documents": "text", "exports": "file",
-    "generated_files": "file", "diagrams": "image", "schematics": "image",
-    "blueprints": "image",
+    "transcripts": "text", "summaries": "text",
+    "reports": "document", "documents": "document",
+    "code": "code", "source_code": "code",
+    "exports": "file", "generated_files": "file",
+    "diagrams": "image", "schematics": "image", "blueprints": "image",
 }
+
+_CODE_EXTENSIONS = {"py", "js", "jsx", "ts", "tsx", "css", "html", "json", "sh", "ps1", "bat", "c", "cpp", "h", "hpp", "java", "go", "rs", "sql", "yaml", "yml", "toml"}
 
 _MESSAGE_KEYS = ("message", "summary", "response", "reply", "text", "answer", "description")
 _MAX_DEPTH = 6
@@ -53,14 +56,22 @@ def collect_attachments(value: Any, _depth: int = 0, _seen: set | None = None) -
         artifact_type = value.get("type") or value.get("artifact_type")
         if isinstance(artifact_id, str) and artifact_id and artifact_id not in seen:
             seen.add(artifact_id)
+            filename = value.get("filename") or value.get("file")
+            extension_value = value.get("extension") or (str(filename).rsplit(".", 1)[-1] if isinstance(filename, str) and "." in filename else "")
+            extension = str(extension_value or "").lower().lstrip(".")
             kind = _KIND_BY_TYPE.get(str(artifact_type or "").lower(), "file")
-            found.append({
+            if str(artifact_type or "").lower() == "generated_files" and extension in _CODE_EXTENSIONS:
+                kind = "code"
+            attachment = {
                 "artifact_id": artifact_id,
                 "kind": kind,
                 "type": artifact_type,
                 "title": value.get("title") or value.get("name") or value.get("source") or _humanize(str(artifact_type or "file")),
                 "url": f"/artifacts/{artifact_id}/content",
-            })
+            }
+            if extension:
+                attachment["extension"] = extension
+            found.append(attachment)
         for child in value.values():
             found.extend(collect_attachments(child, _depth + 1, seen))
     elif isinstance(value, list):

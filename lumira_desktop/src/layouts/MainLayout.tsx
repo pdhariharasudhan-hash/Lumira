@@ -33,12 +33,13 @@ type ApiResponse = JsonObject & {
 	result?: JsonObject;
 	context?: JsonObject;
 	output?: OutputDescriptor;
-	attachments?: Array<{ artifact_id: string; kind: string; title?: string; url: string }>;
+	attachments?: Array<{ artifact_id: string; kind: string; title?: string; url: string; extension?: string | null }>;
 };
 
 type OutputDescriptor = {
-	type: "text" | "image" | "video" | "audio" | "json";
+	type: "text" | "code" | "document" | "pdf" | "image" | "video" | "audio" | "json";
 	mime?: string;
+	language?: string;
 	content?: string;
 	url?: string;
 	artifact_id?: string;
@@ -84,6 +85,13 @@ function stringValue(value: unknown, fallback = "") {
 	return typeof value === "string" ? value : fallback;
 }
 
+function explicitlyRequestsJson(prompt: string | undefined) {
+	if (!prompt || !/\bjson\b/i.test(prompt)) return false;
+	if (/\b(?:no|not|never|hide|avoid|without|don't|do not)\b[^.!?]{0,40}\bjson\b/i.test(prompt)) return false;
+	return /\b(?:as|in|format(?:ted)? as|return|respond(?: with)?|output|show|display|give|provide|print)\b[^.!?]{0,40}\bjson\b/i.test(prompt)
+		|| /\bjson\b[^.!?]{0,24}\b(?:format|response|output|object|schema)\b/i.test(prompt);
+}
+
 function safeDisplay(value: unknown, key = ""): unknown {
 	if (/password|api[_-]?key|jwt[_-]?secret|credential|chain[_-]?of[_-]?thought|hidden[_-]?prompt|private[_-]?state/i.test(key)) return "[redacted]";
 	if (Array.isArray(value)) return value.map((item) => safeDisplay(item));
@@ -114,11 +122,48 @@ function renderOutput(output: OutputDescriptor | undefined) {
 			? <div className="assistant-message">{output.content}</div>
 			: null;
 	}
+	if (output.type === "code") {
+		return output.content?.trim()
+			? <pre className="assistant-code-output"><code className={output.language ? `language-${output.language}` : undefined}>{output.content}</code></pre>
+			: null;
+	}
+	if (output.type === "document") {
+		return output.content?.trim()
+			? <article className="assistant-document-output"><pre>{output.content}</pre></article>
+			: output.url ? <a className="text-link" href={output.url} target="_blank" rel="noreferrer">Open document</a> : null;
+	}
 	const source = output.url;
 	if (!source) return null;
 	if (output.type === "image") return <img className="assistant-output-media" src={source} alt="Lumira generated output" />;
-	if (output.type === "video") return <video className="assistant-output-media" src={source} controls />;
-	return <audio className="assistant-output-media" src={source} controls />;
+	if (output.type === "video") return <video className="assistant-output-media" src={source} controls aria-label="Generated video" />;
+	if (output.type === "pdf") return <iframe className="assistant-output-media" src={source} title="Generated PDF document" />;
+	return <audio className="assistant-output-media" src={source} controls aria-label="Generated audio" />;
+}
+
+function ArtifactTextPreview({ artifactId, title, kind, extension, url }: {
+	artifactId: string;
+	title: string;
+	kind: "text" | "document" | "code";
+	extension?: string | null;
+	url: string;
+}) {
+	const [content, setContent] = useState<string | null>(null);
+	const [failed, setFailed] = useState(false);
+	useEffect(() => {
+		let active = true;
+		api.getArtifactTextContent(artifactId).then((value) => {
+			if (active) setContent(value);
+		}).catch(() => {
+			if (active) setFailed(true);
+		});
+		return () => { active = false; };
+	}, [artifactId]);
+	return <section className={`assistant-attachment-preview ${kind === "code" ? "is-code" : "is-document"}`}>
+		<header><strong>{title}</strong><a className="text-link" href={url} target="_blank" rel="noreferrer">Open original</a></header>
+		{content === null && !failed && <p className="assistant-attachment-status">Loading preview…</p>}
+		{failed && <p className="assistant-attachment-status">Preview unavailable. Open the original file instead.</p>}
+		{content !== null && <pre><code className={kind === "code" && extension ? `language-${extension}` : undefined}>{content}</code></pre>}
+	</section>;
 }
 
 function modeFromSession(value?: string | null): LumiraMode | null {
@@ -1273,9 +1318,12 @@ function MainLayout() {
 		const transcript = messages.map((message, index) => {
 			const sections = [`## Exchange ${index + 1}`];
 			if (message.prompt) sections.push(`**You:** ${message.prompt}`);
-			if (message.transcript) sections.push(`**Lumira:** ${message.transcript}`);
+			const assistantText = message.transcript || stringValue(message.response?.message);
+			if (assistantText) sections.push(`**Lumira:** ${assistantText}`);
+			if (message.response?.output?.content) sections.push(`**Output:**${newline}${message.response.output.content}`);
+			const attachments = message.response?.attachments ?? [];
+			if (attachments.length) sections.push(`**Attachments:** ${attachments.map((item) => `${item.title ?? item.kind} (${item.kind})`).join(", ")}`);
 			if (message.error) sections.push(`**Error:** ${message.error}`);
-			if (message.response) sections.push("**Structured response:**" + newline + JSON.stringify(safeDisplay(message.response), null, 2));
 			return sections.join(newline + newline);
 		}).join(newline + newline + "---" + newline + newline);
 		if (!transcript.trim()) { setActionNotice("There is no conversation content to save yet."); return; }
@@ -1462,7 +1510,13 @@ async function runArtifactVoiceAction(artifactId: string, action: "process" | "t
 			window.localStorage.setItem("lumira.sessionId", sessionId);
 			setActiveMode(modeFromSession(loaded.active_mode) ?? "auto");
 			setSelectedProject(loaded.active_project ?? null, loaded.active_version ?? null);
-			setMessages((loaded.recent_messages ?? []).map((item, index) => item.role === "user" ? { id: `restored-${index}`, prompt: item.content } : { id: `restored-${index}`, transcript: item.content }));
+			setMessages((loaded.recent_messages ?? []).map((item, index) => {
+				const metadata = object(item.metadata);
+				if (item.role === "user") return { id: `restored-${index}`, prompt: item.content };
+				const storedResponse = object(metadata.response);
+				if (Object.keys(storedResponse).length) return { id: `restored-${index}`, response: storedResponse as ApiResponse };
+				return { id: `restored-${index}`, transcript: item.content };
+			}));
 			setActivePage("chats");
 		} catch (error) { setActionNotice(formatError(error).message); }
 	}
@@ -1987,10 +2041,11 @@ async function runArtifactVoiceAction(artifactId: string, action: "process" | "t
 								{message.response && renderOutput(response.output)}
 								{Array.isArray(response.attachments) && response.attachments.filter((item) => item.artifact_id !== response.output?.artifact_id).map((item) => <div key={item.artifact_id}>
 									{item.kind === "image" && <img className="assistant-output-media" src={item.url} alt={item.title ?? "Lumira generated image"} />}
-									{item.kind === "video" && <video className="assistant-output-media" src={item.url} controls />}
-									{item.kind === "audio" && <audio className="assistant-output-media" src={item.url} controls />}
+									{item.kind === "video" && <video className="assistant-output-media" src={item.url} controls aria-label={item.title ?? "Generated video"} />}
+									{item.kind === "audio" && <audio className="assistant-output-media" src={item.url} controls aria-label={item.title ?? "Generated audio"} />}
 									{item.kind === "pdf" && <iframe className="assistant-output-media" title={item.title ?? "PDF"} src={item.url} style={{ width: "100%", height: 480, border: 0 }} />}
-									{(item.kind === "file" || item.kind === "text") && <a className="text-link" href={item.url} target="_blank" rel="noreferrer">Open {item.title ?? "file"}</a>}
+									{(["text", "document", "code"].includes(item.kind) && (!item.extension || ["txt", "md", "csv", "json", "py", "js", "jsx", "ts", "tsx", "css", "html", "sh", "ps1", "bat", "c", "cpp", "h", "hpp", "java", "go", "rs", "sql", "yaml", "yml", "toml"].includes(item.extension.toLowerCase()))) && <ArtifactTextPreview artifactId={item.artifact_id} title={item.title ?? "Saved document"} kind={item.kind as "text" | "document" | "code"} extension={item.extension} url={item.url} />}
+									{(item.kind === "file" || (["text", "document", "code"].includes(item.kind) && Boolean(item.extension) && !["txt", "md", "csv", "json", "py", "js", "jsx", "ts", "tsx", "css", "html", "sh", "ps1", "bat", "c", "cpp", "h", "hpp", "java", "go", "rs", "sql", "yaml", "yml", "toml"].includes(item.extension!.toLowerCase()))) && <a className="text-link" href={item.url} target="_blank" rel="noreferrer">Open {item.title ?? "file"}</a>}
 								</div>)}
 								{message.pending && <div className="assistant-pending">Lumira is working…</div>}
 								{message.error && <div className="workspace-alert error" role="alert">{message.error}</div>}
@@ -2001,7 +2056,7 @@ async function runArtifactVoiceAction(artifactId: string, action: "process" | "t
 									{isProjectResult && <section className="project-result-card"><div><span className="eyebrow">PROJECT RESULT</span><h3>{projectName}</h3><p>{stringValue(metadata.description ?? metadata.idea ?? result.idea ?? result.request, "Project files were saved by Lumira.")}</p></div><dl><div><dt>Version</dt><dd>{stringValue(metadata.version, stringValue(result.version, "Latest"))}</dd></div><div><dt>Status</dt><dd>{stringValue(metadata.status, status)}</dd></div><div><dt>Created</dt><dd>{stringValue(metadata.created_at ?? result.created_at, "Recorded by the project service")}</dd></div></dl><div className="project-card-actions"><button type="button" onClick={() => openProjectFiles(projectName)}>View Files</button><button type="button" onClick={() => void projectAction(projectName, "run")}>Run Project</button><button type="button" onClick={() => void projectAction(projectName, "edit")}>Open in Editor</button><button type="button" onClick={() => void projectAction(projectName, "modify")}>Modify Project</button><button type="button" onClick={() => void projectAction(projectName, "frontend")}>Add Frontend</button><button type="button" onClick={() => void projectAction(projectName, "database")}>Add Database</button><button type="button" onClick={() => void projectAction(projectName, "deploy")}>Create Deployment Plan</button><button type="button" onClick={() => void projectAction(projectName, "docs")}>Show Documentation</button></div></section>}
 									{capability === "voice_capture" && stringValue(object(result.artifact).artifact_id) && object(result.transcript).success !== true && <button className="secondary-action" type="button" onClick={() => void retryVoiceTranscriptionForMessage(message.id, stringValue(object(result.artifact).artifact_id))}>Retry transcription from saved audio</button>}
 									{capability === "voice_capture" && stringValue(object(object(result.transcript).transcript_artifact).artifact_id) && <button className="secondary-action" type="button" onClick={() => void retryVoiceSummaryForMessage(message.id, stringValue(object(object(result.transcript).transcript_artifact).artifact_id))}>Retry summary from saved transcript</button>}
-									<details className="result-details"><summary>Technical details (raw JSON)</summary><pre>{JSON.stringify(safeResult, null, 2)}</pre></details>
+									{explicitlyRequestsJson(message.prompt) && <details className="result-details" open><summary>JSON response</summary><pre>{JSON.stringify(safeResult, null, 2)}</pre></details>}
 								</div>}
 							</article>;
 						})}</div>}
