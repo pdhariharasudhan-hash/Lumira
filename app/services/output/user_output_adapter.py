@@ -48,11 +48,17 @@ def _first_text(data: dict) -> str | None:
 
 
 def _explicitly_requests_json(prompt: str | None) -> bool:
-    if not isinstance(prompt, str):
+    if not isinstance(prompt, str) or not re.search(r"\bjson\b", prompt, re.IGNORECASE):
+        return False
+    if re.search(
+        r"\b(?:no|not|never|hide|avoid|without|don't|do not)\b[^.!?]{0,40}\bjson\b",
+        prompt,
+        re.IGNORECASE,
+    ):
         return False
     return bool(
         re.search(
-            r"\b(?:as|in|format(?:ted)? as|return|respond(?: with)?|output|show|display|give|provide|print)\b[^.!?]{0,40}\bjson\b"
+            r"\b(?:as|in|format(?:ted)? as|return|respond(?: with)?|output|show|display|give|provide|print|convert|serialize|want|need|generate)\b[^.!?]{0,40}\bjson\b"
             r"|\bjson\b[^.!?]{0,24}\b(?:format|response|output|object|schema)\b",
             prompt,
             re.IGNORECASE,

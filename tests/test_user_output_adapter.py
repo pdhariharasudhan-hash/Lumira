@@ -195,3 +195,14 @@ def test_unsolicited_fenced_json_is_not_shown_as_the_answer():
 
     _no_json(out["message"])
     assert "structured data" in out["message"]
+
+
+def test_negative_json_instruction_does_not_enable_json_output():
+    raw = '{"status":"completed","internal_count":3}'
+    out = adapt(
+        {"success": True, "message": raw, "result": {"capability": "conversation"}},
+        prompt="Do not return JSON. Answer in plain language.",
+    )
+
+    _no_json(out["message"])
+    assert "structured data" in out["message"]
