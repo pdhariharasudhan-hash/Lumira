@@ -206,3 +206,37 @@ def test_negative_json_instruction_does_not_enable_json_output():
 
     _no_json(out["message"])
     assert "structured data" in out["message"]
+
+
+def test_prefixed_json_is_not_exposed_in_normal_chat():
+    out = adapt({
+        "success": True,
+        "message": 'Here is the result: {"status":"completed","internal_count":3}',
+        "result": {"capability": "conversation"},
+    })
+
+    assert out["message"] == "Here is the result."
+    _no_json(out["message"])
+
+
+def test_prefixed_json_with_readable_message_uses_the_message():
+    out = adapt({
+        "success": True,
+        "message": 'Result: {"message":"The image is ready.","internal_count":3}',
+        "result": {"capability": "conversation"},
+    })
+
+    assert out["message"] == "The image is ready."
+    _no_json(out["message"])
+
+
+def test_deeply_nested_json_string_fails_closed_in_normal_chat():
+    raw = '{"message":' * 6 + '"internal state"' + '}' * 6
+    out = adapt({
+        "success": True,
+        "message": raw,
+        "result": {"capability": "conversation"},
+    })
+
+    _no_json(out["message"])
+    assert "structured data" in out["message"]
