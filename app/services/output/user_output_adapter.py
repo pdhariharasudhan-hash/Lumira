@@ -80,20 +80,51 @@ def _normalize_text(value: str, *, allow_json: bool = False, depth: int = 0) -> 
         end = candidate.find("```", start)
         if end >= 0:
             candidate = candidate[start:end].strip()
-    if allow_json or depth >= 4 or not candidate or candidate[0] not in "{[":
+    if allow_json or not candidate:
         return text
-    try:
-        parsed = json.loads(candidate)
-    except (TypeError, ValueError):
-        return text
+
+    fallback = (
+        "I received structured data, but couldn't turn it into a readable answer. "
+        "Please tell me what you'd like to do with it."
+    )
+    if depth >= 4:
+        return fallback if candidate[0] in "{[" else text
+
+    # A model sometimes prefixes an otherwise valid JSON object with prose
+    # (for example, "Here is the result: { ... }"). Detect a complete trailing
+    # JSON value and never leak its raw structure into ordinary chat.
+    json_candidate = candidate
+    prefix = ""
+    if candidate[0] not in "{[":
+        decoder = json.JSONDecoder()
+        parsed_embedded = None
+        for index, character in enumerate(candidate):
+            if character not in "{[":
+                continue
+            try:
+                parsed_value, end = decoder.raw_decode(candidate[index:])
+            except (TypeError, ValueError):
+                continue
+            trailing = candidate[index + end:].strip()
+            if trailing not in {"", "```"}:
+                continue
+            parsed_embedded = parsed_value
+            prefix = candidate[:index].strip()
+            break
+        if parsed_embedded is None:
+            return text
+        parsed = parsed_embedded
+    else:
+        try:
+            parsed = json.loads(json_candidate)
+        except (TypeError, ValueError):
+            return text
+
     if isinstance(parsed, dict):
         nested = _first_text(parsed)
         if nested and nested != text:
             return _normalize_text(nested, depth=depth + 1)
-    return (
-        "I received structured data, but couldn't turn it into a readable answer. "
-        "Please tell me what you'd like to do with it."
-    )
+    return prefix.rstrip(":;,- ") + "." if prefix else fallback
 
 
 def collect_attachments(value: Any, _depth: int = 0, _seen: set | None = None) -> list[dict]:
