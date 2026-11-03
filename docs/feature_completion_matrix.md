@@ -33,6 +33,13 @@
 | 27 | `security` | Local auth boundary, strict local/generated bearer-token claim validation, bearer-header size bounds, secret redaction, feature lifecycle guards | Token claim shape and timestamp types plus oversized generated bearer headers are rejected at source level; deployment still needs deliberate key provisioning, shared transactional user storage, shared rate limiting, and app-specific authorization. New auth regression tests remain unrun. |
 | 28 | `observability` | Pipeline history and `/intelligence/status`, `/intelligence/history` | Status/history surfaces exist; runtime verification remains. |
 
+## Latest verification — 2026-11-03
+
+- Commit `73a4818` hardens the user-output adapter against unsolicited JSON embedded after ordinary prose, including punctuation after the JSON value. Deeply nested JSON strings fail closed rather than being displayed as raw structures.
+- Regression coverage includes prefixed JSON with and without readable message fields, punctuation suffixes, and deeply nested JSON.
+- GitHub Actions completed successfully: **668 backend tests passed** and **27 desktop tests passed**; desktop build and lint also passed.
+- This is automated CI evidence only. It does not close provider, microphone, Tamil acceptance, hardware, package portability, or isolated-runtime gates below.
+
 ## Remaining operational completion gates
 
 The repository-level implementation and consolidated CI baseline are complete. The following gates require a real Lumira environment and cannot be honestly closed by source inspection alone:
