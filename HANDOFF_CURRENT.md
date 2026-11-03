@@ -1,4 +1,4 @@
-﻿# Lumira Current Handoff â€” 2026-10-20
+# Lumira Current Handoff — 2026-10-20
 
 ## Working locations
 - Active project: E:\\Hari\\personal_ai_core
@@ -34,18 +34,18 @@
 Copied the working tree including .git, app, tests, memory, docs, generated outputs, and artifacts. Excluded .venv, node_modules, .pytest_cache, .pytest-work, __pycache__, and *.pyc. Snapshot is a recovery copy, not a tested runnable environment.
 
 
-## Latest code change â€” 2026-10-20
+## Latest code change — 2026-10-20
 - Hardened persistent work-item task transitions: completed tasks cannot be reopened, and pending tasks cannot be marked failed before execution.
 - Regression tests were added but not run because the safe behavioral-test gate remains blocked.
 - Targeted py_compile, full app/tests compileall, and git diff --check passed. Only existing Git LF-to-CRLF notices appeared.
 
 
-## Local backup automation â€” 2026-10-20
+## Local backup automation — 2026-10-20
 - Repeatable backup script: `tools/backup_lumira.ps1`.
 - Latest tested snapshot: `E:\\Lumira_Local_Backups\\personal_ai_core_20261020_163756`.
 - Script syntax parse: 0 errors; execution copied 785 files and passed all 8 critical SHA-256 checks. Robocopy exit 1 is successful copy semantics.
 
-## Continuation verification â€” 2026-10-20 16:42 IST
+## Continuation verification — 2026-10-20 16:42 IST
 - Remote device online.
 - Python `compileall -q app tests`: passed.
 - 26 JSON files parsed successfully; `git diff --check` passed (only existing LF-to-CRLF notices).
@@ -53,19 +53,19 @@ Copied the working tree including .git, app, tests, memory, docs, generated outp
 - Behavioral tests/build/lint remain blocked by the unverified project terminal OS-isolation provider. No project-controlled commands, provider calls, or generated code were executed.
 - The audit JSON is not refreshed by this static-check pass; it remains a prior audit snapshot.
 
-## Dependency and resource check â€” 2026-10-20 16:44 IST
+## Dependency and resource check — 2026-10-20 16:44 IST
 - `.venv/Scripts/python.exe -m pip check`: passed; no broken requirements found.
 - Free host RAM about 1.42 GB / 7.7 GB total. Avoid large builds and broad tests.
 - Latest backup created at `E:/Lumira_Local_Backups/personal_ai_core_20261020_164314`: 785 files copied, 8/8 critical SHA-256 checks passed. Robocopy exit code 1 means files were copied successfully.
 - Do not treat compile/static checks as behavioral verification; project-controlled tests/build/lint remain blocked by the unverified project-terminal isolation gate.
 
-## Fresh bounded audit â€” 2026-10-20 16:45 IST
+## Fresh bounded audit — 2026-10-20 16:45 IST
 - Refreshed `final-audit-result.json` through the bounded read-only audit path: 905 files inventoried, 0 active integration findings.
 - Audit invariants validated: `completion_ready=false`; behavioral gate and project-terminal security both remain `blocked`. The report does not claim runtime correctness.
 - `git diff --check` passed. No pytest/npm scripts, generated-project commands, or live providers were run.
 
 
-## Continuation progress â€” 2026-10-20 17:01 IST
+## Continuation progress — 2026-10-20 17:01 IST
 - Remote development laptop is online.
 - Fresh static pass: Python compileall passed, `git diff --check` passed, and 26 JSON files parsed with zero errors.
 - Primary command route still gates downstream execution on literal boolean success; agent delegation remains explicit.
@@ -74,32 +74,32 @@ Copied the working tree including .git, app, tests, memory, docs, generated outp
 - Next: refresh the bounded read-only audit and backup snapshot after this handoff update, then continue one small verified safety improvement at a time.
 
 
-## Fresh bounded audit â€” 2026-10-20 17:02 IST
+## Fresh bounded audit — 2026-10-20 17:02 IST
 - Refreshed `final-audit-result.json` via the bounded read-only audit path.
 - 905 files inventoried; 0 active integration findings.
 - `completion_ready=false`; behavioral gate and project-terminal security remain blocked, with OS sandbox verification not implemented.
 - No tests/build/lint, provider calls, or generated-project commands were executed.
 
 
-## Post-audit validation correction â€” 2026-10-20 17:05 IST
+## Post-audit validation correction — 2026-10-20 17:05 IST
 - A JSON parse check caught a literal escaped newline appended to `final-audit-result.json`; removed it.
 - Final static recheck: 26 JSON files parse, Python compileall passes, pip check reports no broken requirements, and git diff --check passes.
 - Runtime tests/build/lint remain unrun due the verified-isolation gate.
 
 
-## Desktop syntax and backup â€” 2026-10-20 17:07 IST
+## Desktop syntax and backup — 2026-10-20 17:07 IST
 - TypeScript parser checked all 18 desktop TS/TSX source files plus Vite config: 0 parse errors. No build, lint, or app execution was run.
 - Free RAM about 1.33 GB / 7.70 GB; keep verification lightweight.
 - Recovery snapshot `E:\\Lumira_Local_Backups\\personal_ai_core_20261020_170655`: 785 files, 8/8 critical SHA-256 checks passed, zero copy failures/mismatches.
 
 
-## Persisted-state recheck â€” 2026-10-20 17:08 IST
+## Persisted-state recheck — 2026-10-20 17:08 IST
 - JSON-only checks: 28 feature records, 80 artifacts, 25 workflows / 209 tasks, and 12 workflow runs; 0 invariant findings.
 - Bounded source audit: 905 files, 0 active findings, 33/33 route registrations, 0 unmatched paths across 44 frontend and 76 backend API paths.
 - No stored state or feature flags were changed. Runtime gate remains blocked.
 
 
-## Continuation checkpoint â€” 2026-10-20 17:45 IST
+## Continuation checkpoint — 2026-10-20 17:45 IST
 - Remote device online; project root remains `E:\\Hari\\personal_ai_core`.
 - Refreshed bounded read-only audit: 907 files, 0 active integration findings, 33/33 router registrations; completion readiness remains false and terminal isolation remains blocked (`os_sandbox=false`, `sandbox_verification=not_implemented`).
 - Static verification passed: Python compileall, `git diff --check`, 26 JSON parses, and `pip check` (no broken requirements).
@@ -107,12 +107,12 @@ Copied the working tree including .git, app, tests, memory, docs, generated outp
 - No package/system changes, cleanup/reset, feature-flag changes, or commit. Preserve the existing worktree and backups.
 
 
-## Recovery snapshot â€” 2026-10-20 17:41 IST
+## Recovery snapshot — 2026-10-20 17:41 IST
 - Snapshot: `E:\\Lumira_Local_Backups\\personal_ai_core_20261020_174129`.
 - 786 files / 10.12 MB copied; 0 failures/mismatches; 8/8 critical SHA-256 checks passed. Robocopy exit code 1 indicates files were copied successfully.
 
 
-## Continuation verification â€” 2026-10-20 17:52 IST
+## Continuation verification — 2026-10-20 17:52 IST
 - Remote laptop online.
 - Python compileall passed; `git diff --check` passed; all 26 checked JSON files parsed.
 - Free RAM was approximately 0.94 GB / 7.7 GB; no pytest, npm scripts, sandbox launch, live provider call, or generated-project command was run.
@@ -121,7 +121,7 @@ Copied the working tree including .git, app, tests, memory, docs, generated outp
 - Preserve current worktree and keep terminal execution disabled. Next: continue low-risk static review; defer behavioral tests/build/lint until isolation and RAM headroom are adequate.
 
 
-## Final essentials pass â€” 2026-10-20 17:53 IST
+## Final essentials pass — 2026-10-20 17:53 IST
 - `pip check`: no broken requirements.
 - Latest snapshot: `E:\\Lumira_Local_Backups\\personal_ai_core_20261020_175206`; 786 files, approximately 10.13 MB, 8/8 critical SHA-256 matches, no copy failures.
 - Latest safe checks: Python compileall, JSON parsing (26 files), and `git diff --check` passed.
@@ -131,7 +131,7 @@ Copied the working tree including .git, app, tests, memory, docs, generated outp
 - Desktop TypeScript parser pass: 18 TS/TSX/config files checked, 0 syntax errors. Parse-only; frontend tests/build/lint were not run.
 
 
-## Continuation verification â€” 2026-10-20 18:06 IST
+## Continuation verification — 2026-10-20 18:06 IST
 - Remote device online.
 - Current static checks passed: Python compileall; `git diff --check`; 24 JSON files under `memory/` and `generated_templates/` parsed with zero errors; audit JSON parsed successfully.
 - Git output contained only existing LF-to-CRLF notices.
@@ -142,7 +142,7 @@ Copied the working tree including .git, app, tests, memory, docs, generated outp
 - Recovery snapshot completed at `E:\\Lumira_Local_Backups\\personal_ai_core_20261020_180812`: 787 files / about 10.13 MB; zero copy failures; 8/8 critical SHA-256 checks passed. A first nested-shell invocation failed before copying; rerunning with an explicit source path succeeded.
 
 
-## Essentials continuation â€” 2026-10-20 18:36 IST
+## Essentials continuation — 2026-10-20 18:36 IST
 - Remote laptop confirmed online; project root remains `E:\\Hari\\personal_ai_core`.
 - Fresh safe verification: Python `compileall -q app tests` passed; `git diff --check` passed; 19 checked JSON files parsed; `pip check` reported no broken requirements.
 - Free host RAM was approximately 1.16 GB of 7.7 GB. Backend port 8000 and desktop port 5000 were not listening; no services were launched because memory headroom is limited.
@@ -150,7 +150,7 @@ Copied the working tree including .git, app, tests, memory, docs, generated outp
 - No packages/settings changed, no cleanup/reset, no feature flags changed, and no commit. Recovery snapshot created at `E:\\Lumira_Local_Backups\\personal_ai_core_20261020_183815`: 787 files / 10.13 MB copied, zero copy failures or mismatches, and 8/8 critical SHA-256 checks passed. Continue small static reviews; do not describe Lumira as runtime-ready yet.
 
 
-## Continuation verification â€” 2026-10-20 18:44 IST
+## Continuation verification — 2026-10-20 18:44 IST
 - Reconnected to the remote laptop; device online.
 - Safe checks passed: Python compileall; 26 JSON files parsed; `git diff --check`; `pip check` (no broken requirements).
 - Read-only isolation recheck: Windows Sandbox executable exists and optional feature is enabled, but firmware virtualization, VM monitor extensions, and SLAT all report false. Free RAM approximately 0.95 GiB / 7.7 GiB. Do not launch Sandbox or run behavioral/frontend/provider/generated-project commands at this memory/isolation state.
@@ -159,7 +159,7 @@ Copied the working tree including .git, app, tests, memory, docs, generated outp
 - Preserve the current worktree; no reset/cleanup, package/system changes, feature-flag changes, or commit. Next: refresh a local backup after this handoff update; continue scoped source review only until the isolation gate is genuinely resolved.
 
 
-## Workflow integrity change â€” 2026-10-20 18:49 IST
+## Workflow integrity change — 2026-10-20 18:49 IST
 - Hardened `WorkItemService` to reject persisted workflow status that disagrees with the contained task states. The update path now uses the same canonical status derivation helper.
 - Added regression coverage asserting corrupted status is rejected without rewriting the JSON file; authored but not executed.
 - Before the change, a read-only scan found 25 persisted workflows and zero status mismatches.
@@ -168,13 +168,13 @@ Copied the working tree including .git, app, tests, memory, docs, generated outp
 - Next: create and verify a new recovery snapshot including this change; do not commit or clean/reset the worktree.
 
 
-## Backup verification improvement â€” 2026-10-20 18:52 IST
+## Backup verification improvement — 2026-10-20 18:52 IST
 - Expanded the local backup script's critical SHA-256 checks from 8 to 13, covering workflow recovery and brain/agent orchestration code plus their regression tests and the main command route.
 - PowerShell parse passed with zero errors. Snapshot `E:\\Lumira_Local_Backups\\personal_ai_core_20261020_185114`: 787 files, about 10.14 MB, zero copy failures/mismatches, 13/13 critical hashes matched.
 - Create one final snapshot after this handoff update to capture the latest ledger.
 
 
-## Continuation verification â€” 2026-10-20 18:55 IST
+## Continuation verification — 2026-10-20 18:55 IST
 - Reconnected successfully; remote laptop online.
 - Safe checks passed: Python compileall, `git diff --check`, and 26 JSON parses. Existing LF-to-CRLF notices only.
 - Reviewed `/command`, optional-provider registration, and durable work-item transition/integrity checks. No additional code change was justified by this read-only review.
@@ -182,7 +182,7 @@ Copied the working tree including .git, app, tests, memory, docs, generated outp
 - Creating a recovery snapshot now to preserve the latest handoff and verification record.
 
 
-## Essentials continuation â€” 2026-10-20 19:04 IST
+## Essentials continuation — 2026-10-20 19:04 IST
 - Remote laptop online; current worktree safe checks passed: Python compileall, 26 JSON parses, `git diff --check`, and `pip check`.
 - Read-only inventory: 28 feature entries, 80 artifact records, 25 workflows, 12 recovery runs. No persisted state or feature flags changed.
 - Free RAM approximately 1.37 GiB / 7.7 GiB. No behavioral tests, desktop scripts, provider calls, or generated-project commands were run because Lumira's per-run OS isolation is not implemented/verified.
@@ -190,70 +190,70 @@ Copied the working tree including .git, app, tests, memory, docs, generated outp
 - No package/system changes, cleanup/reset, feature changes, or commit. Keep project terminal disabled. Next: implement/verify genuine OS isolation only after explicit system-level authorization, then run focused tests in the isolated environment.
 
 
-## Read-only state audit â€” 2026-10-20 19:07 IST
+## Read-only state audit — 2026-10-20 19:07 IST
 - Data-only persisted-state scan: 28 features, 80 artifacts, 25 workflows / 209 tasks, 12 recovery runs; 0 invariant findings for feature dependencies, artifact path containment/existence, workflow/task status and dependency graphs, or stage order/duplicates.
 - Desktop TypeScript/TSX parse: 18 files, 0 syntax errors. Parse-only, not a build or runtime test.
 - Latest snapshot before this note: `E:\\Lumira_Local_Backups\\personal_ai_core_20261020_190522`; create a fresh snapshot after this note.
 
 
-## Memory search validation hardening â€” 2026-10-20 19:10 IST
-- `MemoryService.search` now rejects bool/non-integer limits with `MemoryValidationError` instead of allowing an accidental raw `TypeError`; integer bounds still clamp to 0â€“100.
+## Memory search validation hardening — 2026-10-20 19:10 IST
+- `MemoryService.search` now rejects bool/non-integer limits with `MemoryValidationError` instead of allowing an accidental raw `TypeError`; integer bounds still clamp to 0–100.
 - Added regression cases in `tests/test_memory_lifecycle.py` for bool/string/float/null limits and integer boundary behavior. Tests are authored but not run due unverified OS isolation.
 - Targeted py_compile, full compileall, git diff check, and pip check passed. No cleanup, reset, package/system change, or commit.
 
 
-## Bounded audit refresh â€” 2026-10-20 19:12 IST
+## Bounded audit refresh — 2026-10-20 19:12 IST
 - Refreshed `final-audit-result.json` via the bounded source audit: 908 files, 0 active integration findings, 0 unmatched desktop/backend API paths.
 - Audit still reports `completion_ready=false`; behavioral gate and project-terminal security are blocked (`os_sandbox=false`, `sandbox_verification=not_implemented`). No pytest/npm or generated-project commands were run by the audit.
 - Memory search limit validation fix has static checks only; regression test execution remains blocked. No system/package changes, cleanup/reset, feature toggles, or commit.
 
 
-## Isolation/resource recheck â€” 2026-10-20 19:14 IST
+## Isolation/resource recheck — 2026-10-20 19:14 IST
 - Windows Sandbox executable exists and optional feature is enabled, but firmware virtualization, VM monitor extensions, and SLAT all report false. Free RAM is approximately 0.89 GiB / 7.7 GiB.
 - Do not launch Sandbox or behavioral/frontend/provider/generated-project commands. No BIOS/Windows settings changed. Project-terminal isolation remains unimplemented; completion remains blocked despite 908-file bounded audit with 0 source integration findings.
 
 
-## Backup coverage â€” 2026-10-20 19:16 IST
+## Backup coverage — 2026-10-20 19:16 IST
 - Expanded backup critical SHA-256 list from 13 to 15 files, adding the memory service and memory lifecycle tests touched in this continuation. Verify the script syntax and create a snapshot after this handoff update.
 - Last host check: about 0.89 GiB free RAM; OS virtualization flags remain false. No behavioral/frontend/provider/generated-project execution.
 
 
-## Voice pipeline improvement â€” 2026-10-20 19:26 IST
+## Voice pipeline improvement — 2026-10-20 19:26 IST
 - `TranscriptService` now checks only the 12-byte audio header for format signature validation rather than reading the entire audio file into RAM.
 - Added a regression test that guards against whole-file reads during transcription validation.
 - Targeted Python syntax compilation and `git diff --check` passed. Test execution remains unverified because the OS-isolation gate is blocked; no behavioral test was run.
 - Next productive priority: inspect the desktop's user-facing voice and provider status flows, then make one concrete integration improvement. Preserve all existing work and do not bypass the isolation gate.
 
 
-## Voice capture workflow integration â€” 2026-10-20 19:30 IST
+## Voice capture workflow integration — 2026-10-20 19:30 IST
 - Backend transcript response now returns the actual transcript text alongside its stored artifact; summary response returns the generated summary text alongside its stored artifact.
-- Desktop voice upload now chains upload â†’ transcription â†’ summary when the configured providers are available, and displays transcript/summary text directly in the chat. Missing providers/errors remain visible as failures; the upload itself is still recorded as captured.
+- Desktop voice upload now chains upload → transcription → summary when the configured providers are available, and displays transcript/summary text directly in the chat. Missing providers/errors remain visible as failures; the upload itself is still recorded as captured.
 - Added regression assertions for the response text fields and a test preventing full audio-file reads during signature validation.
 - Targeted Python syntax compilation passed; TypeScript parser reported syntax OK for `client.ts` and `MainLayout.tsx`; `git diff --check` exited 0 with only pre-existing LF-to-CRLF notices. Runtime tests/build remain unrun because OS isolation is blocked. Next: continue with another user-visible essential, not another audit-only pass.
 
 
-## Voice result persistence â€” 2026-10-20 19:39 IST
+## Voice result persistence — 2026-10-20 19:39 IST
 - Added `/sessions/{session_id}/voice-result` to validate audio/transcript/summary artifact types, read bounded persisted transcript/summary text, link those artifact IDs to the session, and append an assistant message. The desktop voice flow now stores the result into the active session for restoration after refresh.
 - Added a persistence regression test. Targeted Python syntax compilation passed; TypeScript parser checks for `client.ts` and `MainLayout.tsx` passed; `git diff --check` passed with only existing CRLF notices. Behavioral tests remain unrun due the isolation gate.
 - Previous backup `E:\\Lumira_Local_Backups\\personal_ai_core_20261020_193421` predates this change. Create another snapshot after this handoff update using an explicit `-SourceRoot` argument.
 
 
-## Voice artifact provenance guard â€” 2026-10-20 19:43 IST
-- The session persistence endpoint now verifies transcriptâ†’audio and summaryâ†’transcript source relationships before linking artifacts. Added a regression test for mismatched source IDs.
+## Voice artifact provenance guard — 2026-10-20 19:43 IST
+- The session persistence endpoint now verifies transcript→audio and summary→transcript source relationships before linking artifacts. Added a regression test for mismatched source IDs.
 - Static syntax checks and `git diff --check` passed after the guard. Tests are authored but not run. Create a fresh recovery snapshot after this note; the previous 19:38 snapshot predates the provenance guard.
 
 
-## Voice provider feedback â€” 2026-10-20 19:45 IST
+## Voice provider feedback — 2026-10-20 19:45 IST
 - Desktop now shows inline messages when transcription or summary providers are unavailable/fail, while retaining the audio artifact and structured failure details. TypeScript/TSX parser and `git diff --check` passed; no runtime UI test/build was run.
 - Take a final snapshot after this note using explicit `-SourceRoot` so today's voice changes are preserved.
 
 
-## Persisted voice failure status â€” 2026-10-20 19:46 IST
+## Persisted voice failure status — 2026-10-20 19:46 IST
 - Session voice-result messages now preserve a clear status when transcription or summarization is unavailable. Added an audio-only persistence regression test. Static Python syntax checks, TypeScript/TSX parsing, and `git diff --check` passed; behavioral tests remain unrun.
 - Create a final snapshot now so all current voice work and this handoff are preserved.
 
 
-## Continuation â€” 2026-10-21 04:55 IST
+## Continuation — 2026-10-21 04:55 IST
 - Device online; project root unchanged.
 - Static verification passed: Python compileall, 26 JSON parses, `git diff --check`, and `pip check` (no broken requirements).
 - Refreshed bounded read-only audit: 908 files, 0 source/integration findings. Completion remains blocked; behavioral gate and project terminal security remain blocked (`os_sandbox=false`).
@@ -265,7 +265,7 @@ Copied the working tree including .git, app, tests, memory, docs, generated outp
 - Final recovery snapshot after the audit/handoff updates: `E:\\Lumira_Local_Backups\\personal_ai_core_20261021_045705`; 787 files / approximately 10.18 MB, zero copy failures, 15/15 critical SHA-256 checks passed (Robocopy exit 1 means successful copy).
 
 
-## Essentials continuation â€” 2026-10-21 09:50 IST
+## Essentials continuation — 2026-10-21 09:50 IST
 - Remote laptop online; active root `E:\\Hari\\personal_ai_core`.
 - Rechecked `/command`, explicit agent delegation, and workflow recovery route. No safe, clearly evidenced reason for a broad change was found; preserved current behavior rather than guessing.
 - Safe checks passed: Python compileall for `app` and `tests`, `git diff --check`, and 19 JSON files parsed with zero errors. Git showed only existing LF-to-CRLF notices.
@@ -273,12 +273,12 @@ Copied the working tree including .git, app, tests, memory, docs, generated outp
 - Next action: create a new recovery snapshot including this checkpoint and verify the backup script's critical-file SHA-256 manifest.
 
 
-## Feature implementation continuation â€” 2026-10-21
+## Feature implementation continuation — 2026-10-21
 - User explicitly redirected work from testing/perfection to building features from `Pasted text(20261021-042414).txt` (Lumira Master Feature Development Specification). Prioritize implementation and integration, not broad test/cleanup passes.
 - Built goal decomposition/hierarchy using existing `MemoryService` + `AtomicJsonStore` persistence: bounded atomic child-objective creation, parent/project association, event history capped at 50 entries, duplicate/missing/closed-parent rejection.
 - Added `/goals/{goal_id}/decompose`, parent filtering on `/goals`, and `/goals/{goal_id}/tree` combining descendant goals with existing WorkItemService workflows/tasks (depth 10, max 100 nodes, cycle warning). Desktop `api/client.ts` now exposes goal filtering, tree, decomposition, and update methods.
 - Not tested or built per user direction. Dedicated goal UI still pending. Keep implementing the spec's Priority 1/2 before lower-priority future-device work. Continue preserving all existing worktree changes.
-- Extended the Goal workspace UI with one-line-per-objective decomposition, hierarchy viewing, and task-workflow creation linked to the selected goal. Added desktop client support for creating workflows. No test/build runs per instruction; runtime integration remains unverified. Feature is now wired across persistence â†’ API â†’ desktop client/UI, using the existing stores and WorkItemService.
+- Extended the Goal workspace UI with one-line-per-objective decomposition, hierarchy viewing, and task-workflow creation linked to the selected goal. Added desktop client support for creating workflows. No test/build runs per instruction; runtime integration remains unverified. Feature is now wired across persistence → API → desktop client/UI, using the existing stores and WorkItemService.
 - Continued Goal priority feature build: persistent optional ISO-8601 deadlines, desktop deadline input/display, goal pause/resume/complete controls, child-objective decomposition, tree view, and task workflow creation from the Goals workspace. Added `POST /workflows` using existing WorkItemService and a desktop API method. No tests/builds run by design. Next feature slice should remain Priority 1/2: dependency-aware planning and context/session-linked goals, then memory/search/learning integration.
 - Priority 2 integration added: `PATCH /sessions/{session_id}/context` delegates to existing `SessionManagerService.update_context`; desktop API exposes it and Goals UI can link the selected goal to the active session. No test/build run by user instruction. Feature work remains focused on core goals/planning/session context rather than audits or polish.
 - Added planner integration: `POST /goals/{goal_id}/plan` calls existing deterministic `PlannerService.create_plan`, persists its bounded steps as a WorkItemService workflow linked to the saved goal/project, and is exposed in the Goals UI as Generate plan. It creates work items but does not run them. No tests/builds run by design.
@@ -316,7 +316,7 @@ Copied the working tree including .git, app, tests, memory, docs, generated outp
 - Added a Goals-page button to save and display a recovery snapshot for the selected session. The snapshot is intentionally compact and can be used to continue work when a chat reaches its conversation limit.
 
 
-## Current continuation â€” 2026-10-24
+## Current continuation — 2026-10-24
 
 - User reopened Ubuntu and reconnected Desktop Commander; device `lap` is online. Project root: `/mnt/e/Hari/personal_ai_core`.
 - Implemented provider-context integrity hardening in `app/services/autonomous_development/worker/openai_compatible_provider.py` and `app/services/autonomous_development/worker/development_worker.py`: oversized authoritative files and total context overflow now return structured blocked results rather than silently omitting or truncating source content.
@@ -328,7 +328,7 @@ Copied the working tree including .git, app, tests, memory, docs, generated outp
 - Follow-up on 2026-10-24: added dependency-free Linux/WSL `/proc/meminfo` telemetry fallback to `ResourceBudgetService`; added `tests/test_resource_budget_service.py` for that path. This test is authored but not run. The previous handoff entry's implementation and verification restrictions remain in effect.
 
 
-## 2026-10-24 continuation â€” resource-aware media implementation
+## 2026-10-24 continuation — resource-aware media implementation
 
 Latest saved edits:
 - `app/services/image/image_generation_service.py`: reject invalid/empty/over-4,000-character prompts; defer rendering when `ResourceBudgetService.execution_guidance()` reports that optional heavy media should wait.
@@ -369,7 +369,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - No tests/builds/runtime checks run. Source edits were read back for spot confirmation only; behavior/compilation remain unverified.
 
 
-## 2026-10-24 continuation batch â€” artifact detail, recovery inspection, voice retry durability
+## 2026-10-24 continuation batch — artifact detail, recovery inspection, voice retry durability
 - Added an Artifact Manager detail action that fetches the full public artifact metadata by ID and renders it in the page, with direct content access and archive/restore actions in the detail panel.
 - Expanded the Artifact Manager type filter to include diagrams, blueprints, schematics, exports, and reports so saved output categories can be searched without switching to the all-types view.
 - Added an execution-run Details action in Operations; it retrieves the selected run through the existing run detail API and renders the persisted record alongside recovery actions.
@@ -380,7 +380,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - Additional recovery safeguard: desktop startup no longer deletes the locally stored session ID when the backend/session fetch fails. It now preserves the identifier and surfaces a retry-after-reconnect notice, avoiding accidental loss of the recovery pointer during transient outages.
 
 
-## 2026-10-24 continuation batch â€” artifact insights, metadata export, recovery retry, navigation
+## 2026-10-24 continuation batch — artifact insights, metadata export, recovery retry, navigation
 - Added a desktop API client method for the existing `GET /artifacts/stats` endpoint.
 - Artifact Manager now requests the current page and global artifact statistics together, then displays total/active/archived counts when returned by the backend.
 - Added a Clear filters action that resets query, type, archive visibility, and pagination in one operation.
@@ -394,7 +394,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - Resilience refinement: artifact statistics are now optional to the list page. If `/artifacts/stats` is unavailable, the artifact list still renders and the metrics strip is hidden rather than failing the entire page.
 
 
-## 2026-10-25 â€” Search privacy and voice/artifact recovery corrections
+## 2026-10-25 — Search privacy and voice/artifact recovery corrections
 
 - `app/routes/search.py`: the existing recursive public-result sanitizer is now actually applied to unified-search results, preventing nested `file` fields from exposing local filesystem paths. Search input is trimmed; whitespace-only queries return a successful empty result rather than searching for whitespace.
 - `app/routes/artifacts.py`: artifact detail responses now include `content_available` (boolean) after resolving the stored path through the artifact manager. The local path itself remains excluded from public metadata; an invalid path produces a generic server error rather than exposing path details.
@@ -406,7 +406,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - Follow-up in the same batch: `ArtifactLibraryQueryService` now searches a bounded allowlist of user-facing metadata fields instead of every stored value. Internal file paths no longer affect artifact search matches; IDs, type, source, timestamps, title/name/description, and filename remain searchable. Source-inspected only; no tests/builds run.
 
 
-## 2026-10-25 â€” Master feature spec implementation batch (continued)
+## 2026-10-25 — Master feature spec implementation batch (continued)
 
 - `app/services/search/unified_search_service.py`: artifact search no longer matches on persisted local filesystem paths and now returns artifact metadata without the internal `file` field. Text content remains searchable through the validated artifact manager path.
 - `tests/test_search.py`: added regression coverage that internal artifact paths neither affect search matches nor appear in direct service results.
@@ -423,7 +423,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - Additional targeted regression fix: `OllamaSummaryProvider` now labels oversized transcript rejection as an input-limit error, matching the documented/tested contract while preserving the same configured size bound. Combined focused backend regression run after this correction: 33 passed in 7.90s. The earlier full-suite run predates this message-only correction and therefore still reports 25 failures; rerun the full backend suite before publishing a new global count.
 
 
-## 2026-10-25 â€” Progress-first implementation batch: goal readiness and durable failure states
+## 2026-10-25 — Progress-first implementation batch: goal readiness and durable failure states
 
 - Fixed app/routes/goals.py to import WorkItemValidationError, preventing a NameError when the goal-plan route handles that error path.
 - Added read-only GET /goals/{goal_id}/readiness. It reports goal status, direct dependency satisfaction, explicit blockers, deadline state, child-objective counts, and compact linked-workflow/task counts. It does not mutate goal or workflow state.
@@ -435,10 +435,10 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - Next implementation batch: continue autonomous-development task lifecycle fixes and agent dispatch contract gaps; keep generated-code execution disabled until real per-run OS isolation is implemented and verified.
 
 
-## 2026-10-25 â€” Progress-first implementation batch 2: goal management + agent research routing
+## 2026-10-25 — Progress-first implementation batch 2: goal management + agent research routing
 
 ### Implemented source changes (not runtime-verified)
-- `app/routes/goals.py`: bounded `/goals` pagination and strict status filtering; `/goals/summary`; transitive `/goals/{goal_id}/dependencies`; add/remove blocker routes; add/remove dependency routes; missing-reference/cycle reporting; graph depth/node bounds; parent-goal existence checks; ISO-8601 deadline validation; progress 0â€“100 constraint; blocker string bounds; backend duplicate active/blocked workflow protection during planning; readiness query narrowed to workflows belonging to the requested goal.
+- `app/routes/goals.py`: bounded `/goals` pagination and strict status filtering; `/goals/summary`; transitive `/goals/{goal_id}/dependencies`; add/remove blocker routes; add/remove dependency routes; missing-reference/cycle reporting; graph depth/node bounds; parent-goal existence checks; ISO-8601 deadline validation; progress 0–100 constraint; blocker string bounds; backend duplicate active/blocked workflow protection during planning; readiness query narrowed to workflows belonging to the requested goal.
 - `lumira_desktop/src/api/client.ts` and `lumira_desktop/src/layouts/MainLayout.tsx`: goal summary metrics, dependency graph inspection, blocker management, and dependency edits now go through server-side cycle-checking APIs instead of directly replacing the entire dependency list.
 - `app/agents/research_agent.py`: explicit intent routing to existing comparison, market, technical, document, local knowledge, evidence, research summary, and knowledge-extraction capabilities; rejects empty tasks and malformed capability results.
 - `app/services/research/research_capability_service.py`: local search errors normalized without leaking internals; malformed result shapes rejected; local results bounded by category, total count, string length, nested depth, and object/list size.
@@ -447,7 +447,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - No tests/build/lint/runtime checks run per instruction. Do not treat these changes as verified until explicitly asked to run checks.
 
 
-## 2026-10-25 â€” Progress-first implementation batch 2
+## 2026-10-25 — Progress-first implementation batch 2
 
 - `app/routes/goals.py`: added bounded goal pagination, strict status filters, portfolio summary, transitive dependency graph, missing/cycle warnings, blocker add/remove, dependency add/remove with cycle protection, parent-goal validation, deadline validation, progress bounds, blocker bounds, duplicate active-plan protection, and goal-scoped readiness workflow lookup.
 - `lumira_desktop/src/api/client.ts` and `lumira_desktop/src/layouts/MainLayout.tsx`: connected goal summary metrics, dependency graph inspection, blocker management, and server-validated dependency edits.
@@ -460,7 +460,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - Additional guard: provider-backed research now rejects empty or over-10,000-character requests before calling the configured provider. Added regression coverage; still unexecuted.
 
 
-## 2026-10-25 â€” Progress-first implementation batch 3: goal portfolio intelligence
+## 2026-10-25 — Progress-first implementation batch 3: goal portfolio intelligence
 
 ### Source changes (not executed or verified)
 - Added and registered `app/routes/goal_intelligence.py` as the Goal Intelligence API router.
@@ -474,7 +474,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - Follow-up UI wiring in the same batch: Goals now exposes a milestone panel with create/list/status-change/remove controls, a duplicate-goal action, portfolio analysis, and copy-export. These additions are also unverified; no tests/build/lint/runtime checks were run.
 
 
-## 2026-10-25 â€” Progress-first batch 4: workflow operations and session diagnostics
+## 2026-10-25 — Progress-first batch 4: workflow operations and session diagnostics
 
 ### Source implemented; verification deliberately not run
 - Added `app/routes/workflow_insights.py` and registered it before the legacy workflow router so static insight routes cannot be shadowed by `/workflows/{workflow_id}`.
@@ -487,7 +487,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - No tests, builds, lint, runtime checks, package installs, commits, resets, cleanup, or data mutations were performed. These are source-level additions only and must remain marked unverified.
 
 
-## 2026-10-25 â€” Progress-first batch 5: project portfolio insights
+## 2026-10-25 — Progress-first batch 5: project portfolio insights
 
 - Added and registered `app/routes/project_insights.py` before the existing project routes to avoid static-route shadowing.
 - Added project portfolio summary (project/version totals, project-type and latest-status distributions, projects without valid metadata versions), case-insensitive project search, per-project health findings, bounded safe file manifests, and relative-path comparison between versions.
@@ -497,12 +497,12 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - No tests/build/lint/runtime checks were run. Project and session/workflow insight additions are source-only and unverified; no package installs, commits, resets, cleanup, or data mutation.
 
 
-## Roadmap count clarification â€” 2026-10-25
+## Roadmap count clarification — 2026-10-25
 - The canonical `docs/feature_completion_matrix.md` currently defines **28 top-level catalog features**, not a verified 40-item master list. The 28 goal-intelligence signals and newly added workflow/session/project endpoints are sub-capabilities, not new top-level registry entries.
 - Do not claim that all 40 top-level features are complete. The new insight routes and Desktop wiring are source-level work; verification remains pending by explicit user instruction not to run tests/build/lint/runtime checks.
 
 
-## 2026-10-25 â€” Progress-first batch 6: content-aware project version comparison
+## 2026-10-25 — Progress-first batch 6: content-aware project version comparison
 
 - Extended `GET /projects/{project_name}/compare-versions` from path-only comparison to bounded SHA-256 content comparison for common files.
 - Reports files unique to either version, changed common paths with sizes and hashes, and files skipped due to read errors or budgets. Read budgets: 2 MiB per file, 20 MiB total, and 200 common paths scanned. Does not execute project files.
@@ -511,7 +511,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - No tests, builds, lint, runtime checks, package installs, cleanup, reset, commit, or repository-wide formatting performed.
 
 
-## 2026-10-25 â€” Progress-first batch 7: generated-project integrity inspection
+## 2026-10-25 — Progress-first batch 7: generated-project integrity inspection
 
 - Added `GET /projects/{project_name}/integrity` with bounded traversal and reports for empty files, oversized files, skipped symlinks, unreadable/out-of-root paths, and scan truncation.
 - The scan is metadata-only: it never imports or executes generated project code. It ignores hidden paths and common dependency/build directories and caps the scan at 500 files.
@@ -520,7 +520,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - No cleanup, formatting sweep, tests, build, lint, runtime checks, installs, commits, resets, or data changes.
 
 
-## 2026-10-25 â€” Progress-first batch 8: generated-project static security review
+## 2026-10-25 — Progress-first batch 8: generated-project static security review
 
 - Added `GET /projects/{project_name}/security-review` for bounded heuristic scanning of saved source/config files.
 - Reports rule IDs, severity, relative paths, and line numbers without returning source lines or secret values. It never executes source.
@@ -530,7 +530,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - No cleanup, resets, commits, installs, builds, lint, tests, or runtime checks performed.
 
 
-## 2026-10-25 â€” Progress-first batch 9: generated-project readiness audit
+## 2026-10-25 — Progress-first batch 9: generated-project readiness audit
 
 - Added `GET /projects/{project_name}/readiness-audit`, a static packaging/readiness review with 31 deterministic checks spanning README, manifests, lockfiles, tests, license, ignore rules, environment templates, container/CI files, source layout, configuration, documentation, package.json parsing/scripts, requirements pinning, possible root environment files, generation metadata, and bundled dependency directories.
 - Returns per-check pass/warning/info status, concise guidance, aggregate counts, and a readiness score. The score reflects checklist completion only; it does not indicate runtime correctness or security.
@@ -540,9 +540,9 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - No tests, build, lint, runtime checks, package installs, resets, cleanup, commits, or destructive data changes were performed.
 
 
-## 2026-10-25 â€” Progress-first batch 10: agent-backed workflow execution
+## 2026-10-25 — Progress-first batch 10: agent-backed workflow execution
 
-- Added `POST /workflows/{workflow_id}/run-ready` to execute up to three dependency-ready tasks per explicit request through Lumiraâ€™s existing local agent dispatcher.
+- Added `POST /workflows/{workflow_id}/run-ready` to execute up to three dependency-ready tasks per explicit request through Lumira’s existing local agent dispatcher.
 - The route checks persisted dependencies before each task, marks it in progress, records a bounded agent result, transitions success to completed and failure to failed, and stops on failure by default. Agent dispatch exceptions are recorded as task failures rather than leaving tasks stuck in progress.
 - Connected the API client and Business/Operations workflow cards with a user-confirmed **Run with agent** action and a structured result panel.
 - Added `tests/test_workflow_agent_execution.py` covering dependency-order execution, persisted outcomes, fail-stop behavior, and missing workflows. Tests were authored but not run.
@@ -550,7 +550,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - Safety boundary: this invokes the existing bounded agent dispatcher; it does not execute arbitrary generated project code or claim unperformed external side effects.
 
 
-## 2026-10-25 â€” Progress-first batch 11: goal orchestration and durable agent deliverables
+## 2026-10-25 — Progress-first batch 11: goal orchestration and durable agent deliverables
 
 - Added a read-only workflow execution preview endpoint. It reports dependency-ready tasks, unmet dependencies, failed-task retry requirements, and progress without invoking agents or mutating workflow state.
 - Added goal-wide bounded execution across linked workflows with one shared task budget, sequential workflow processing, and fail-stop behavior.
@@ -561,7 +561,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - No builds, tests, lint, runtime checks, package installs, cleanup, resets, commits, or destructive changes were performed.
 
 
-## 2026-10-25 â€” Progress-first batch 12: explicit workflow recovery
+## 2026-10-25 — Progress-first batch 12: explicit workflow recovery
 
 - Added a bounded `POST /workflows/{workflow_id}/retry-failed` endpoint that requeues failed tasks without invoking agents, clears the task's active blocker/result through the existing transition service, and preserves transition history. Dependency checks still govern later execution.
 - Added a confirmation-gated Retry failed action to workflow cards and API integration. It is separate from Run with agent so requeueing cannot silently execute work.
@@ -627,7 +627,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - After voice processing creates linked artifacts, the Artifact Manager query is reset to search across all artifact types, rather than accidentally keeping the original audio-only filter.
 
 
-## 2026-10-26 â€” Progress-first continuation: image artifact persistence
+## 2026-10-26 — Progress-first continuation: image artifact persistence
 
 - Updated the Image Analysis save action to persist the original uploaded image as an `images` binary artifact before saving the Markdown analysis report as a `reports` artifact. The UI now reports both artifact IDs when the backend returns them, and prevents repeated clicks after a successful save until a new analysis is run.
 - Starting a new analysis clears the previous saved status so the new result can be stored separately.
@@ -636,14 +636,14 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - No tests, builds, lint, or runtime checks were run. The new image persistence path is not runtime-verified; if image storage succeeds but report storage fails, the image artifact may remain without a corresponding report.
 
 
-## 2026-10-26 â€” Progress-first continuation: artifact speech and image links
+## 2026-10-26 — Progress-first continuation: artifact speech and image links
 
 - Added a **Speak content** action to Artifact Manager details for transcript, summary, report, and export artifacts when the detail response includes text content. It sends up to 12,000 characters to the existing voice playback API and selects English, Tamil, or mixed Tamil-English based on the text's scripts.
 - The image-analysis save flow now also records the original image artifact ID in its on-screen success message; the report itself remains a separate Markdown artifact. No new API route was introduced.
 - These are source-level changes only. The playback endpoint response, artifact-detail content shape, image upload/report sequence, and TypeScript compilation have not been verified by tests/build/runtime checks.
 
 
-## 2026-10-26 â€” Progress-first continuation: speech playback content loading
+## 2026-10-26 — Progress-first continuation: speech playback content loading
 
 - Added a text-response helper to the Desktop API client and a `getArtifactTextContent` method that reads the existing artifact-content endpoint as text rather than JSON.
 - Artifact details now fetch content for available transcript, summary, report, and export artifacts (capped to 12,000 characters in the UI state) so the **Speak content** action can work when metadata alone did not contain the text. A content-read failure leaves the metadata panel usable and disables speaking for that artifact.
@@ -651,7 +651,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - No tests, builds, lint, or runtime checks were run. The content endpoint response shape, playback behavior, and UI compile status remain unverified.
 
 
-## 2026-10-26 â€” Artifact usability continuation
+## 2026-10-26 — Artifact usability continuation
 
 - Added a dedicated expandable text-content preview to Artifact Manager details, so loaded transcripts, summaries, reports, and exports can be read directly without inspecting the metadata JSON.
 - Added a Copy text action beside Speak content for text-based artifacts. Clipboard errors are surfaced in the existing page error area.
@@ -660,7 +660,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - No tests, builds, lint, or runtime checks were run. These UI edits remain unverified in the running app.
 
 
-## 2026-10-26 â€” Artifact media playback and previews
+## 2026-10-26 — Artifact media playback and previews
 
 - Added inline image previews for stored `images` artifacts, with a link to open the original content endpoint.
 - Added browser-native audio playback controls for `audio` artifacts and video playback controls for `video` artifacts using the existing artifact content URL. The existing transcription/summarization actions remain available for audio.
@@ -669,7 +669,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - No tests, builds, lint, or runtime checks were run.
 
 
-## 2026-10-26 â€” Artifact Manager continuation (multi-import and previews)
+## 2026-10-26 — Artifact Manager continuation (multi-import and previews)
 
 - Artifact Manager file selection now accepts multiple files and processes them sequentially through the existing import path, reporting the number imported and listing failed filenames.
 - Import outcomes are now returned from the import handler so the batch summary can distinguish successful imports from rejected/failed files. Existing per-file validation remains: supported extensions only; text up to 1 MB; binary up to 25 MB.
@@ -678,7 +678,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - The batch import is frontend-only and reuses existing artifact endpoints. No tests, TypeScript checks, build, lint, or runtime checks were run. Confirm multiple import behavior and the content endpoint's PDF/media response headers during a later safe verification pass.
 
 
-## 2026-10-26 â€” Progress-first continuation: workflow creation and recoverable UI errors
+## 2026-10-26 — Progress-first continuation: workflow creation and recoverable UI errors
 
 - Added direct workflow creation to Operations so a user can persist a task sequence without first creating a parent goal. The form supports operations/business category, title, and one task per line; it saves the workflow, refreshes the workspace, and opens the dependency graph when the API returns a workflow ID. Saving does not execute the tasks.
 - Added `createStandaloneWorkflow` in `lumira_desktop/src/layouts/MainLayout.tsx`, reusing the existing workflow API and current session/project context when available.
@@ -691,7 +691,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - Unified Search now also shows a total match count and an explicit no-results message rather than leaving the user to infer that an empty result set is expected.
 
 
-## 2026-10-26 â€” Workflow safety and task inspection continuation
+## 2026-10-26 — Workflow safety and task inspection continuation
 
 - Operations workflow creation now validates backend limits before submission: at most 20 non-empty tasks and 500 characters per task. The submit control disables when those limits are exceeded, and the form displays the current task count/limits.
 - Agent workflow execution now calls the existing read-only execution-preview endpoint before showing the confirmation dialog. If the preview has zero dependency-ready tasks, execution is not started and the UI explains that blockers/dependencies must be reviewed. The confirmation states the preview count and selected agent mode. Backend preview contract confirmed from source: `ready_count`, `can_start`, `tasks`; preview is read-only and reports zero agent calls/state changes.
@@ -701,7 +701,7 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - No tests, builds, lint, type checks, or app runtime were run. Source changes were read back through the remote file tool; behavior remains unverified in the running application. Follow-up: safely verify the preview response and task-history/result response shapes when runtime checks are explicitly permitted; improve workflow search result presentation after a small safe edit is available.
 
 
-## User-journey repair checkpoint â€” 2026-11-03
+## User-journey repair checkpoint — 2026-11-03
 
 The owner requested an end-user audit of Lumira followed by repairs. Work was performed against the local checkout and GitHub, with changes merged to `main`.
 
@@ -736,7 +736,7 @@ The owner requested an end-user audit of Lumira followed by repairs. Work was pe
 5. Re-check provider readiness and startup logs; keep any unavailable provider clearly labelled unavailable.
 
 
-## User-perspective verification continuation â€” 2026-11-03 17:05 IST
+## User-perspective verification continuation — 2026-11-03 17:05 IST
 
 Local checks performed on the connected Windows laptop after the 2026-11-03 repairs:
 - Desktop production frontend build (`npm run build`): passed; Vite emitted `dist/index.html` and production JS/CSS bundles.
@@ -751,23 +751,3 @@ Deployment remains pending:
 - The installed app and its existing user-data directory remain untouched; the pre-migration backup is preserved.
 - UI interaction was validated through automated component tests only. Remote shell/file access does not provide screenshot or mouse control, so visual acceptance still requires the owner to inspect the running desktop app.
 - Next: wait for stable RAM headroom above 2 GB, package into a new release output directory so the old installer is not overwritten, install without deleting the backup, and perform packaged startup/data-migration/API acceptance.
-
-
-## Deployment gate recheck â€” 2026-11-03 17:xx IST
-
-- GitHub Actions run `41629035324` for commit `dffa3a9b029b9f2a9908ce163de65347a9e25f72` completed with conclusion `success`; backend and desktop jobs both passed, including backend compile/tests and desktop build/lint/tests.
-- Reconnected to the authorized Windows laptop. Working tree remains clean on `main` and synchronized with `origin/main` at `dffa3a9`.
-- Latest host memory sample: 1.81 GB free of 7.7 GB. This is below the conservative 2 GB threshold for Electron packaging; no installer build or installation was attempted.
-- Ports 8000 and 5000 did not return a health response within the short diagnostic timeout. No Lumira backend or desktop service is currently verified as running; this is not a code-test failure and requires a controlled launch after packaging/deployment.
-- The process inventory shows substantial browser and desktop-app memory use. No processes were terminated and no user applications were changed.
-- Deployment, migration, packaged runtime, live provider checks, and visual acceptance remain open. Do not claim 100% completion until those gates pass. Existing user-data backups and old release remain untouched.
-
-
-## Deployment gate recheck - 2026-11-03
-
-- GitHub Actions run `41629035324` for commit `dffa3a9b029b9f2a9908ce163de65347a9e25f72` completed with conclusion `success`; backend and desktop jobs both passed, including backend compile/tests and desktop build/lint/tests.
-- Reconnected to the authorized Windows laptop. Working tree was clean on `main` and synchronized with `origin/main` at `dffa3a9` before this handoff-only update.
-- Latest host memory sample: 1.81 GB free of 7.7 GB. This is below the conservative 2 GB threshold for Electron packaging; no installer build or installation was attempted.
-- Ports 8000 and 5000 did not return a health response within the short diagnostic timeout. No Lumira backend or desktop service is currently verified as running; this is not a code-test failure and requires a controlled launch after packaging/deployment.
-- The process inventory shows substantial browser and desktop-app memory use. No processes were terminated and no user applications were changed.
-- Deployment, migration, packaged runtime, live provider checks, and visual acceptance remain open. Do not claim 100% completion until those gates pass. Existing user-data backups and old release remain untouched.
