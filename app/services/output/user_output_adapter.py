@@ -106,7 +106,7 @@ def _normalize_text(value: str, *, allow_json: bool = False, depth: int = 0) -> 
             except (TypeError, ValueError):
                 continue
             trailing = candidate[index + end:].strip()
-            if trailing not in {"", "```"}:
+            if trailing and not re.fullmatch(r"(?:```)?[.!?;,:\\s]*", trailing):
                 continue
             parsed_embedded = parsed_value
             prefix = candidate[:index].strip()
