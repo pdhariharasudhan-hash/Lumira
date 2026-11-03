@@ -72,3 +72,13 @@ def test_result_is_left_untouched_and_response_serializable():
 
 def test_non_dict_response_passes_through():
     assert adapt("raw") == "raw"
+
+
+def test_nested_error_object_is_converted_to_plain_language():
+    message = build_message({
+        "success": False,
+        "capability": "project_generation",
+        "error": {"code": "project_save_failed", "message": "Disk is full."},
+    })
+    _no_json(message)
+    assert message == "Project generation could not be completed: Disk is full."

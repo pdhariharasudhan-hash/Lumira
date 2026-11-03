@@ -134,8 +134,13 @@ def build_message(result: Any, capability: str | None = None) -> str:
 
     if failed:
         reason = result.get("error") or result.get("reason") or result.get("code")
+        if isinstance(reason, dict):
+            reason = reason.get("message") or reason.get("code")
         base = f"{_humanize(capability)} could not be completed"
-        return f"{base}: {str(reason).replace('_', ' ')}." if reason else base + "."
+        if isinstance(reason, str) and reason.strip():
+            detail = reason.strip().replace("_", " ").rstrip(".!?")
+            return f"{base}: {detail}."
+        return base + "."
 
     return _describe_scalars(result, capability)
 

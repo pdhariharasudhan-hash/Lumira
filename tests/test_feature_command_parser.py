@@ -59,3 +59,34 @@ def test_feature_list_phrases_route_to_list_features():
         parsed = parser.parse(command)
         assert parsed["success"] is True
         assert parsed["capability"] == "list_features"
+
+from app.services.projects.project_classifier import ProjectClassifier
+
+
+def test_image_generation_accepts_common_natural_language_variants():
+    parser = CommandParserService()
+    for command in (
+        "GENERATE A IMAGE OF ROCKET",
+        "create an image of a rocket",
+        "draw a picture of a rocket",
+    ):
+        parsed = parser.parse(command)
+        assert parsed["success"] is True
+        assert parsed["capability"] == "generate_image"
+        assert parsed["payload"]["prompt"] == command
+
+
+def test_vague_app_request_asks_for_requirements_instead_of_running_builder():
+    parsed = CommandParserService().parse("Build an app")
+    assert parsed == {
+        "success": True,
+        "capability": "clarify_project",
+        "payload": {},
+    }
+
+
+def test_specific_app_request_gets_a_crud_project_plan():
+    classifier = ProjectClassifier()
+    result = classifier.classify("build an app for tracking homework")
+    assert result["primary_entity"] == "homework"
+    assert set(result["actions"]) >= {"storage", "create", "read", "update", "delete"}

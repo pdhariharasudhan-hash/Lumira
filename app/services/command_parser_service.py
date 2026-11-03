@@ -82,6 +82,13 @@ class CommandParserService:
         if any(phrase in text for phrase in complete_project_phrases):
             return {"success": True, "capability": "project_pipeline", "payload": {"request": command}}
 
+        # A bare app request needs requirements, not a fabricated project plan.
+        if text.rstrip(" .!?") in {
+            "build an app", "build app", "create an app", "create app",
+            "make an app", "make app", "develop an app", "develop app",
+        }:
+            return {"success": True, "capability": "clarify_project", "payload": {}}
+
         creation_phrases = (
             "create pannu", "create pannunga", "build pannu", "build pannunga",
             "உருவாக்கு", "உருவாக்குங்கள்", "செயலி உருவாக்கு", "இணையதளம் உருவாக்கு",
@@ -154,17 +161,15 @@ class CommandParserService:
         # IMAGE GENERATION
         # ----------------------------------------------------
 
-        if (
-            "generate image" in text
-            or "generate an image" in text
+        image_verbs = ("generate", "create", "make", "draw", "render")
+        image_nouns = ("image", "picture", "photo", "illustration", "artwork")
+        if any(text.startswith(verb) for verb in image_verbs) and any(
+            noun in text.split() for noun in image_nouns
         ):
             return {
                 "success": True,
                 "capability": "generate_image",
-                "payload": {
-                    "prompt": command,
-                    "image_type": "image",
-                },
+                "payload": {"prompt": command, "image_type": "image"},
             }
 
         # ----------------------------------------------------

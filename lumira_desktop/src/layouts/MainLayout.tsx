@@ -37,7 +37,7 @@ type ApiResponse = JsonObject & {
 };
 
 type OutputDescriptor = {
-	type: "text" | "code" | "document" | "pdf" | "image" | "video" | "audio" | "json";
+	type: "text" | "code" | "document" | "pdf" | "image" | "svg" | "video" | "audio" | "json";
 	mime?: string;
 	language?: string;
 	content?: string;
@@ -134,7 +134,7 @@ function renderOutput(output: OutputDescriptor | undefined) {
 	}
 	const source = output.url;
 	if (!source) return null;
-	if (output.type === "image") return <img className="assistant-output-media" src={source} alt="Lumira generated output" />;
+	if (output.type === "image" || output.type === "svg") return <img className="assistant-output-media" src={source} alt="Lumira generated image" />;
 	if (output.type === "video") return <video className="assistant-output-media" src={source} controls aria-label="Generated video" />;
 	if (output.type === "pdf") return <iframe className="assistant-output-media" src={source} title="Generated PDF document" />;
 	return <audio className="assistant-output-media" src={source} controls aria-label="Generated audio" />;
@@ -2027,9 +2027,10 @@ async function runArtifactVoiceAction(artifactId: string, action: "process" | "t
 						{messages.length === 0 ? <div className="welcome-state"><div className="welcome-mark"><FiCpu /></div><p className="eyebrow">LUMIRA / {titleForMode(activeMode).toUpperCase()}</p><h2>What are we working on?</h2><p className="welcome-copy">Send a request through Lumira's routed command pipeline.</p><div className="suggestion-row"><button type="button" onClick={() => setPromptFromTool("Plan for launching ", "business")}>Business plan</button><button type="button" onClick={() => setPromptFromTool("Generate a diagram for ", "generator")}>Generate diagram</button><button type="button" onClick={() => setPromptFromTool("Prepare today's operational tasks for ", "operations")}>Plan operations</button></div></div> : <div className="message-list">{messages.map((message) => {
 							const response = message.response ?? {};
 							const result = object(response.result ?? response.data ?? response);
-							const capability = stringValue(result.capability, "Lumira response");
+							const parsedResponse = object(response.parsed);
+							const capability = stringValue(result.capability, stringValue(parsedResponse.capability, stringValue(response.capability, "Lumira response")));
 							const successful = result.success !== false && response.success !== false;
-							const status = stringValue(result.status, successful ? "completed" : "unavailable");
+							const status = stringValue(result.status, response.clarification_required ? "needs_details" : successful ? "completed" : "unavailable");
 							const projectName = stringValue(result.project_name ?? object(result.project).project_name ?? result.code_target);
 							const metadata = object(result.metadata);
 							const isProjectResult = Boolean(projectName) && successful;

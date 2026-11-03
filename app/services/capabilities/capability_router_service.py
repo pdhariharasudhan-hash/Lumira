@@ -1197,23 +1197,16 @@ class CapabilityRouterService:
         # --------------------------
 
         if capability == "image_generation":
-
             request = payload.get(
                 "request",
-                payload.get(
-                    "idea",
-                    payload.get(
-                        "command",
-                        ""
-                    )
-                )
+                payload.get("prompt", payload.get("idea", payload.get("command", ""))),
             )
-
             return self._with_mode(
-                self.generator.image_generation(
-                    request
+                self.images.generate(
+                    prompt=request,
+                    image_type=payload.get("image_type", "image"),
                 ),
-                mode_state
+                mode_state,
             )
 
         if capability == "document_generation":

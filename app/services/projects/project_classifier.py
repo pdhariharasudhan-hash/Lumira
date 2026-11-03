@@ -48,6 +48,15 @@ class ProjectClassifier:
             "secure",
             "with",
             "for",
+            "to",
+            "tracking",
+            "track",
+            "manage",
+            "management",
+            "build",
+            "create",
+            "make",
+            "develop",
         }
 
         entities = []
@@ -91,6 +100,12 @@ class ProjectClassifier:
                 ])
 
                 break
+
+        # App, website and software requests need a usable CRUD foundation.
+        if any(term in text for term in (" app", "application", "website", "web site", "software", "tool")):
+            for action in ("storage", "create", "read", "update", "delete"):
+                if action not in actions:
+                    actions.append(action)
 
         # LUMIRA CAPABILITY ACTION ALIASES
         if isinstance(text, str):

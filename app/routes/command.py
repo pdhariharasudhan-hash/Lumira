@@ -147,6 +147,30 @@ def _command_impl(
         )
 
     parsed = CommandParserService().parse(request.input)
+    if parsed.get("success") and parsed.get("capability") == "clarify_project":
+        message = (
+            "I can build it, but I need the app's purpose first. "
+            "What should the app help people do? For example: track homework, "
+            "manage expenses, or organize projects."
+        )
+        sessions.append_message(session["session_id"], "user", request.input)
+        sessions.append_message(
+            session["session_id"],
+            "assistant",
+            message,
+            metadata={"capability": "clarify_project", "clarification_required": True},
+        )
+        return {
+            "success": True,
+            "session_id": session["session_id"],
+            "intent": "build",
+            "parsed": parsed,
+            "clarification_required": True,
+            "message": message,
+            "attachments": [],
+            "context": session,
+        }
+
     greeting_text = (
         request.input.strip().lower().replace(",", "").replace("!", "").replace(".", "")
     )

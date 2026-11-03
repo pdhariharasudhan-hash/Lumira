@@ -347,6 +347,45 @@ describe("Lumira workspace shell", () => {
 		expect(screen.getByText("No workflow runs are recorded.")).toBeTruthy();
 	});
 
+	it("renders app clarification as a clarification instead of a completed generic response", async () => {
+		setSessionId("session-12345678");
+		mockFetch((input) => {
+			if (String(input) === "/sessions/session-12345678") return jsonResponse(activeSession());
+			if (String(input) === "/command") return jsonResponse({
+				success: true,
+				parsed: { success: true, capability: "clarify_project", payload: {} },
+				clarification_required: true,
+				message: "What should the app help people do?",
+				attachments: [],
+			});
+			return defaultResponse(input);
+		});
+		render(<MainLayout />);
+		fireEvent.change(await screen.findByRole("textbox", { name: "Describe what you want to work on" }), { target: { value: "Build an app" } });
+		fireEvent.click(screen.getByRole("button", { name: "Send request" }));
+		expect(await screen.findAllByText("What should the app help people do?")).toHaveLength(2);
+		expect(await screen.findByText("clarify project")).toBeTruthy();
+		expect(await screen.findByText("needs details")).toBeTruthy();
+	});
+
+	it("renders SVG image artifacts as images instead of falling through to audio", async () => {
+		setSessionId("session-12345678");
+		mockFetch((input) => {
+			if (String(input) === "/sessions/session-12345678") return jsonResponse(activeSession());
+			if (String(input) === "/command") return jsonResponse({
+				success: true,
+				message: "Your diagram is ready.",
+				result: { success: true, capability: "image_generation", status: "completed" },
+				output: { type: "svg", url: "/artifacts/svg-1/content" },
+			});
+			return defaultResponse(input);
+		});
+		render(<MainLayout />);
+		fireEvent.change(await screen.findByRole("textbox", { name: "Describe what you want to work on" }), { target: { value: "Create a diagram" } });
+		fireEvent.click(screen.getByRole("button", { name: "Send request" }));
+		expect(await screen.findByRole("img", { name: "Lumira generated image" })).toBeTruthy();
+	});
+
 	it("records microphone audio and sends it through the saved voice pipeline", async () => {
 		setSessionId("session-12345678");
 		const stoppedTrack = vi.fn();
