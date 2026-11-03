@@ -14,6 +14,11 @@ class InvalidImageProvider:
         return {"success": True, "content": b"not an image", "extension": "png"}
 
 
+class RaisingInvalidImageProvider:
+    def generate(self, prompt, image_type):
+        raise ValueError("private provider endpoint details")
+
+
 class ValidImageProvider:
     def generate(self, prompt, image_type):
         return {"success": True, "content": b"\x89PNG\r\n\x1a\nimage", "extension": "png"}
@@ -53,6 +58,10 @@ def test_image_provider_errors_do_not_create_artifacts(tmp_path, monkeypatch):
 
     invalid = ImageGenerationService(InvalidImageProvider()).generate("diagram")
     assert invalid["code"] == "invalid_provider_response"
+
+    invalid_exception = ImageGenerationService(RaisingInvalidImageProvider()).generate("diagram")
+    assert invalid_exception["code"] == "invalid_provider_response"
+    assert "private provider endpoint details" not in str(invalid_exception)
     assert ArtifactManagerService().get_all_artifacts() == []
 
 
