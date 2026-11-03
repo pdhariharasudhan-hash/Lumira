@@ -15,6 +15,7 @@ _PROVIDER_ENABLE_FLAGS = {
     "transcription": ("LUMIRA_TRANSCRIPTION_ENABLED", "LUMIRA_LOCAL_TRANSCRIPTION_ENABLED"),
     "speech_synthesis": ("LUMIRA_SPEECH_SYNTHESIS_ENABLED",),
     "image_generation": ("LUMIRA_IMAGE_GENERATION_ENABLED",),
+    "video_generation": ("LUMIRA_VIDEO_GENERATION_ENABLED",),
     "image_understanding": ("LUMIRA_VISION_ENABLED", "LUMIRA_OLLAMA_VISION_ENABLED"),
     "research": ("LUMIRA_RESEARCH_ENABLED",),
     "wake_word": ("LUMIRA_WAKE_WORD_ENABLED",),

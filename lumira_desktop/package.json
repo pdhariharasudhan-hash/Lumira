@@ -46,6 +46,7 @@
                   "files":  [
                                 "dist/**/*",
                                 "electron-main.cjs",
+                                "backend-runtime.cjs",
                                 "package.json"
                             ],
                   "directories":  {
@@ -60,13 +61,25 @@
                               "!lumira_desktop{,/**}",
                               "!.git{,/**}",
                               "!generated{,/**}",
+                              "!memory{,/**}",
+                              "!artifacts{,/**}",
+                              "!data{,/**}",
+                              "!.lumira_data{,/**}",
+                              "!tests{,/**}",
+                              "!autodev_review{,/**}",
+                              "!.agents{,/**}",
+                              "!.pytest_cache{,/**}",
+                              "!.pytest-work{,/**}",
                               "!.venv{,/**}",
                               "!venv{,/**}",
-                              "!__pycache__{,/**}"
+                              "!__pycache__{,/**}",
+                              "!*.db",
+                              "!project_memory.json",
+                              "!final-audit-result.json"
                           ]
                       },
                       {
-                          "from": "E:/Hari/personal_ai_core/.venv",
+                          "from": "../.venv",
                           "to": "python-runtime",
                           "filter": [
                               "**/*"

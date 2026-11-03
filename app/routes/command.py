@@ -68,7 +68,7 @@ def command(
     request: GenericInput
 ):
     # Normalize once, then persist the exact user-facing response contract for chat restore.
-    response = adapt_user_output(_command_impl(request))
+    response = adapt_user_output(_command_impl(request), prompt=request.input)
     if isinstance(response, dict):
         session_id = response.get("session_id")
         message = response.get("message")

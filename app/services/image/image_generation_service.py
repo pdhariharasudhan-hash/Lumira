@@ -84,17 +84,17 @@ class ImageGenerationService:
 
         try:
             result = self.provider.generate(prompt, image_type)
-        except ValueError as error:
+        except ValueError:
             return {
                 "success": False,
                 "code": "invalid_provider_response",
-                "message": str(error),
+                "message": "Image service returned an invalid image response.",
             }
-        except RuntimeError as error:
+        except RuntimeError:
             return {
                 "success": False,
                 "code": "provider_error",
-                "message": str(error),
+                "message": "The image provider encountered an error; no image artifact was created.",
             }
         except Exception:
             return {

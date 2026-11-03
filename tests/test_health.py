@@ -17,6 +17,7 @@ def test_health_endpoint():
         "transcription",
         "speech_synthesis",
         "image_generation",
+        "video_generation",
         "image_understanding",
         "research",
         "wake_word",

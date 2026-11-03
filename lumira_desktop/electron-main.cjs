@@ -3,6 +3,7 @@ const { spawn, execFile } = require('child_process');
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
+const { installBackendRuntime, prepareWorkspace } = require('./backend-runtime.cjs');
 
 const API_PORT = Number(process.env.LUMIRA_API_PORT || 8000);
 const APP_PORT = Number(process.env.LUMIRA_APP_PORT || 5000);
@@ -28,39 +29,24 @@ function existing(candidates) {
   return candidates.find(candidate => candidate && fs.existsSync(candidate)) || null;
 }
 
+function backendWorkspaceRoot() {
+  return prepareWorkspace(app.getPath('userData'), message => log(message));
+}
+
 function runtimeBackendRoot() {
   if (!isPackaged) return null;
-  const bundled = path.join(process.resourcesPath, 'backend');
-  const runtime = path.join(app.getPath('userData'), 'backend');
-  const marker = path.join(runtime, '.lumira-runtime-version');
-  const backendSignaturePath = path.join(bundled, 'app', 'routes', 'command.py');
-  const backendSignature = fs.existsSync(backendSignaturePath)
-    ? fs.statSync(backendSignaturePath)
-    : null;
-  // Replace stale user-data copies when bundled backend code changes, even if
-  // the Electron application version has not changed.
-  const version = [
-    app.getVersion(),
-    backendSignature ? backendSignature.size : 0,
-    backendSignature ? Math.trunc(backendSignature.mtimeMs) : 0,
-  ].join('-');
-
   try {
-    const installedVersion = fs.existsSync(marker) ? fs.readFileSync(marker, 'utf8').trim() : '';
-    if (installedVersion !== version || !fs.existsSync(path.join(runtime, 'run.py'))) {
-      fs.rmSync(runtime, { recursive: true, force: true });
-      fs.mkdirSync(path.dirname(runtime), { recursive: true });
-      fs.cpSync(bundled, runtime, { recursive: true });
-      fs.writeFileSync(marker, version);
-      log('Installed bundled backend runtime version ' + version);
-    }
-    return runtime;
+    return installBackendRuntime({
+      userData: app.getPath('userData'),
+      bundled: path.join(process.resourcesPath, 'backend'),
+      appVersion: app.getVersion(),
+      log: message => log(message),
+    });
   } catch (error) {
     log('Backend runtime installation failed: ' + (error.message || String(error)));
     return null;
   }
 }
-
 function backendRoot() {
   return existing([
     process.env.LUMIRA_PROJECT_ROOT,
@@ -124,11 +110,33 @@ async function ensureBackend() {
     throw new Error('Lumira Python runtime was not found.');
   }
 
-  log('Starting backend from ' + root);
-  backend = spawn(python, ['run.py'], {
-    cwd: root,
+  const workspace = isPackaged ? backendWorkspaceRoot() : root;
+  const backendScript = path.join(root, 'run.py');
+  const backendEnv = {
+    ...process.env,
+    HOST: '127.0.0.1',
+    PORT: String(API_PORT),
+    RELOAD: 'false',
+    PYTHONIOENCODING: 'utf-8',
+    PYTHONUTF8: '1',
+  };
+  if (isPackaged) {
+    // The desktop shortcut and installer now receive the same local-provider
+    // defaults as the development launcher. Explicit user settings still win.
+    backendEnv.LUMIRA_OLLAMA_BASE_URL ||= 'http://127.0.0.1:11434/v1';
+    backendEnv.LUMIRA_OLLAMA_SUMMARY_ENABLED ||= 'true';
+    backendEnv.LUMIRA_OLLAMA_VISION_ENABLED ||= 'true';
+    backendEnv.LUMIRA_OLLAMA_VISION_MODEL ||= 'moondream';
+    backendEnv.LUMIRA_LOCAL_TRANSCRIPTION_ENABLED ||= 'true';
+    backendEnv.LUMIRA_LOCAL_TRANSCRIPTION_MODEL ||= 'base';
+    backendEnv.LUMIRA_LOCAL_TRANSCRIPTION_COMPUTE_TYPE ||= 'int8';
+  }
+
+  log('Starting backend code from ' + root + ' with persistent workspace ' + workspace);
+  backend = spawn(python, [backendScript], {
+    cwd: workspace,
     windowsHide: true,
-    env: { ...process.env, HOST: '127.0.0.1', PORT: String(API_PORT), RELOAD: 'false', PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' },
+    env: backendEnv,
     stdio: ['ignore', 'pipe', 'pipe']
   });
   ownsBackend = true;

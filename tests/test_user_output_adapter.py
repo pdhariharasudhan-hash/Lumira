@@ -152,3 +152,57 @@ def test_non_media_artifacts_remain_attachments_without_becoming_primary_media()
     })
     assert "output" not in out
     assert out["attachments"][0]["kind"] == "document"
+
+
+def test_unsolicited_json_message_is_replaced_with_its_readable_content():
+    out = adapt({
+        "success": True,
+        "message": '{"message":"Here is the answer in normal language.","debug":true}',
+        "result": {"capability": "conversation"},
+    })
+
+    assert out["message"] == "Here is the answer in normal language."
+    _no_json(out["message"])
+
+
+def test_unsolicited_json_without_readable_content_is_not_shown():
+    out = adapt({
+        "success": True,
+        "message": '{"status":"completed","internal_count":3}',
+        "result": {"capability": "conversation"},
+    })
+
+    _no_json(out["message"])
+    assert "structured data" in out["message"]
+
+
+def test_explicit_json_request_keeps_json_output():
+    raw = '{"answer":"42","valid":true}'
+    out = adapt(
+        {"success": True, "message": raw, "result": {"capability": "conversation"}},
+        prompt="Return the result as JSON.",
+    )
+
+    assert out["message"] == raw
+
+
+def test_unsolicited_fenced_json_is_not_shown_as_the_answer():
+    out = adapt({
+        "success": True,
+        "message": 'Here is the result:\n```json\n{"status":"completed"}\n```',
+        "result": {"capability": "conversation"},
+    })
+
+    _no_json(out["message"])
+    assert "structured data" in out["message"]
+
+
+def test_negative_json_instruction_does_not_enable_json_output():
+    raw = '{"status":"completed","internal_count":3}'
+    out = adapt(
+        {"success": True, "message": raw, "result": {"capability": "conversation"}},
+        prompt="Do not return JSON. Answer in plain language.",
+    )
+
+    _no_json(out["message"])
+    assert "structured data" in out["message"]
