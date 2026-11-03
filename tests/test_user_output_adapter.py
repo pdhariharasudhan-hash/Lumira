@@ -211,7 +211,7 @@ def test_negative_json_instruction_does_not_enable_json_output():
 def test_prefixed_json_is_not_exposed_in_normal_chat():
     out = adapt({
         "success": True,
-        "message": 'Here is the result: {"status":"completed","internal_count":3}',
+        "message": 'Here is the result: {"status":"completed","internal_count":3}.',
         "result": {"capability": "conversation"},
     })
 
