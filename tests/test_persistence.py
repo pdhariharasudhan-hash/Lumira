@@ -210,3 +210,24 @@ def test_cognitive_memory_rejects_corrupt_and_unknown_schema(tmp_path):
     with pytest.raises(MemoryValidationError, match="valid JSON"):
         memory.retrieve_relevant("expense")
     assert path.read_text(encoding="utf-8") == "{broken"
+
+import pytest
+
+from app.services.sessions.session_manager_service import SessionManagerService
+
+
+def test_delete_session_permanently_removes_saved_messages(tmp_path):
+    path = tmp_path / "sessions.json"
+    manager = SessionManagerService(path)
+    session = manager.create_session()
+    session_id = session["session_id"]
+    manager.append_message(session_id, "user", "private old conversation")
+    manager.append_message(session_id, "assistant", "old answer")
+
+    result = manager.delete_session(session_id)
+
+    assert result == {"success": True, "session_id": session_id, "deleted": True}
+    assert manager.get_session(session_id) is None
+    assert manager.list_sessions() == []
+    with pytest.raises(KeyError, match="session not found"):
+        manager.delete_session(session_id)

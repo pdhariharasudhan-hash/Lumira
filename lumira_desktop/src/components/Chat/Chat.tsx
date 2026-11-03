@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { FiChevronDown, FiMessageSquare, FiMinus, FiMoreHorizontal, FiPlus, FiSearch } from "react-icons/fi";
+import { FiChevronDown, FiMessageSquare, FiMinus, FiMoreHorizontal, FiPlus, FiSearch, FiTrash2 } from "react-icons/fi";
 import type { CSSProperties } from "react";
 import type { PanelMode } from "../../store/appStore";
 
@@ -24,6 +24,7 @@ type Props = {
 	onSelect: (session: ChatSession) => void;
 	onPause: (sessionId: string) => void;
 	onClose: (sessionId: string) => void;
+	onDelete: (sessionId: string) => void;
 };
 
 function titleFor(session: ChatSession) {
@@ -42,7 +43,7 @@ function dayKey(value?: string) {
 	return then.toDateString() === now.toDateString() ? "today" : "previous";
 }
 
-export function ChatSidebar({ mode, sessions, activeId, width, onToggle, onResize, onNew, onSelect, onPause, onClose }: Props) {
+export function ChatSidebar({ mode, sessions, activeId, width, onToggle, onResize, onNew, onSelect, onPause, onClose, onDelete }: Props) {
 	const [query, setQuery] = useState("");
 	const [menuId, setMenuId] = useState<string | null>(null);
 	const filtered = useMemo(() => sessions.filter((session) => titleFor(session).toLowerCase().includes(query.toLowerCase())), [sessions, query]);
@@ -57,7 +58,7 @@ export function ChatSidebar({ mode, sessions, activeId, width, onToggle, onResiz
 				{!compact && <span><span className="chat-title">{titleFor(session)}</span><small>{session.updated_at ? new Date(session.updated_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : session.status}</small></span>}
 			</button>
 			{!compact && <button className="icon-button chat-menu-trigger" type="button" aria-label={`Conversation menu ${titleFor(session)}`} onClick={() => setMenuId(menuId === session.session_id ? null : session.session_id)}><FiMoreHorizontal /></button>}
-			{menuId === session.session_id && !compact && <div className="chat-menu"><button type="button" onClick={() => { onPause(session.session_id); setMenuId(null); }}>Pause</button><button type="button" onClick={() => { onClose(session.session_id); setMenuId(null); }}>Close</button></div>}
+			{menuId === session.session_id && !compact && <div className="chat-menu"><button type="button" onClick={() => { onPause(session.session_id); setMenuId(null); }}>Pause</button><button type="button" onClick={() => { onClose(session.session_id); setMenuId(null); }}>Close</button><button className="chat-menu-delete" type="button" onClick={() => { onDelete(session.session_id); setMenuId(null); }}><FiTrash2 aria-hidden="true" />Delete permanently</button></div>}
 		</div>
 	));
 	return (

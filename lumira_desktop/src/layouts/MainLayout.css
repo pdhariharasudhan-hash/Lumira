@@ -122,6 +122,7 @@
 .chat-menu { position: absolute; z-index: 5; top: 29px; right: 4px; display: flex; min-width: 100px; flex-direction: column; padding: 4px; border: 1px solid var(--line-strong); border-radius: 6px; background: #17212c; box-shadow: 0 8px 25px #0009; }
 .chat-menu button { padding: 7px; border: 0; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
 .chat-menu button:hover { background: var(--panel-soft); }
+.chat-menu .chat-menu-delete { display: flex; align-items: center; gap: 7px; color: #ff8b8b; border-top: 1px solid var(--line); margin-top: 3px; padding-top: 9px; }
 .chat-sidebar.is-compact { align-items: center; padding-inline: 7px; }
 .chat-sidebar.is-compact .panel-heading { width: 100%; justify-content: center; padding-inline: 0; }
 .chat-sidebar.is-compact .new-chat-button { width: 36px; padding: 0; }

@@ -77,6 +77,7 @@ export const api = {
 	resumeSession: (sessionId: string) => request<JsonObject>(`/sessions/${encodeURIComponent(sessionId)}/resume`, { method: "POST" }),
 	pauseSession: (sessionId: string) => request<JsonObject>(`/sessions/${encodeURIComponent(sessionId)}/pause`, { method: "POST" }),
 	closeSession: (sessionId: string) => request<JsonObject>(`/sessions/${encodeURIComponent(sessionId)}/close`, { method: "POST" }),
+	deleteSession: (sessionId: string) => request<JsonObject>(`/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" }),
 	command: (input: string, session_id?: string) =>
 		request<JsonObject>("/command", json("POST", { input, session_id, workspace_id: "default" })),
 	listProjects: () => request<JsonObject>("/projects"),

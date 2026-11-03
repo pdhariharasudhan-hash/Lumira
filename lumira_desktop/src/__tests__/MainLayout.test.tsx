@@ -434,3 +434,34 @@ describe("Lumira workspace shell", () => {
 	});
 
 });
+
+	it("permanently deletes a saved conversation from the sidebar", async () => {
+		setSessionId("session-12345678");
+		let deleted = false;
+		const confirmMock = vi.fn(() => true);
+		vi.stubGlobal("confirm", confirmMock);
+		const fetchMock = mockFetch((input, init) => {
+			const path = String(input);
+			if (path === "/sessions?limit=100") return jsonResponse({
+				sessions: deleted ? [] : [activeSession({
+					recent_messages: [{ role: "user", content: "Conversation to delete" }],
+				})],
+			});
+			if (path === "/sessions/session-12345678" && init?.method === "DELETE") {
+				deleted = true;
+				return jsonResponse({ success: true, deleted: true });
+			}
+			if (path === "/sessions/session-12345678") return jsonResponse(activeSession({
+				recent_messages: [{ role: "user", content: "Conversation to delete" }],
+			}));
+			return defaultResponse(input);
+		});
+		render(<MainLayout />);
+		fireEvent.click(await screen.findByRole("button", { name: "Conversation menu Conversation to delete" }));
+		fireEvent.click(screen.getByRole("button", { name: /Delete permanently/ }));
+		await waitFor(() => expect(confirmMock).toHaveBeenCalledTimes(1));
+		await waitFor(() => expect(fetchMock.mock.calls.some(([input, init]) => String(input) === "/sessions/session-12345678" && init?.method === "DELETE")).toBe(true));
+		expect(await screen.findByText("No saved conversations yet.")).toBeTruthy();
+		expect(window.localStorage.getItem("lumira.sessionId")).toBeNull();
+		expect(await screen.findByText(/Conversation permanently deleted/)).toBeTruthy();
+	});

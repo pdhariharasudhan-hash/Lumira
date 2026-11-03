@@ -95,6 +95,19 @@ def close_session(session_id: str):
         raise _http_error(exc) from exc
 
 
+@router.delete("/sessions/{session_id}")
+def delete_session(session_id: str):
+    """Permanently delete a conversation and all messages stored in it.
+
+    Standalone artifacts remain in the Artifact Library; deleting a chat
+    removes only the conversation record and its attachment references.
+    """
+    try:
+        return SessionManagerService().delete_session(session_id)
+    except Exception as exc:
+        raise _http_error(exc) from exc
+
+
 @router.post("/sessions/{session_id}/recovery-snapshot")
 def create_recovery_snapshot(session_id: str):
     """Create a compact recovery package for resuming this session later."""

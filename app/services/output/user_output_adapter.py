@@ -59,8 +59,22 @@ def collect_attachments(value: Any, _depth: int = 0, _seen: set | None = None) -
             filename = value.get("filename") or value.get("file")
             extension_value = value.get("extension") or (str(filename).rsplit(".", 1)[-1] if isinstance(filename, str) and "." in filename else "")
             extension = str(extension_value or "").lower().lstrip(".")
-            kind = _KIND_BY_TYPE.get(str(artifact_type or "").lower(), "file")
-            if str(artifact_type or "").lower() == "generated_files" and extension in _CODE_EXTENSIONS:
+            normalized_type = str(artifact_type or "").lower()
+            kind = _KIND_BY_TYPE.get(normalized_type, "file")
+            if extension:
+                if extension in {"png", "jpg", "jpeg", "webp", "svg"}:
+                    kind = "image"
+                elif extension in {"mp4", "webm", "mov"}:
+                    kind = "video"
+                elif extension in {"wav", "mp3", "m4a", "ogg"}:
+                    kind = "audio"
+                elif extension == "pdf":
+                    kind = "pdf"
+                elif extension in {"md", "txt", "rtf", "doc", "docx"}:
+                    kind = "document"
+                elif normalized_type in {"images", "image", "diagrams", "schematics", "blueprints"}:
+                    kind = "document" if extension in {"json", "xml"} else "file"
+            if normalized_type == "generated_files" and extension in _CODE_EXTENSIONS:
                 kind = "code"
             attachment = {
                 "artifact_id": artifact_id,

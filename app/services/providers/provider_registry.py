@@ -7,6 +7,7 @@ PROVIDER_STATUS_NAMES = (
     "transcription",
     "speech_synthesis",
     "image_generation",
+    "video_generation",
     "image_understanding",
     "research",
     "wake_word",

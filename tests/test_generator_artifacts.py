@@ -132,3 +132,32 @@ def test_artifact_detail_reports_content_availability_without_exposing_path(tmp_
     assert public["content_available"] is True
     assert "file" not in public
     assert "content_available" not in artifact
+
+def test_legacy_image_generation_never_saves_a_json_spec_as_an_image(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    from app.services.generator.generator_capability_service import GeneratorCapabilityService
+    from app.services.resources.resource_budget_service import ResourceBudgetService
+
+    png = b"\x89PNG\r\n\x1a\nreal-image-bytes"
+
+    class ImageProvider:
+        def generate(self, prompt, image_type):
+            assert prompt == "A red rocket flying over Earth"
+            assert image_type == "image"
+            return {"success": True, "content": png, "extension": "png"}
+
+    monkeypatch.setattr(
+        ResourceBudgetService,
+        "execution_guidance",
+        lambda self: {"resource_pressure": "normal", "defer_optional_heavy_media_work": False},
+    )
+    ProviderRegistry.register("image_generation", ImageProvider())
+    try:
+        result = GeneratorCapabilityService().image_generation("A red rocket flying over Earth")
+    finally:
+        ProviderRegistry.clear()
+
+    assert result["success"] is True
+    assert result["artifact"]["type"] == "images"
+    assert result["artifact"]["file"].endswith(".png")
+    assert open(result["artifact"]["file"], "rb").read() == png

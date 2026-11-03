@@ -1,4 +1,4 @@
-﻿import json
+import json
 """
 Deterministic Generator capability service.
 """
@@ -70,74 +70,34 @@ class GeneratorCapabilityService:
         return ArtifactManagerService().create_artifact(artifact_type, json.dumps(value, ensure_ascii=False), source, "json")
 
     def image_generation(self, request):
-        if not isinstance(request, str):
-            request = ""
+        """Generate real image bytes through the configured image provider.
 
-        request = request.strip()
+        A JSON description is not an image and must never be reported as one.
+        """
+        if not isinstance(request, str) or not request.strip() or len(request) > 4_000:
+            return {
+                "success": False,
+                "capability": "image_generation",
+                "status": "rejected",
+                "code": "invalid_request",
+                "message": "Image requests must contain 1 to 4000 characters.",
+            }
 
-        if not request:
-            return {"success": False, "capability": "image_generation", "status": "reject", "error": "request is required"}
+        from app.services.image.image_generation_service import ImageGenerationService
 
-        words = [word.strip(".,!?;:()[]{}").lower() for word in request.split()]
-        words = [word for word in words if word]
-
-        stop_words = {"a", "an", "the", "for", "to", "of", "and", "with", "my", "simple", "image", "picture", "photo", "generate", "generation", "create", "draw", "show", "make"}
-        concepts = []
-
-        for word in words:
-            if word not in stop_words and word not in concepts:
-                concepts.append(word)
-
-        if not concepts:
-            concepts = ["scene"]
-
-        subject = concepts[0]
-
-        image = {
-            "type": "image_generation_specification",
-            "version": "1.0",
-            "request": request,
-            "status": "specification_created",
-            "subject": subject,
-            "format": "structured_image_spec",
-            "composition": {
-                "layout": "centered_subject",
-                "orientation": "landscape",
-                "framing": "medium",
-            },
-            "visual_elements": [
-                {"id": "element_1", "name": subject, "role": "primary_subject"},
-                {"id": "element_2", "name": "background", "role": "environment"},
-                {"id": "element_3", "name": "lighting", "role": "illumination"},
-            ],
-            "rendering": {
-                "style": "clean_digital",
-                "detail": "high",
-                "lighting": "balanced",
-            },
-        }
-
-        try:
-            import json
-            from app.services.artifacts.artifact_manager_service import ArtifactManagerService
-
-            artifact = ArtifactManagerService().create_artifact(
-                artifact_type="images",
-                content=json.dumps(image, indent=2),
-                source="image_generation",
-                extension="json",
-            )
-        except Exception as exc:
-            return {"success": False, "capability": "image_generation", "status": "reject", "request": request, "image": image, "error": str(exc)}
-
+        result = ImageGenerationService().generate(request.strip(), "image")
+        if result.get("success") is not True:
+            return {
+                **result,
+                "capability": "image_generation",
+                "status": "unavailable" if result.get("code") == "provider_unavailable" else "failed",
+            }
         return {
-            "success": True,
+            **result,
             "capability": "image_generation",
-            "status": "accept",
-            "request": request,
-            "image": image,
-            "artifact": artifact,
+            "status": "completed",
         }
+
     def schematic_generation(self, request):
         if not isinstance(request, str):
             request = ''

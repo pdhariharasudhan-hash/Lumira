@@ -102,3 +102,19 @@ def test_image_generation_rejects_oversized_provider_output(monkeypatch):
     assert result["success"] is False
     assert result["code"] == "image_size_limit_exceeded"
     assert result["max_image_bytes"] == 8
+
+class InvalidImageResponseProvider:
+    def generate(self, prompt: str, image_type: str) -> dict:
+        raise ValueError("Image service returned an invalid image response.")
+
+
+def test_image_generation_preserves_safe_provider_error_detail(monkeypatch):
+    monkeypatch.setattr(
+        ResourceBudgetService,
+        "execution_guidance",
+        lambda self: {"resource_pressure": "normal", "defer_optional_heavy_media_work": False},
+    )
+    result = ImageGenerationService(provider=InvalidImageResponseProvider()).generate("A small rocket")
+    assert result["success"] is False
+    assert result["code"] == "invalid_provider_response"
+    assert result["message"] == "Image service returned an invalid image response."

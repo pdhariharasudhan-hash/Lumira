@@ -575,6 +575,32 @@ class SessionManagerService:
 
         self._mutate_session(session_id, update)
 
+    def delete_session(self, session_id: str) -> dict:
+        """Permanently remove one conversation and its persisted messages."""
+        if not isinstance(session_id, str) or not session_id.strip() or len(session_id) > MAX_SESSION_ID_LENGTH:
+            raise ValueError("session_id is invalid")
+
+        def delete(document):
+            self._validate_document(document)
+            session = next(
+                (item for item in document["sessions"] if item.get("session_id") == session_id),
+                None,
+            )
+            if session is None:
+                raise KeyError("session not found")
+            document["sessions"] = [
+                item for item in document["sessions"]
+                if item.get("session_id") != session_id
+            ]
+            return {"success": True, "session_id": session_id, "deleted": True}
+
+        result = self.store.update(
+            delete,
+            {"schema_version": SESSION_SCHEMA_VERSION, "sessions": []},
+        )
+        self._log_event("session_deleted", session_id)
+        return result
+
     def close_session(self, session_id: str) -> dict:
         session = self._mutate_session(
             session_id,

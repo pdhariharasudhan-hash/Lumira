@@ -82,3 +82,28 @@ def test_nested_error_object_is_converted_to_plain_language():
     })
     _no_json(message)
     assert message == "Project generation could not be completed: Disk is full."
+
+def test_json_image_metadata_is_not_misrepresented_as_a_renderable_image():
+    attachment = collect_attachments({
+        "artifact": {
+            "artifact_id": "image-spec",
+            "type": "images",
+            "extension": "json",
+        }
+    })[0]
+    assert attachment["kind"] == "document"
+
+
+def test_svg_diagrams_and_mp4_videos_keep_their_actual_media_types():
+    attachments = collect_attachments({
+        "items": [
+            {"artifact_id": "diagram-svg", "type": "diagrams", "extension": "svg"},
+            {"artifact_id": "movie-mp4", "type": "video", "extension": "mp4"},
+            {"artifact_id": "wrong-image", "type": "images", "extension": "mp4"},
+        ]
+    })
+    assert {item["artifact_id"]: item["kind"] for item in attachments} == {
+        "diagram-svg": "image",
+        "movie-mp4": "video",
+        "wrong-image": "video",
+    }

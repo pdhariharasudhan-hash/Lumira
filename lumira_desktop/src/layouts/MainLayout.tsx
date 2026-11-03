@@ -1541,6 +1541,28 @@ async function runArtifactVoiceAction(artifactId: string, action: "process" | "t
 		} catch (error) { setActionNotice(formatError(error).message); }
 	}
 
+	async function deleteSession(sessionId: string) {
+		const target = sessions.find((item) => item.session_id === sessionId);
+		const title = target?.recent_messages?.find((item) => item.role === "user")?.content
+			?? target?.current_goal
+			?? target?.active_project
+			?? "this conversation";
+		if (!window.confirm(`Permanently delete "${title}" and all its saved messages? This cannot be undone.`)) return;
+		try {
+			await api.deleteSession(sessionId);
+			if (session?.session_id === sessionId) {
+				setSession(null);
+				setMessages([]);
+				setSelectedProject(null, null);
+			}
+			if (window.localStorage.getItem("lumira.sessionId") === sessionId) {
+				window.localStorage.removeItem("lumira.sessionId");
+			}
+			await loadSessions();
+			setActionNotice("Conversation permanently deleted. Its standalone files remain in the Artifact Library.");
+		} catch (error) { setActionNotice(`Could not delete conversation: ${formatError(error).message}`); }
+	}
+
 	async function inspectWorkflowTask(workflowId: string, taskId: string, detail: "history" | "result") {
 		const key = `${workflowId}:${taskId}:${detail}`;
 		if (workflowTaskDetailBusy) return;
@@ -2001,7 +2023,7 @@ async function runArtifactVoiceAction(artifactId: string, action: "process" | "t
 	return (
 		<main className={`workspace-shell ${focusMode ? "focus-mode" : ""} ${topBarCompact ? "topbar-compact" : ""} ${inputMode === "compact" ? "input-compact" : ""} ${effectiveNavMode === "hidden" ? "nav-hidden" : ""}`} style={layoutStyle} data-testid="workspace-shell">
 			<Sidebar mode={effectiveNavMode} activePage={activePage} width={navWidth} onResize={(change) => setPanelWidth("nav", navWidth + change)} onNavigate={navigate} onNewChat={() => void startNewSession()} onModeSelect={() => { setActivePage("settings"); window.setTimeout(() => document.querySelector<HTMLSelectElement>('.mode-select-wrap select')?.focus(), 0); }} onToggle={() => setNavMode(cyclePanel(navMode))} />
-			<ChatSidebar mode={effectiveChatMode} sessions={sessions} activeId={session?.session_id} width={chatWidth} onResize={(change) => setPanelWidth("chat", chatWidth + change)} onToggle={() => setChatMode(cyclePanel(chatMode))} onNew={() => void startNewSession()} onSelect={(record) => void changeSession(record.session_id)} onPause={(id) => void pauseSession(id)} onClose={(id) => void closeSession(id)} />
+			<ChatSidebar mode={effectiveChatMode} sessions={sessions} activeId={session?.session_id} width={chatWidth} onResize={(change) => setPanelWidth("chat", chatWidth + change)} onToggle={() => setChatMode(cyclePanel(chatMode))} onNew={() => void startNewSession()} onSelect={(record) => void changeSession(record.session_id)} onPause={(id) => void pauseSession(id)} onClose={(id) => void closeSession(id)} onDelete={(id) => void deleteSession(id)} />
 			<section className="center-workspace" aria-label="Central AI workspace">
 				<header className="workspace-topbar">
 					<div className="topbar-left">
