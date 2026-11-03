@@ -16,6 +16,7 @@ autodev_review.zip
 artifacts/audio/
 lumira_desktop/release/
 lumira_desktop/release_phase1/
+lumira_desktop/release-verified/
 memory/*.json
 data/cognitive_memory.json
 data/project_memory.json
