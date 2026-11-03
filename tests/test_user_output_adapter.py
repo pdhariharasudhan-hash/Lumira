@@ -107,3 +107,48 @@ def test_svg_diagrams_and_mp4_videos_keep_their_actual_media_types():
         "movie-mp4": "video",
         "wrong-image": "video",
     }
+
+
+
+def test_adapter_creates_inline_image_output_descriptor():
+    out = adapt({
+        "success": True,
+        "result": {"success": True, "capability": "image_generation",
+                   "artifact": {"artifact_id": "img-inline", "type": "images", "title": "Circuit diagram"}},
+    })
+    assert out["output"] == {
+        "type": "image",
+        "url": "/artifacts/img-inline/content",
+        "artifact_id": "img-inline",
+        "title": "Circuit diagram",
+    }
+    assert "{" not in out["message"]
+
+
+def test_adapter_creates_inline_video_and_audio_output_descriptors():
+    video = adapt({"success": True, "result": {"artifact": {"artifact_id": "vid-1", "type": "video"}}})
+    audio = adapt({"success": True, "result": {"artifact": {"artifact_id": "aud-1", "type": "audio"}}})
+    assert video["output"]["type"] == "video"
+    assert video["output"]["url"] == "/artifacts/vid-1/content"
+    assert audio["output"]["type"] == "audio"
+    assert audio["output"]["url"] == "/artifacts/aud-1/content"
+
+
+def test_adapter_does_not_replace_existing_explicit_output():
+    explicit = {"type": "text", "content": "The finished answer."}
+    out = adapt({
+        "success": True,
+        "message": "The finished answer.",
+        "output": explicit,
+        "result": {"artifact": {"artifact_id": "img-2", "type": "images"}},
+    })
+    assert out["output"] == explicit
+
+
+def test_non_media_artifacts_remain_attachments_without_becoming_primary_media():
+    out = adapt({
+        "success": True,
+        "result": {"artifact": {"artifact_id": "doc-1", "type": "documents", "extension": "md"}},
+    })
+    assert "output" not in out
+    assert out["attachments"][0]["kind"] == "document"
