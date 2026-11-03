@@ -174,10 +174,6 @@ def build_output(attachments: list[dict]) -> dict | None:
         "audio": "audio",
         "video": "video",
         "pdf": "pdf",
-        "text": "document",
-        "document": "document",
-        "code": "code",
-        "file": "document",
     }.get(kind)
     if not output_type:
         return None
@@ -227,6 +223,4 @@ def adapt(response: dict) -> dict:
         primary = build_output(response.get("attachments", []))
         if primary:
             response["output"] = primary
-        elif isinstance(response.get("message"), str):
-            response["output"] = {"type": "text", "content": response["message"]}
     return response
