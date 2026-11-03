@@ -35,7 +35,7 @@
 
 ## Latest verification — 2026-11-03
 
-- Commit `73a4818` hardens the user-output adapter against unsolicited JSON embedded after ordinary prose, including punctuation after the JSON value. Deeply nested JSON strings fail closed rather than being displayed as raw structures.
+- Commit `6a51c3d` (source hardening in `73a4818`, followed by the documentation-only audit commit) records the user-output adapter against unsolicited JSON embedded after ordinary prose, including punctuation after the JSON value. Deeply nested JSON strings fail closed rather than being displayed as raw structures.
 - Regression coverage includes prefixed JSON with and without readable message fields, punctuation suffixes, and deeply nested JSON.
 - GitHub Actions completed successfully: **668 backend tests passed** and **27 desktop tests passed**; desktop build and lint also passed.
 - This is automated CI evidence only. It does not close provider, microphone, Tamil acceptance, hardware, package portability, or isolated-runtime gates below.
