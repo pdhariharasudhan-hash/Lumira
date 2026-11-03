@@ -2081,7 +2081,7 @@ Verification:
 - Main commit: 80be772; repair PR #2 merged at d26392c.
 - Latest main GitHub Actions run 41625571242 passed: 663 backend tests and 27 desktop tests, with desktop build and lint passing.
 - Local static checks passed: Python py_compile, Node syntax checks, package JSON parse and git diff check.
-- Pre-migration backup: E:\\Lumira_Local_Backups\\pre-user-data-separation_20261103_162626 (1,840 files / ~21 MB).
+- Pre-migration backup: E:\\Lumira_Local_Backups\\pre-user-data-separation_20261103_162626 (1,841 files / 21.22 MB).
 
 Not yet deployed or user-accepted:
 - Installed shortcut still launches the previous packaged release. The new installer has not been built or installed; migration has not been executed against the live user data.

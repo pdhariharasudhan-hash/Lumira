@@ -719,7 +719,7 @@ The owner requested an end-user audit of Lumira followed by repairs. Work was pe
 - Repair PR #2 merged as `d26392c`; subsequent private-config packaging hardening committed directly to main as `80be772`.
 - Latest main workflow: run `41625571242`, success. Backend: 663 passed. Desktop: 5 test files / 27 tests passed; build and lint passed.
 - Local static checks passed: Python `py_compile`, Node `--check`, package JSON parsing, and `git diff --check`.
-- Before changing deployment logic, a backup of the existing packaged backend and desktop log was created at `E:\\Lumira_Local_Backups\\pre-user-data-separation_20261103_162626` (1,840 files, approximately 21 MB; Robocopy exit 1 indicates successful copy semantics).
+- Before changing deployment logic, a backup of the existing packaged backend and desktop log was created at `E:\\Lumira_Local_Backups\\pre-user-data-separation_20261103_162626` (1,841 files, 21.22 MB; Robocopy exit 1 indicates successful copy semantics).
 
 ### Deployment and operational gates still open
 - The installed desktop shortcut still points to the older `release-verified-20261103-chat-delete` build. The new source has **not** yet been packaged or installed; therefore the new migration has not yet run against the live user-data directory.
