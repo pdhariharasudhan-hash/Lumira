@@ -2089,3 +2089,12 @@ Not yet deployed or user-accepted:
 - Packaged Python venv still points to its build-machine Python base path; portable-runtime packaging remains unresolved.
 - No interactive mouse/screenshot acceptance has been completed. CI passes are not proof of live app behavior.
 - Project terminal stays disabled until OS-level isolation is independently verified. Wake-word and external-provider capabilities still need provider/hardware tests.
+
+
+## User-perspective verification continuation — 2026-11-03
+
+- Local desktop production build passed (`npm run build`). Desktop lint passed with **0 warnings / 0 errors**. Desktop Vitest passed **27/27 tests across 5 files**, including chat routing, JSON intent handling, media previews, session restore/delete, voice capture flow, search/goals, and wake-word user gating.
+- Focused backend regression group passed **30 tests**, covering command greeting, health, session deletion, output adaptation, and protected system prompt behavior. Backend runtime migration helper passed **3/3 tests** for safe legacy migration, no-overwrite recovery, and code-update/data-persistence separation.
+- `git diff --check` passed. The test run created two test sessions in the working memory store; those exact two session IDs and matching activity-feed entries were removed. A before-cleanup copy is retained at `E:\\Lumira_Local_Backups\\test-generated-session-cleanup_20261103`. Final Git status is clean and synchronized with `origin/main`.
+- Installer build/install remains pending: free RAM fluctuated between 1.6 and 2.05 GB during tests and was **1.74 GB** at the last measurement. No processes were terminated; Wispr Flow, Desktop Commander and Ollama were preserved. The previous installed app and live user-data directory were not modified.
+- Automated component tests are not visual acceptance. Remote shell/file tools do not provide screenshot/mouse control. Packaged runtime and data migration still require a new installer, installation, and end-user acceptance.

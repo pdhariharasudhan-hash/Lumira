@@ -734,3 +734,20 @@ The owner requested an end-user audit of Lumira followed by repairs. Work was pe
 3. Install without deleting the existing user-data backup; verify migration preserves sessions, memory, artifacts, projects, and the local system prompt.
 4. Open Lumira and test greetings, normal chat, unsolicited JSON suppression, explicit JSON, image/audio/video output, voice transcription, search, create/restore/delete sessions, and restart persistence.
 5. Re-check provider readiness and startup logs; keep any unavailable provider clearly labelled unavailable.
+
+
+## User-perspective verification continuation — 2026-11-03 17:05 IST
+
+Local checks performed on the connected Windows laptop after the 2026-11-03 repairs:
+- Desktop production frontend build (`npm run build`): passed; Vite emitted `dist/index.html` and production JS/CSS bundles.
+- Desktop lint (`npm run lint`): passed with 0 warnings and 0 errors.
+- Desktop Vitest suite: 5 test files, 27/27 tests passed. Coverage includes session restore, normal chat routing, explicit JSON-only rendering, image/video/audio/document/code previews, microphone audio flow, saved media, search/goals, wake-word user gating, and permanent session deletion.
+- Backend focused regression group: 30 tests passed, including greeting/command, health, session deletion, output adapter, and protected system prompt behavior.
+- Backend runtime migration helper: 3/3 tests passed (legacy data migration, non-overwriting recovery merge, full-source fingerprint/runtime update with persistent data retained).
+- `git diff --check` passed. After tests, two test-created sessions and their two activity-feed entries were removed by exact ID only. Before that cleanup, both JSON files were copied to `E:\\Lumira_Local_Backups\\test-generated-session-cleanup_20261103`. Final Git status returned clean and synchronized with `origin/main`.
+
+Deployment remains pending:
+- No new installer was built or installed. Free RAM fluctuated between 1.6 and 2.05 GB during the verification and was 1.74 GB at the latest check; this is below the 2 GB packaging threshold. No processes were killed; Wispr Flow, Desktop Commander, and Ollama were left alone.
+- The installed app and its existing user-data directory remain untouched; the pre-migration backup is preserved.
+- UI interaction was validated through automated component tests only. Remote shell/file access does not provide screenshot or mouse control, so visual acceptance still requires the owner to inspect the running desktop app.
+- Next: wait for stable RAM headroom above 2 GB, package into a new release output directory so the old installer is not overwritten, install without deleting the backup, and perform packaged startup/data-migration/API acceptance.
