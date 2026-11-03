@@ -2066,3 +2066,26 @@ Implemented (not runtime-tested, per the current build-first instruction):
 
 - The OpenAI-compatible provider now returns `provider_file_count_exceeded` instead of slicing off source files beyond the resource budget, and returns `provider_invalid_source_file` for malformed entries instead of skipping them.
 - Added two corresponding regression cases to `tests/test_provider_resource_budget.py`. All new tests remain authored but unexecuted; no tests/build/runtime checks or generated-project execution were performed.
+
+
+## User-journey repair checkpoint — 2026-11-03
+
+Merged to main:
+- Persistent data is separated from replaceable backend code; legacy user data is migrated without deletion, runtime updates are staged and full-source fingerprinted, and prior code runtimes are retained for rollback.
+- Desktop packaging excludes mutable user data, tests/caches, private environment files and key/certificate files while retaining required builder templates.
+- Packaged launch defaults now enable local Ollama summary/vision and local Faster-Whisper transcription when dependencies are present.
+- Lumira's protected system prompt and response adapter prefer natural language. Raw JSON is suppressed unless the user's prompt explicitly requests JSON; negative instructions such as "do not return JSON" remain negative.
+- Image provider failures are sanitized and health status matches the nine-provider registry.
+
+Verification:
+- Main commit: 80be772; repair PR #2 merged at d26392c.
+- Latest main GitHub Actions run 41625571242 passed: 663 backend tests and 27 desktop tests, with desktop build and lint passing.
+- Local static checks passed: Python py_compile, Node syntax checks, package JSON parse and git diff check.
+- Pre-migration backup: E:\\Lumira_Local_Backups\\pre-user-data-separation_20261103_162626 (1,840 files / ~21 MB).
+
+Not yet deployed or user-accepted:
+- Installed shortcut still launches the previous packaged release. The new installer has not been built or installed; migration has not been executed against the live user data.
+- Host memory was critically low at last check (about 0.42 GB free / 5.4%). Defer local packaging and interactive runtime tests until at least 2 GB is available.
+- Packaged Python venv still points to its build-machine Python base path; portable-runtime packaging remains unresolved.
+- No interactive mouse/screenshot acceptance has been completed. CI passes are not proof of live app behavior.
+- Project terminal stays disabled until OS-level isolation is independently verified. Wake-word and external-provider capabilities still need provider/hardware tests.

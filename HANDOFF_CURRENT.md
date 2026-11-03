@@ -699,3 +699,38 @@ No tests, builds, or runtime checks were run. These edits are saved but unverifi
 - Workflow search in Operations now searches all workflow categories rather than only `operations`, matching the form's ability to create business or operations workflows. Search label/placeholder updated accordingly.
 - Files changed: `lumira_desktop/src/layouts/MainLayout.tsx` and this handoff file.
 - No tests, builds, lint, type checks, or app runtime were run. Source changes were read back through the remote file tool; behavior remains unverified in the running application. Follow-up: safely verify the preview response and task-history/result response shapes when runtime checks are explicitly permitted; improve workflow search result presentation after a small safe edit is available.
+
+
+## User-journey repair checkpoint — 2026-11-03
+
+The owner requested an end-user audit of Lumira followed by repairs. Work was performed against the local checkout and GitHub, with changes merged to `main`.
+
+### Merged repairs
+- Separated replaceable backend code from persistent user data. The next packaged launch migrates the legacy `%APPDATA%\\lumira_desktop\\backend` directory to a stable `workspace` without deleting it, then installs code under `backend-runtime`.
+- Backend installation now stages a complete replacement, fingerprints the full backend source tree, and retains the previous code runtime for rollback. It no longer deletes the active runtime before a replacement is ready.
+- Packaged resources exclude user memory, artifacts, databases, generated projects, tests, caches, private environment files, and key/certificate files. Required `generated_templates` remain included.
+- The packaged desktop backend receives the local Ollama summarization/vision and Faster-Whisper transcription defaults used by the development launcher.
+- The chat system prompt and output adapter now enforce natural-language output by default. Unrequested raw JSON and fenced JSON are converted to readable text; explicit JSON requests remain supported.
+- The command route passes the user's prompt into the output adapter so the explicit-JSON exception is evaluated correctly.
+- Health provider status now includes `video_generation`; image-provider exceptions return safe messages rather than raw provider error details.
+
+### Verification evidence
+- GitHub main commit: `80be772`.
+- Repair PR #2 merged as `d26392c`; subsequent private-config packaging hardening committed directly to main as `80be772`.
+- Latest main workflow: run `41625571242`, success. Backend: 663 passed. Desktop: 5 test files / 27 tests passed; build and lint passed.
+- Local static checks passed: Python `py_compile`, Node `--check`, package JSON parsing, and `git diff --check`.
+- Before changing deployment logic, a backup of the existing packaged backend and desktop log was created at `E:\\Lumira_Local_Backups\\pre-user-data-separation_20261103_162626` (1,840 files, approximately 21 MB; Robocopy exit 1 indicates successful copy semantics).
+
+### Deployment and operational gates still open
+- The installed desktop shortcut still points to the older `release-verified-20261103-chat-delete` build. The new source has **not** yet been packaged or installed; therefore the new migration has not yet run against the live user-data directory.
+- At the last resource check, only approximately 0.42 GB RAM (5.4%) was free. Do not run local Electron packaging, broad tests, or model workloads until memory pressure is reduced.
+- The packaged virtual environment still records the build machine's Python base path in `pyvenv.cfg`; portability beyond this laptop needs a proper bundled Python runtime strategy.
+- Interactive visual/mouse acceptance has not been completed. The available remote connection supports shell and file operations, not a screenshot/mouse-control session. CI validates the frontend, but it is not a substitute for opening the installed app and testing it manually.
+- Keep generated-project terminal execution disabled until verified per-run OS isolation exists. Wake word, external research, remote image generation, speech synthesis, and video generation remain provider/hardware-dependent.
+
+### Next acceptance sequence
+1. Wait for at least 2 GB free RAM before local packaging.
+2. Build the Windows installer from current `main`.
+3. Install without deleting the existing user-data backup; verify migration preserves sessions, memory, artifacts, projects, and the local system prompt.
+4. Open Lumira and test greetings, normal chat, unsolicited JSON suppression, explicit JSON, image/audio/video output, voice transcription, search, create/restore/delete sessions, and restart persistence.
+5. Re-check provider readiness and startup logs; keep any unavailable provider clearly labelled unavailable.
