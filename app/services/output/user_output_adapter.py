@@ -11,6 +11,8 @@ Pure Python: no FastAPI or service imports, so it is trivial to unit test.
 
 from __future__ import annotations
 
+import json
+import re
 from typing import Any
 
 # artifact type (as stored by ArtifactService) -> how the UI should render it
@@ -43,6 +45,49 @@ def _first_text(data: dict) -> str | None:
         if isinstance(value, str) and value.strip():
             return value.strip()
     return None
+
+
+def _explicitly_requests_json(prompt: str | None) -> bool:
+    if not isinstance(prompt, str):
+        return False
+    return bool(
+        re.search(
+            r"\b(?:as|in|format(?:ted)? as|return|respond(?: with)?|output|show|display|give|provide|print)\b[^.!?]{0,40}\bjson\b"
+            r"|\bjson\b[^.!?]{0,24}\b(?:format|response|output|object|schema)\b",
+            prompt,
+            re.IGNORECASE,
+        )
+    )
+
+
+def _normalize_text(value: str, *, allow_json: bool = False, depth: int = 0) -> str:
+    text = value.strip()
+    if not text:
+        return ""
+    candidate = text
+    if candidate.startswith("```") and candidate.endswith("```"):
+        lines = candidate.splitlines()
+        if len(lines) >= 3 and lines[0].strip().lower() in {"```json", "```"} and lines[-1].strip() == "```":
+            candidate = " ".join(lines[1:-1]).strip()
+    elif "```json" in candidate.lower():
+        start = candidate.lower().find("```json") + len("```json")
+        end = candidate.find("```", start)
+        if end >= 0:
+            candidate = candidate[start:end].strip()
+    if allow_json or depth >= 4 or not candidate or candidate[0] not in "{[":
+        return text
+    try:
+        parsed = json.loads(candidate)
+    except (TypeError, ValueError):
+        return text
+    if isinstance(parsed, dict):
+        nested = _first_text(parsed)
+        if nested and nested != text:
+            return _normalize_text(nested, depth=depth + 1)
+    return (
+        "I received structured data, but couldn't turn it into a readable answer. "
+        "Please tell me what you'd like to do with it."
+    )
 
 
 def collect_attachments(value: Any, _depth: int = 0, _seen: set | None = None) -> list[dict]:
@@ -121,10 +166,15 @@ def _describe_scalars(result: dict, capability: str) -> str:
     return head + (" " + "; ".join(bits) + "." if bits else "")
 
 
-def build_message(result: Any, capability: str | None = None) -> str:
-    """Return a human-readable sentence for a capability result. Never returns JSON."""
+def build_message(
+    result: Any,
+    capability: str | None = None,
+    *,
+    allow_json: bool = False,
+) -> str:
+    """Return readable text by default; preserve JSON only for explicit JSON requests."""
     if isinstance(result, str):
-        return result.strip() or "Done."
+        return _normalize_text(result, allow_json=allow_json) or "Done."
     if not isinstance(result, dict):
         return "Done."
     capability = capability or str(result.get("capability") or "request")
@@ -132,7 +182,7 @@ def build_message(result: Any, capability: str | None = None) -> str:
 
     text = _first_text(result)
     if text:
-        return text
+        return _normalize_text(text, allow_json=allow_json)
 
     if capability in {"search", "unified_search"}:
         described = _describe_search(result)
@@ -188,14 +238,14 @@ def build_output(attachments: list[dict]) -> dict | None:
     return {key: value for key, value in output.items() if value is not None}
 
 
-def adapt(response: dict) -> dict:
-    """Add ``message`` and ``attachments`` to a /command response without removing anything.
+def adapt(response: dict, prompt: str | None = None) -> dict:
+    """Add readable user output while retaining structured data for API consumers.
 
-    Existing consumers keep working (``result`` and everything else is untouched).
-    A ``message`` already set by the route (greetings, conversation) is preserved.
+    Raw JSON is kept only when the user's prompt explicitly requests it.
     """
     if not isinstance(response, dict):
         return response
+    allow_json = _explicitly_requests_json(prompt)
     result = response.get("result")
     capability = None
     if isinstance(result, dict):
@@ -205,13 +255,15 @@ def adapt(response: dict) -> dict:
         if isinstance(parsed, dict):
             capability = parsed.get("capability")
 
-    if not (isinstance(response.get("message"), str) and response["message"].strip()):
-        if isinstance(result, (dict, str)):
-            response["message"] = build_message(result, capability)
-        elif response.get("success") is False:
-            response["message"] = "I could not complete that request. Please try rephrasing it."
-        else:
-            response["message"] = "Done."
+    existing_message = response.get("message")
+    if isinstance(existing_message, str) and existing_message.strip():
+        response["message"] = _normalize_text(existing_message, allow_json=allow_json)
+    elif isinstance(result, (dict, str)):
+        response["message"] = build_message(result, capability, allow_json=allow_json)
+    elif response.get("success") is False:
+        response["message"] = "I could not complete that request. Please try rephrasing it."
+    else:
+        response["message"] = "Done."
 
     if not isinstance(response.get("attachments"), list) or not response["attachments"]:
         response["attachments"] = collect_attachments(result) if result is not None else []
