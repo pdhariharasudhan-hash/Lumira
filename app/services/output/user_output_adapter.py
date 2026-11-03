@@ -159,6 +159,39 @@ def build_message(result: Any, capability: str | None = None) -> str:
     return _describe_scalars(result, capability)
 
 
+def build_output(attachments: list[dict]) -> dict | None:
+    """Create the primary renderer contract from the first renderable artifact.
+
+    Keep the complete attachment list for additional files, but expose one
+    primary output so the chat renderer can show media inline consistently.
+    """
+    if not attachments:
+        return None
+    item = attachments[0]
+    kind = item.get("kind")
+    output_type = {
+        "image": "image",
+        "audio": "audio",
+        "video": "video",
+        "pdf": "pdf",
+        "text": "document",
+        "document": "document",
+        "code": "code",
+        "file": "document",
+    }.get(kind)
+    if not output_type:
+        return None
+    output = {
+        "type": output_type,
+        "url": item.get("url"),
+        "artifact_id": item.get("artifact_id"),
+        "title": item.get("title"),
+    }
+    if item.get("extension"):
+        output["language"] = item["extension"]
+    return {key: value for key, value in output.items() if value is not None}
+
+
 def adapt(response: dict) -> dict:
     """Add ``message`` and ``attachments`` to a /command response without removing anything.
 
@@ -186,4 +219,14 @@ def adapt(response: dict) -> dict:
 
     if "attachments" not in response:
         response["attachments"] = collect_attachments(result) if result is not None else []
+
+    # The desktop chat renderer consumes a single primary output descriptor.
+    # Derive it from the same attachment metadata so media is rendered inline
+    # instead of leaving the user with an empty response or internal JSON.
+    if "output" not in response or not isinstance(response.get("output"), dict):
+        primary = build_output(response.get("attachments", []))
+        if primary:
+            response["output"] = primary
+        elif isinstance(response.get("message"), str):
+            response["output"] = {"type": "text", "content": response["message"]}
     return response
