@@ -88,7 +88,7 @@ class ImageGenerationService:
             return {
                 "success": False,
                 "code": "invalid_provider_response",
-                "message": "The image provider returned an invalid response; no image artifact was created.",
+                "message": "Image service returned an invalid image response.",
             }
         except RuntimeError:
             return {
