@@ -68,6 +68,8 @@ describe("persistent backend runtime", () => {
     write(bundled, "app/routes/command.py", "command v1");
     write(bundled, "app/services/health.py", "health v1");
     write(bundled, "generated_templates/starter.txt", "required builder template");
+    write(bundled, ".env", "PRIVATE_TOKEN=must not ship");
+    write(bundled, "app/.env.local", "PRIVATE_ENDPOINT=must not ship");
     write(bundled, "memory/shipped-data.json", "must not ship");
     write(bundled, "tests/test_example.py", "must not ship");
 
@@ -80,6 +82,8 @@ describe("persistent backend runtime", () => {
     expect(readFileSync(path.join(runtime, "generated_templates/starter.txt"), "utf8")).toBe("required builder template");
     expect(existsSync(path.join(runtime, "memory"))).toBe(false);
     expect(existsSync(path.join(runtime, "tests"))).toBe(false);
+    expect(existsSync(path.join(runtime, ".env"))).toBe(false);
+    expect(existsSync(path.join(runtime, "app/.env.local"))).toBe(false);
 
     write(bundled, "app/services/health.py", "health v2");
     expect(backendFingerprint(bundled)).not.toBe(firstFingerprint);

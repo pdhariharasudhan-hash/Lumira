@@ -14,6 +14,10 @@ const EXCLUDED_BACKEND_ENTRIES = new Set([
   'generated', 'autodev_review', '.agents',
 ]);
 
+function isSensitiveConfigEntry(name) {
+  return name === '.env' || name.startsWith('.env.');
+}
+
 function copyMissingTree(source, destination) {
   fs.mkdirSync(destination, { recursive: true });
   for (const entry of fs.readdirSync(source, { withFileTypes: true })) {
@@ -65,7 +69,7 @@ function backendFingerprint(root) {
       .sort((a, b) => a.name.localeCompare(b.name));
     for (const entry of entries) {
       const nextRelative = path.join(relative, entry.name);
-      if (!relative && EXCLUDED_BACKEND_ENTRIES.has(entry.name)) continue;
+      if ((!relative && EXCLUDED_BACKEND_ENTRIES.has(entry.name)) || isSensitiveConfigEntry(entry.name)) continue;
       const absolute = path.join(directory, entry.name);
       if (entry.isDirectory()) {
         visit(absolute, nextRelative);
@@ -105,8 +109,9 @@ function installBackendRuntime({ userData, bundled, appVersion, log = () => {} }
       recursive: true,
       filter: source => {
         const relative = path.relative(bundled, source);
-        const first = relative.split(path.sep)[0];
-        return !first || !EXCLUDED_BACKEND_ENTRIES.has(first);
+        const parts = relative.split(path.sep).filter(Boolean);
+        const first = parts[0];
+        return (!first || !EXCLUDED_BACKEND_ENTRIES.has(first)) && !parts.some(isSensitiveConfigEntry);
       },
     });
     fs.writeFileSync(path.join(stage, '.lumira-runtime-version'), version);
