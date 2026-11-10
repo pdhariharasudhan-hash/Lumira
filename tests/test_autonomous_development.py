@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from app.services.resources.resource_budget_service import ResourceBudgetService
 from app.services.autonomous_development.autonomous_development_service import (
     AutonomousDevelopmentService,
 )
@@ -42,6 +43,27 @@ from app.services.autonomous_development.worker.workspace_boundary import (
 from app.services.work_items.work_item_service import WorkItemService
 from app.services.workflow_recovery.run_recovery_service import RunRecoveryService
 from app.services.sessions.session_manager_service import SessionManagerService
+
+
+@pytest.fixture(autouse=True)
+def deterministic_resource_budget(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Provider contract tests exercise request/response behavior, not the
+    # machine's transient RAM availability during a long repository suite.
+    monkeypatch.setattr(
+        ResourceBudgetService,
+        "execution_guidance",
+        lambda self: {
+            "resource_profile": "low_memory",
+            "resource_pressure": "normal",
+            "max_concurrent_agents": 1,
+            "max_concurrent_local_model_requests": 1,
+            "max_provider_files": 6,
+            "max_context_characters": 30000,
+            "max_file_characters": 12000,
+            "avoid_loading_multiple_local_models": True,
+            "defer_optional_heavy_media_work": False,
+        },
+    )
 
 
 def _service(
@@ -125,6 +147,44 @@ def test_validation_is_blocked_without_verified_os_sandbox(tmp_path: Path, monke
     assert result.status == "blocked"
     assert result.return_code is None
     assert "OS-level sandboxing is not implemented" in result.output
+
+
+def test_autonomous_development_requires_code_permission_before_creating_workflow(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.services.autonomy.autonomy_permission_service import AutonomyPermissionService
+
+    permissions = AutonomyPermissionService(tmp_path / "autonomy.json")
+    service, _ = _service(tmp_path, monkeypatch, [0])
+    service.autonomy = permissions
+
+    result = service.execute("Add a bounded development test", autonomous=True)
+
+    assert result["success"] is False
+    assert result["code"] == "autonomous_permission_required"
+    assert permissions.status()["recent_events"] == []
+    assert service.work_items.list_workflows() == []
+
+
+def test_authorized_autonomous_development_records_start_before_workflow_creation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.services.autonomy.autonomy_permission_service import AutonomyPermissionService
+
+    permissions = AutonomyPermissionService(tmp_path / "autonomy.json")
+    permissions.set_permission("code.execute", True, "bounded test")
+    service, _ = _service(tmp_path, monkeypatch, [0])
+    service.autonomy = permissions
+    monkeypatch.setattr(service, "_recover_stale_workflows", lambda: None)
+    monkeypatch.setattr(service, "_is_continuation_request", lambda goal: True)
+    monkeypatch.setattr(service, "_continue_development_program", lambda goal, session_id=None: {"success": True, "state": "completed"})
+
+    result = service.execute("Continue the bounded development task", autonomous=True)
+
+    assert result["success"] is True
+    assert permissions.status()["recent_events"][-1]["state"] == "started"
 
 
 def test_blocked_validation_stops_autonomous_loop_without_diagnosis_or_retry(

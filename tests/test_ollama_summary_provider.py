@@ -3,6 +3,28 @@ import json
 import pytest
 
 from app.services.providers.ollama_summary_provider import OllamaSummaryProvider
+from app.services.resources.resource_budget_service import ResourceBudgetService
+
+
+@pytest.fixture(autouse=True)
+def deterministic_resource_budget(monkeypatch):
+    # These tests validate provider contracts; memory-pressure policy is
+    # covered independently and must not make network mocks nondeterministic.
+    monkeypatch.setattr(
+        ResourceBudgetService,
+        "execution_guidance",
+        lambda self: {
+            "resource_profile": "low_memory",
+            "resource_pressure": "normal",
+            "max_concurrent_agents": 1,
+            "max_concurrent_local_model_requests": 1,
+            "max_provider_files": 6,
+            "max_context_characters": 30000,
+            "max_file_characters": 12000,
+            "avoid_loading_multiple_local_models": True,
+            "defer_optional_heavy_media_work": False,
+        },
+    )
 
 
 class FakeResponse:

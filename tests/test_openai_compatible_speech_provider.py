@@ -2,6 +2,16 @@ import pytest
 import requests
 
 from app.services.providers.openai_compatible_speech_provider import OpenAICompatibleSpeechProvider
+from app.services.resources.resource_budget_service import ResourceBudgetService
+
+
+@pytest.fixture(autouse=True)
+def normal_resource_budget(monkeypatch):
+    monkeypatch.setattr(
+        ResourceBudgetService,
+        "execution_guidance",
+        lambda self: {"defer_optional_heavy_media_work": False, "resource_pressure": "normal"},
+    )
 
 
 class FakeResponse:

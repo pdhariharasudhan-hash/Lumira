@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.services.providers.provider_registry import PROVIDER_STATUS_NAMES, ProviderRegistry
+from app.services.providers.provider_access_policy_service import ProviderAccessPolicyService
 
 
 class ProviderReadinessService:
@@ -14,6 +15,13 @@ class ProviderReadinessService:
             providers[name] = {
                 "registered": registered,
                 "status": "registered" if registered else "not_configured",
+                "provider_scope": (
+                    ProviderAccessPolicyService.provider_scope(ProviderRegistry.get(name))
+                    if registered
+                    else None
+                ),
+                "reachable": None,
+                "last_success": None,
             }
             available += int(registered)
         return {
@@ -22,5 +30,5 @@ class ProviderReadinessService:
             "registered_count": available,
             "total_known_providers": len(PROVIDER_STATUS_NAMES),
             "providers": providers,
-            "note": "Registration does not claim that an external or local provider is currently reachable.",
+            "note": "Registration does not claim reachability or successful operation; null lifecycle fields are unprobed.",
         }

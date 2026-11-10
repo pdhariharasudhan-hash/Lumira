@@ -19,6 +19,10 @@ class FakeActivation:
         self.activated.append(target)
         return self.result
 
+    def activate_with_dependencies(self, target):
+        self.activated.append(target)
+        return self.result
+
     def deactivate(self, target):
         self.deactivated.append(target)
         return self.result
@@ -112,3 +116,23 @@ def test_feature_activation_still_blocks_terminal_without_os_sandbox(tmp_path):
 
     assert result["success"] is False
     assert any("OS-level sandbox" in item for item in result["blockers"])
+
+
+def test_identity_activation_command_uses_dependency_bridge():
+    router = FeatureCommandRouter()
+    router.identity = FakeIdentity({
+        "recognized": True,
+        "command": "activate",
+        "target": "audio_playback",
+    })
+    router.activation = FakeActivation({
+        "success": True,
+        "status": "ENABLED",
+        "activated": ["artifact_manager", "audio_playback"],
+    })
+
+    result = router.process("Lumira activate audio playback")
+
+    assert result["success"] is True
+    assert result["result"]["activated"] == ["artifact_manager", "audio_playback"]
+    assert router.activation.activated == ["audio_playback"]

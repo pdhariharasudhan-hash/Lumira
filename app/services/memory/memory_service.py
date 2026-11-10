@@ -929,6 +929,71 @@ class MemoryService:
         except PersistenceIntegrityError as exc:
             raise MemoryValidationError(str(exc)) from exc
 
+    def evolve(
+        self,
+        collection: str,
+        record_id: str,
+        *,
+        correction: dict[str, Any] | None = None,
+        forget: bool = False,
+        reason: str = "",
+    ) -> dict[str, Any]:
+        """Apply an auditable correction or controlled archival to one record.
+
+        Existing records are never overwritten: corrections retain the original
+        under ``superseded_record`` and archival is the only forgetting action.
+        """
+        allowed = {"goals", "decisions", "experiences", "learning_records"}
+        id_keys = {
+            "goals": "goal_id",
+            "decisions": "decision_id",
+            "experiences": "experience_id",
+            "learning_records": "learning_id",
+        }
+        if collection not in allowed:
+            raise MemoryValidationError("unsupported memory evolution collection")
+        if not isinstance(record_id, str) or not record_id.strip():
+            raise MemoryValidationError("record_id is required")
+        if not isinstance(forget, bool):
+            raise MemoryValidationError("forget must be boolean")
+        if correction is not None and (not isinstance(correction, dict) or not correction):
+            raise MemoryValidationError("correction must be a non-empty object")
+        if correction and set(correction) & {"created_at", "updated_at", "archived", "superseded_record"}:
+            raise MemoryValidationError("correction contains protected fields")
+        reason = self._safe_text(reason.strip())
+        if len(reason) > 500:
+            raise MemoryValidationError("reason must be at most 500 characters")
+
+        id_key = id_keys[collection]
+        now = datetime.now(UTC).isoformat()
+
+        def apply(memory):
+            records = memory.setdefault(collection, [])
+            for record in records:
+                if isinstance(record, dict) and record.get(id_key) == record_id:
+                    if record.get("archived") and correction:
+                        raise MemoryValidationError("archived records cannot be corrected")
+                    if forget:
+                        record["archived"] = True
+                        record["archived_at"] = now
+                        record["evolution_reason"] = reason or "controlled_forgetting"
+                    elif correction:
+                        original = deepcopy(record)
+                        record.update(self._redact_nested(correction))
+                        record["superseded_record"] = original
+                        record["updated_at"] = now
+                        record["evolution_reason"] = reason or "user_correction"
+                    else:
+                        raise MemoryValidationError("provide correction or set forget=true")
+                    return deepcopy(record)
+            raise KeyError("memory record not found")
+
+        try:
+            result = self.cognitive_store.update(apply, self._default_cognitive_memory())
+        except PersistenceIntegrityError as exc:
+            raise MemoryValidationError(str(exc)) from exc
+        return result
+
     def get_all(self) -> Dict[str, Any]:
         memory = self._read_memory()
         cognitive = self._read_cognitive_memory()

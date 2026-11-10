@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+from app.agents.agent_manager import AgentManager
 from app.services.brain.brain_agent_orchestrator import BrainAgentOrchestrator
 
 
@@ -273,3 +274,32 @@ def test_failed_agent_state_does_not_claim_execution_started():
 
     assert result["success"] is False
     assert result["orchestration"]["agent_execution_started"] is False
+
+
+def test_brain_agent_orchestrator_uses_central_tool_selection(monkeypatch):
+    manager = AgentManager()
+    calls = []
+
+    def fake_run(agent_name, task):
+        calls.append((agent_name, task))
+        return {"success": True, "state": "completed", "agent": agent_name}
+
+    monkeypatch.setattr(manager, "run", fake_run)
+    brain_response = SimpleNamespace(
+        success=True,
+        state=SimpleNamespace(
+            execution_context=SimpleNamespace(execution_id="tool-selection-exec"),
+            last_completed_stage="learning",
+        ),
+    )
+
+    result = BrainAgentOrchestrator(agent_manager=manager).execute_after_brain(
+        "Investigate evidence for a database decision",
+        brain_response,
+    )
+
+    assert calls == [("research_agent", "Investigate evidence for a database decision")]
+    assert result["success"] is True
+    assert result["selection"]["tool"] == "research"
+    assert result["selection"]["agent"] == "research_agent"
+    assert result["orchestration"]["brain_gate"] == "passed"

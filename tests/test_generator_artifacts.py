@@ -93,6 +93,7 @@ def test_configured_video_provider_runs_through_command_and_persists_artifact(tm
     monkeypatch.chdir(tmp_path)
 
     class VideoProvider:
+        provider_scope = "local"
         def generate(self, prompt):
             assert prompt == "Generate a video about Saturn"
             return {"success": True, "content": b"\x00\x00\x00\x00ftypisom", "extension": "mp4"}
@@ -141,6 +142,7 @@ def test_legacy_image_generation_never_saves_a_json_spec_as_an_image(tmp_path, m
     png = b"\x89PNG\r\n\x1a\nreal-image-bytes"
 
     class ImageProvider:
+        provider_scope = "local"
         def generate(self, prompt, image_type):
             assert prompt == "A red rocket flying over Earth"
             assert image_type == "image"

@@ -55,11 +55,12 @@ class FeatureActivationService:
             visiting.remove(feature_id)
             visited.add(feature_id)
             ordered.append(feature_id)
-            allowed, item_blockers = self.registry.can_enable(feature_id)
-            if item.get("enabled") is not True and not allowed:
-                blockers.extend(f"{feature_id}: {value}" for value in item_blockers)
 
         visit(root.get("feature_id", name))
+        if ordered:
+            ready, readiness_blockers, _ = self.registry.can_enable_many(ordered)
+            if not ready:
+                blockers.extend(readiness_blockers)
         blockers = list(dict.fromkeys(blockers))
         return {
             "success": True,
@@ -104,22 +105,16 @@ class FeatureActivationService:
         except ValueError as exc:
             return {"success": False, "feature": name, "error": "dependency_resolution_failed", "blockers": [str(exc)]}
 
-        activated = []
-        for feature_id in ordered:
-            item = self.registry.get_feature(feature_id)
-            if item and item.get("enabled") is True:
-                continue
-            allowed, blockers = self.registry.enable(feature_id)
-            if not allowed:
-                return {
-                    "success": False,
-                    "feature": name,
-                    "error": "activation_blocked",
-                    "activated": activated,
-                    "blocked_feature": feature_id,
-                    "blockers": blockers,
-                }
-            activated.append(feature_id)
+        allowed, blockers, activated = self.registry.enable_many(ordered)
+        if not allowed:
+            return {
+                "success": False,
+                "feature": name,
+                "error": "activation_blocked",
+                "activated": [],
+                "blocked_feature": name,
+                "blockers": blockers,
+            }
 
         return {
             "success": True,

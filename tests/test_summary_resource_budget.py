@@ -5,6 +5,7 @@ from app.services.resources.resource_budget_service import ResourceBudgetService
 
 
 class NeverCalledSummaryProvider:
+    provider_scope = "local"
     def summarize(self, transcript: str) -> str:
         raise AssertionError("summary provider must not be called while deferred")
 

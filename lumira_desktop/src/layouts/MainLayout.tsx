@@ -10,6 +10,9 @@ import { RightPanel, type RightTab } from "../components/RightPanel/RightPanel";
 import { Sidebar } from "../components/Sidebar/Sidebar";
 import { ImageUnderstandingPanel } from "../components/ImageUnderstanding/ImageUnderstandingPanel";
 import { ProviderDiagnosticsPanel } from "../components/Common/ProviderDiagnosticsPanel";
+import MarketWorkspace from "../pages/Market/MarketWorkspace";
+import CreatorWorkspace from "../pages/Creator/CreatorWorkspace";
+import DeviceEcosystemWorkspace from "../pages/Devices/DeviceEcosystemWorkspace";
 import {
 	useAppStore, type LumiraMode, type PanelMode,
 	type WorkspacePage,
@@ -58,8 +61,8 @@ type ProjectRecord = { project: string; versions?: number; latest?: JsonObject |
 
 const PAGE_TITLES: Record<WorkspacePage, string> = {
 	chats: "AI Workspace", projects: "Projects", artifacts: "Artifacts", memory: "Memory",
-	goals: "Goals", search: "Unified Search", generator: "Generator", business: "Business",
-	operations: "Operations", features: "Feature Control Center", "image-understanding": "Image Analysis", settings: "Workspace Settings",
+	goals: "Goals", search: "Unified Search", generator: "Generator", business: "Business", market: "Kronos Market Intelligence", creator: "Creator Studio", devices: "Device Ecosystem",
+	operations: "Operations", features: "Feature Control Center", "image-understanding": "Image Analysis", settings: "Workspace Settings", planner: "Planner", observability: "System Observability", agents: "Agent Workspace", background: "Background Tasks", learning: "Self-Improvement", dashboard: "Dashboard",
 };
 
 function object(value: unknown): JsonObject {
@@ -200,6 +203,7 @@ function MainLayout() {
 	const [workflow, setWorkflow] = useState<"brain" | "project">("brain");
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [isSending, setIsSending] = useState(false);
+	const [cancellableSessionId, setCancellableSessionId] = useState<string | null>(null);
 	const [session, setSession] = useState<SessionRecord | null>(null);
 	const [sessions, setSessions] = useState<SessionRecord[]>([]);
 	const [isRestoringSession, setIsRestoringSession] = useState(() => Boolean(window.localStorage.getItem("lumira.sessionId")));
@@ -210,6 +214,9 @@ function MainLayout() {
 	const [pageLoading, setPageLoading] = useState(false);
 	const [pageError, setPageError] = useState<string | null>(null);
 	const [pageRevision, setPageRevision] = useState(0);
+	const [aiMode, setAiMode] = useState<"offline" | "hybrid" | "cloud">("hybrid");
+	const [cloudEnabled, setCloudEnabled] = useState(false);
+	const [aiModeBusy, setAiModeBusy] = useState(false);
 	const [showArchivedArtifacts, setShowArchivedArtifacts] = useState(false);
 	const [artifactQuery, setArtifactQuery] = useState("");
 	const [artifactTypeFilter, setArtifactTypeFilter] = useState("");
@@ -260,6 +267,13 @@ function MainLayout() {
 	const [recoverySnapshot, setRecoverySnapshot] = useState<JsonObject | null>(null);
 	const [sessionHealth, setSessionHealth] = useState<JsonObject | null>(null);
 	const [sessionWorkflows, setSessionWorkflows] = useState<JsonObject | null>(null);
+	const [agentTask, setAgentTask] = useState("");
+	const [agentSelection, setAgentSelection] = useState("auto");
+	const [agentBusy, setAgentBusy] = useState(false);
+	const [agentResult, setAgentResult] = useState<JsonObject | null>(null);
+	const [backgroundTask, setBackgroundTask] = useState("");
+	const [backgroundAgent, setBackgroundAgent] = useState("auto");
+	const [backgroundBusy, setBackgroundBusy] = useState(false);
 	const [workflowTitle, setWorkflowTitle] = useState("");
 	const [workflowTasksText, setWorkflowTasksText] = useState("");
 	const [workflowSearchQuery, setWorkflowSearchQuery] = useState("");
@@ -428,6 +442,13 @@ function MainLayout() {
 			setPageError(null);
 			try {
 				let result: unknown;
+				if (activePage === "dashboard") {
+					const [health, projects, goals, workflows, sessions, agents, artifacts] = await Promise.all([
+						api.health(), api.projectSummary(), api.getGoalSummary(), api.workflowSummary(),
+						api.sessionSummary(), api.listAgents(), api.artifactStats().catch(() => null),
+					]);
+					result = { health, projects, goals, workflows, sessions, agents, artifacts };
+				}
 				if (activePage === "projects") { const [projectResult, summary] = await Promise.all([api.listProjects(), api.projectSummary().catch(() => null)]); result = { ...object(projectResult), summary }; }
 				else if (activePage === "artifacts") {
 					const artifactResult = await api.listArtifacts(showArchivedArtifacts, { q: artifactQuery.trim() || undefined, artifact_type: artifactTypeFilter || undefined, limit: 50, offset: artifactOffset });
@@ -445,8 +466,23 @@ function MainLayout() {
 					result = goalResult;
 					if (!cancelled) setGoalSummary(summaryResult);
 				}
+				else if (activePage === "planner") {
+					const [nextActions, timeline, goalSummary] = await Promise.all([api.getGoalNextActions(), api.getGoalTimeline(30), api.getGoalSummary()]);
+					result = { nextActions, timeline, goalSummary };
+				}
+				else if (activePage === "observability") {
+					const [health, intelligence, history, runs, sessionSummary] = await Promise.all([api.health(), api.intelligenceStatus(), api.intelligenceHistory(25, session?.session_id), api.listRuns(), api.sessionSummary().catch(() => null)]);
+					result = { health, intelligence, history, runs, sessionSummary };
+				}
+				else if (activePage === "agents") result = await api.listAgents();
+				else if (activePage === "background") result = await api.listBackgroundTasks();
+				else if (activePage === "learning") {
+					const [status, patterns, recommendation, guidance, policy, failureGuard] = await Promise.all([api.learningLoopStatus(currentProject ?? undefined), api.learningPatterns(currentProject ?? undefined), api.learningRecommendation(currentProject ?? undefined), api.learningGuidance(currentProject ?? undefined), api.learningPolicy(currentProject ?? undefined), api.learningFailureGuard(currentProject ?? undefined)]);
+					result = { status, patterns, recommendation, guidance, policy, failureGuard };
+				}
 				else if (activePage === "features") result = await api.listFeatures();
 				else if (activePage === "memory") result = await api.getRelevantMemory(searchQuery || "recent activity", session?.session_id);
+				else if (activePage === "market" || activePage === "creator" || activePage === "devices") result = {};
 				else if (activePage === "business") {
 					const [goals, workflows] = await Promise.all([api.listGoals(), api.listWorkflows("business")]);
 					result = { goals, workflows };
@@ -454,8 +490,8 @@ function MainLayout() {
 					const [workflows, runs, workflowSummary, workflowAttention] = await Promise.all([api.listWorkflows("operations"), api.listRuns(), api.workflowSummary(undefined, "operations").catch(() => null), api.workflowAttention(undefined, 30).catch(() => null)]);
 					result = { workflows, runs, workflowSummary, workflowAttention };
 				} else if (activePage === "settings") {
-					const [health, schema, intelligence, history, sessionSummary] = await Promise.all([api.health(), api.getOpenApi(), api.intelligenceStatus(), api.intelligenceHistory(10, session?.session_id), api.sessionSummary().catch(() => null)]);
-					result = { health, schema, intelligence, history, sessionSummary };
+					const [health, schema] = await Promise.all([api.health(), api.getOpenApi()]);
+					result = { health, schema };
 					const paths = object(schema).paths;
 					if (!cancelled && paths && typeof paths === "object") setApiPaths(Object.keys(paths));
 				}
@@ -468,7 +504,7 @@ function MainLayout() {
 		}
 		void loadPage();
 		return () => { cancelled = true; };
-	}, [activePage, pageRevision, searchQuery, session?.session_id, showArchivedArtifacts, artifactQuery, artifactTypeFilter, artifactOffset]);
+	}, [activePage, pageRevision, searchQuery, session?.session_id, currentProject, showArchivedArtifacts, artifactQuery, artifactTypeFilter, artifactOffset]);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -547,6 +583,14 @@ function MainLayout() {
 	useEffect(() => {
 		if (activePage !== "settings") return;
 		let cancelled = false;
+		void api.getAiMode().then((response) => {
+			if (cancelled) return;
+			const mode = response.mode;
+			if (mode === "offline" || mode === "hybrid" || mode === "cloud") setAiMode(mode);
+			setCloudEnabled(response.cloud_enabled === true);
+		}).catch((error) => {
+			if (!cancelled) setPageError(`Could not load AI provider mode: ${formatError(error).message}`);
+		});
 		setDeviceLoading(true);
 		void api.listDevices({ limit: 200 }).then((response) => {
 			if (!cancelled) setDeviceRecords(records(response, "devices"));
@@ -729,7 +773,9 @@ function MainLayout() {
 		setActionNotice(null);
 		try {
 			const targetSession = await ensureProjectSession(options.projectId);
-			const result = await api.command(actualInput, targetSession?.session_id ?? session?.session_id) as ApiResponse;
+			const requestSessionId = targetSession?.session_id ?? session?.session_id ?? null;
+			setCancellableSessionId(requestSessionId);
+			const result = await api.command(actualInput, requestSessionId ?? undefined) as ApiResponse;
 			const sessionId = stringValue(result.session_id);
 			if (sessionId) {
 				window.localStorage.setItem("lumira.sessionId", sessionId);
@@ -743,6 +789,21 @@ function MainLayout() {
 			setMessages((current) => current.map((message) => message.id === messageId ? { ...message, error: failure.message, response: failure.response, pending: false } : message));
 		} finally {
 			setIsSending(false);
+			setCancellableSessionId(null);
+		}
+	}
+
+	async function cancelCurrentRequest() {
+		const sessionId = cancellableSessionId;
+		if (!sessionId) return;
+		try {
+			const result = await api.cancelBrainExecution(sessionId);
+			const count = Number(result.cancelled_executions ?? 0);
+			setActionNotice(count > 0
+				? "Cancellation requested. Lumira will stop at the next Brain stage boundary; an active provider call may need to return first."
+				: "No active Brain execution was found for this session. The current request may be ordinary chat or already finished.");
+		} catch (error) {
+			setActionNotice(`Could not request cancellation: ${formatError(error).message}`);
 		}
 	}
 
@@ -807,6 +868,46 @@ function MainLayout() {
 			setActionNotice(formatError(error).message);
 		} finally {
 			setFileLoading(false);
+		}
+	}
+
+	async function changeAiProviderMode(mode: "offline" | "hybrid" | "cloud") {
+		if (mode === "cloud" && !cloudEnabled) {
+			setActionNotice("Enable cloud providers explicitly before selecting Cloud mode.");
+			return;
+		}
+		setAiModeBusy(true);
+		setPageError(null);
+		try {
+			const response = await api.setAiMode(mode);
+			setAiMode(mode);
+			setCloudEnabled(response.cloud_enabled === true);
+			setActionNotice(`AI provider mode changed to ${mode}. ${response.external_providers_allowed === true ? "Cloud providers are permitted." : "External providers remain blocked."}`);
+		} catch (error) {
+			setPageError(formatError(error).message);
+		} finally {
+			setAiModeBusy(false);
+		}
+	}
+
+	async function changeCloudPermission(enabled: boolean) {
+		if (enabled && !window.confirm("Allow Lumira to send conversation prompts and relevant chat context to configured cloud AI providers?")) return;
+		setAiModeBusy(true);
+		setPageError(null);
+		try {
+			if (!enabled && aiMode === "cloud") {
+				await api.setAiMode("hybrid");
+				setAiMode("hybrid");
+			}
+			const response = await api.setCloudEnabled(enabled);
+			setCloudEnabled(response.cloud_enabled === true);
+			setActionNotice(enabled
+				? "Cloud permission enabled. Hybrid mode still prefers local models; Cloud mode can now be selected."
+				: "Cloud permission disabled. Lumira will not use cloud chat providers.");
+		} catch (error) {
+			setPageError(formatError(error).message);
+		} finally {
+			setAiModeBusy(false);
 		}
 	}
 
@@ -1878,8 +1979,46 @@ async function runArtifactVoiceAction(artifactId: string, action: "process" | "t
 	}
 
 	const pageContent = () => {
+		if (activePage === "market") return <MarketWorkspace />;
+		if (activePage === "creator") return <CreatorWorkspace />;
+		if (activePage === "devices") return <DeviceEcosystemWorkspace />;
 		if (activePage === "chats") return null;
 		if (pageLoading) return <div className="workspace-empty">Loading {PAGE_TITLES[activePage].toLowerCase()}…</div>;
+		if (activePage === "dashboard") return <>
+			<div className="workspace-page-heading"><div><span className="eyebrow">LUMIRA CORE</span><h2>System dashboard</h2><p>A read-only snapshot of saved work, agents, workflows, and core availability.</p></div><button className="secondary-action" type="button" onClick={() => setPageRevision((value) => value + 1)}>Refresh dashboard</button></div>
+			<div className="metric-strip"><span>{Number(object(pageData?.projects).project_count ?? 0)} projects</span><span>{Number(object(pageData?.goals).total ?? 0)} goals</span><span>{Number(object(pageData?.workflows).scanned_workflows ?? 0)} workflows</span><span>{Number(object(pageData?.sessions).total ?? object(pageData?.sessions).scanned_sessions ?? 0)} sessions</span><span>{records(pageData?.agents, "agents").length} agents</span><span>{Number(object(pageData?.artifacts).total ?? object(pageData?.artifacts).count ?? 0)} artifacts</span></div>
+			<div className="entity-list">
+				<article className="entity-row"><div className="entity-copy"><strong>Core API</strong><span>{stringValue(object(pageData?.health).status, "Status not reported")}</span><small>Health endpoint response; not a claim that every provider is reachable.</small></div><button className="secondary-action" type="button" onClick={() => navigate("observability")}>Open observability</button></article>
+				<article className="entity-row"><div className="entity-copy"><strong>Projects and versions</strong><span>{Number(object(pageData?.projects).version_count ?? 0)} saved versions</span><small>Inspect saved project source and version history.</small></div><button className="secondary-action" type="button" onClick={() => navigate("projects")}>Open projects</button></article>
+				<article className="entity-row"><div className="entity-copy"><strong>Goals and planning</strong><span>{Number(object(pageData?.goals).total ?? 0)} saved goals</span><small>Review next actions, dependencies, and blockers.</small></div><button className="secondary-action" type="button" onClick={() => navigate("planner")}>Open planner</button></article>
+				<article className="entity-row"><div className="entity-copy"><strong>Agent workspace</strong><span>{records(pageData?.agents, "agents").length} registered agents</span><small>Dispatch explicit, Brain-gated agent tasks.</small></div><button className="secondary-action" type="button" onClick={() => navigate("agents")}>Open agents</button></article>
+				<article className="entity-row"><div className="entity-copy"><strong>Operations</strong><span>{Number(object(pageData?.workflows).task_completion_percent ?? 0)}% task completion</span><small>Review durable workflows and recovery state.</small></div><button className="secondary-action" type="button" onClick={() => navigate("operations")}>Open operations</button></article>
+				<article className="entity-row"><div className="entity-copy"><strong>Background execution</strong><span>Explicitly submitted tasks only</span><small>Inspect queued, running, completed, failed, or interrupted jobs.</small></div><button className="secondary-action" type="button" onClick={() => navigate("background")}>Open background tasks</button></article>
+			</div>
+		</>;
+		if (activePage === "learning") return <>
+			<div className="workspace-page-heading"><div><span className="eyebrow">PHASE 5 ? SELF-IMPROVEMENT</span><h2>Verified learning loop</h2><p>Review outcome-derived patterns and recommendations. Learning is advisory: it does not rewrite Lumira's source code, permissions, or execution policy automatically.</p></div><button className="secondary-action" type="button" onClick={() => setPageRevision((value) => value + 1)}>Refresh learning data</button></div>
+			<div className="metric-strip"><span>{Number(object(pageData?.status).samples ?? 0)} verified samples</span><span>{object(pageData?.status).learning_active === true ? "Learning evidence available" : "No verified learning evidence yet"}</span><span>Policy changes require explicit review</span></div>
+			<section className="memory-results"><h3>Learning status</h3><p>{stringValue(object(pageData?.status).recommendation, "No recommendation is currently available.")}</p><pre>{JSON.stringify(safeDisplay(pageData?.status), null, 2)}</pre></section>
+			<section className="memory-results"><h3>Outcome patterns</h3><pre>{JSON.stringify(safeDisplay(pageData?.patterns), null, 2)}</pre></section>
+			<section className="memory-results"><h3>Recommendations</h3><pre>{JSON.stringify(safeDisplay(pageData?.recommendation), null, 2)}</pre></section>
+			<section className="memory-results"><h3>Adaptive execution guidance</h3><pre>{JSON.stringify(safeDisplay(pageData?.guidance), null, 2)}</pre></section>
+			<section className="memory-results"><h3>Execution policy review</h3><p>Inspect these decisions before applying changes. The dashboard is read-only.</p><pre>{JSON.stringify(safeDisplay(pageData?.policy), null, 2)}</pre></section>
+			<section className="memory-results"><h3>Failure guard</h3><pre>{JSON.stringify(safeDisplay(pageData?.failureGuard), null, 2)}</pre></section>
+		</>;
+		if (activePage === "agents") return <>
+			<div className="workspace-page-heading"><div><span className="eyebrow">PHASE 4 ? AGENT UI</span><h2>Registered agents</h2><p>Inspect the agents registered in Lumira and dispatch one bounded task through the main Brain gate.</p></div><button className="secondary-action" type="button" onClick={() => setPageRevision((value) => value + 1)}>Refresh agents</button></div>
+			<div className="metric-strip"><span>{records(pageData, "agents").length} registered agents</span><span>One agent at a time on this device</span><span>Brain validation required</span></div>
+			{records(pageData, "agents").length ? <div className="entity-list">{records(pageData, "agents").map((agent) => <article className="entity-row" key={stringValue(agent.name)}><div className="entity-symbol"><FiCpu /></div><div className="entity-copy"><strong>{stringValue(agent.name)}</strong><span>{stringValue(agent.description, "Registered local capability agent")}</span><small>{Array.isArray(agent.capabilities) ? agent.capabilities.map(String).join(" ? ") : "Capabilities not reported"}</small></div><span className="status-pill">Registered</span></article>)}</div> : <div className="workspace-empty">No agents are currently registered. Check backend startup and the agent registry.</div>}
+			<section className="goal-decomposition"><div className="workspace-page-heading"><div><h3>Dispatch an agent task</h3><p>Execution is synchronous and bounded. It is not silently delegated from ordinary chat.</p></div></div><form className="goal-form" onSubmit={async (event) => { event.preventDefault(); if (!agentTask.trim() || agentBusy) return; setAgentBusy(true); setAgentResult(null); setPageError(null); try { const result = await api.dispatchAgent(agentTask.trim(), agentSelection === "auto" ? undefined : agentSelection); setAgentResult(result); setActionNotice(result.success === true ? "Agent task completed." : "Agent returned a non-success result; inspect the recorded outcome."); } catch (error) { setPageError(formatError(error).message); } finally { setAgentBusy(false); } }}><textarea aria-label="Agent task" required maxLength={10000} rows={4} value={agentTask} onChange={(event) => setAgentTask(event.target.value)} placeholder="Plan the implementation steps for a project?" /><select aria-label="Agent selection" value={agentSelection} onChange={(event) => setAgentSelection(event.target.value)}><option value="auto">Automatic routing</option><option value="planner_agent">Planner agent</option><option value="research_agent">Research agent</option><option value="code_agent">Code agent</option></select><button className="primary-action" type="submit" disabled={!agentTask.trim() || agentBusy}>{agentBusy ? "Agent running?" : "Run agent task"}</button></form></section>
+			{agentResult && <section className="memory-results"><div className="workspace-page-heading"><div><h3>Agent result</h3><p>{agentResult.success === true ? "Execution reported success." : "Execution did not report success. No success is inferred."}</p></div><button className="secondary-action" type="button" onClick={() => setAgentResult(null)}>Close</button></div><pre>{JSON.stringify(safeDisplay(agentResult), null, 2)}</pre></section>}
+		</>;
+		if (activePage === "background") return <>
+			<div className="workspace-page-heading"><div><span className="eyebrow">PHASE 5 ? BACKGROUND EXECUTION</span><h2>Background tasks</h2><p>Submit a task explicitly, let the API background worker process it, and inspect its durable status and result.</p></div><button className="secondary-action" type="button" onClick={() => setPageRevision((value) => value + 1)}>Refresh queue</button></div>
+			<div className="metric-strip"><span>{records(pageData, "tasks").length} recent task records</span><span>Persistent status history</span><span>Interrupted jobs require review and resubmission</span></div>
+			<section className="goal-decomposition"><div className="workspace-page-heading"><div><h3>Queue a background task</h3><p>Only tasks submitted here run. No recurring scheduler or unattended external actions are enabled.</p></div></div><form className="goal-form" onSubmit={async (event) => { event.preventDefault(); if (!backgroundTask.trim() || backgroundBusy) return; setBackgroundBusy(true); setPageError(null); try { const result = await api.createBackgroundTask(backgroundTask.trim(), backgroundAgent === "auto" ? undefined : backgroundAgent); setActionNotice(stringValue(result.status, "Task submitted") + "."); setBackgroundTask(""); setPageRevision((value) => value + 1); } catch (error) { setPageError(formatError(error).message); } finally { setBackgroundBusy(false); } }}><textarea aria-label="Background task description" required maxLength={10000} rows={3} value={backgroundTask} onChange={(event) => setBackgroundTask(event.target.value)} placeholder="Prepare a bounded research summary?" /><select aria-label="Background task agent" value={backgroundAgent} onChange={(event) => setBackgroundAgent(event.target.value)}><option value="auto">Automatic routing</option><option value="planner_agent">Planner agent</option><option value="research_agent">Research agent</option><option value="code_agent">Code agent</option></select><button className="primary-action" type="submit" disabled={!backgroundTask.trim() || backgroundBusy}>{backgroundBusy ? "Submitting?" : "Queue background task"}</button></form></section>
+			{records(pageData, "tasks").length ? <div className="entity-list">{records(pageData, "tasks").slice().reverse().map((task) => <article className="entity-row" key={stringValue(task.task_id)}><div className="entity-copy"><strong>{stringValue(task.task, "Background task")}</strong><span>{stringValue(task.agent_name, "Automatic routing")} ? {stringValue(task.status, "unknown")}</span><small>Created {stringValue(task.created_at)} ? Updated {stringValue(task.updated_at)}</small>{typeof task.error === "string" && task.error && <small className="blocker">{task.error}</small>}</div><span className="status-pill">{stringValue(task.status, "unknown")}</span>{typeof task.result === "string" && task.result && <details><summary>View result</summary><pre>{task.result}</pre></details>}</article>)}</div> : <div className="workspace-empty">No background tasks have been submitted.</div>}
+		</>;
 		if (activePage === "projects") return <>
 			<div className="workspace-page-heading"><div><span className="eyebrow">WORKSPACE</span><h2>Generated projects</h2><p>Project metadata and versions from Lumira's project store.</p></div><div className="entity-actions"><button type="button" className="secondary-action" onClick={async () => { try { const result = await api.projectSummary(); setActionNotice("Project portfolio summary refreshed."); setProjectSearchResult(null); setPageRevision((value) => value + 1); void result; } catch (error) { setPageError(formatError(error).message); } }}>Refresh portfolio</button><button type="button" className="primary-action" onClick={startNewProject}>New project</button></div></div>
 			{pageData?.summary && <div className="metric-strip"><span>{Number(object(pageData.summary).project_count ?? 0)} projects</span><span>{Number(object(pageData.summary).version_count ?? 0)} valid versions</span><span>{Object.keys(object(object(pageData.summary)["project_type_counts"])).length} project types</span><span>{records(pageData.summary, "projects_without_valid_versions").length} without valid versions</span></div>}
@@ -1980,8 +2119,34 @@ async function runArtifactVoiceAction(artifactId: string, action: "process" | "t
 				return <article className="entity-row feature-row" key={featureId}><div className="entity-symbol"><FiCpu /></div><div className="entity-copy"><strong>{featureId.replaceAll("_", " ")}</strong><span>{capabilities.join(" · ") || "No capabilities listed"}</span><small>{stringValue(feature.category, "feature")} · {stringValue(feature.status, "UNKNOWN")} · dependencies: {dependencies.join(", ") || "none"}{blocked ? ` · blocked: ${blockerList.join(", ")}` : ""}</small></div><div className="entity-actions"><span className="status-pill">{enabled ? "Enabled" : stringValue(feature.status, "Unknown")}</span><button type="button" disabled={enabled ? protectedFeature : !canAttemptEnable} title={blocked ? blockerList.join(", ") : undefined} onClick={() => void toggleFeature(featureId, enabled)}>{enabled ? "Disable" : "Enable"}</button></div></article>;
 			})}</div> : <div className="workspace-empty">The feature registry returned no entries.</div>}
 		</>;
+		if (activePage === "planner") return <>
+			<div className="workspace-page-heading"><div><span className="eyebrow">GOAL-DRIVEN PLANNING</span><h2>Planner</h2><p>Review upcoming actions and the 30-day goal timeline. This view reads persisted goal data and does not start tasks automatically.</p></div><button className="secondary-action" type="button" onClick={() => setPageRevision((value) => value + 1)}>Refresh plan</button></div>
+			{pageData?.goalSummary && <div className="metric-strip"><span>{Number(object(pageData.goalSummary).total_goals ?? object(pageData.goalSummary).goal_count ?? object(pageData.goalSummary).total ?? 0)} goals</span><span>{Number(object(pageData.goalSummary).active_goals ?? object(object(pageData.goalSummary).by_status).active ?? 0)} active</span><span>{Number(object(pageData.goalSummary).completed_goals ?? object(object(pageData.goalSummary).by_status).completed ?? 0)} completed</span></div>}
+			<section className="settings-capability-status"><h3>Next actions</h3>{records(pageData?.nextActions, "actions").length ? <div className="entity-list">{records(pageData?.nextActions, "actions").map((item, index) => { const goal = object(item.goal); const goalId = stringValue(goal.goal_id); return <article className="entity-row" key={goalId || String(index)}><div className="entity-copy"><strong>{stringValue(goal.title, "Goal action")}</strong><span>{stringValue(item.reason, "Eligible next action")}</span><small>{stringValue(goal.status, "active")} ? {stringValue(goal.deadline, "No deadline")} ? {Number(goal.progress ?? 0)}% complete</small></div>{goalId && <button className="secondary-action" type="button" onClick={() => { setActivePage("goals"); setActionNotice(`Open goal ${goalId} to inspect its plan and dependencies.`); }}>Open goal</button>}</article>; })}</div> : Number(object(pageData?.goalSummary).blocked_with_blockers ?? 0) > 0 ? <div><p>{Number(object(pageData?.goalSummary).blocked_with_blockers)} goal(s) have blockers. Review blockers and dependencies before planning the next actions.</p><button className="secondary-action" type="button" onClick={() => setActivePage("goals")}>Review blocked goals</button></div> : <p>No eligible next actions are currently available.</p>}</section>
+			<section className="settings-capability-status"><h3>30-day timeline</h3>{records(pageData?.timeline, "events").length ? <div className="entity-list">{records(pageData?.timeline, "events").map((item, index) => <article className="entity-row" key={`${stringValue(item.goal_id)}-${index}`}><div className="entity-copy"><strong>{stringValue(item.goal_title, "Goal activity")}</strong><span>{stringValue(item.event, stringValue(item.action, stringValue(item.status, "Goal event")))}</span><small>{stringValue(item.at, "Timestamp not supplied")}</small></div></article>)}</div> : <p>No timeline entries are currently available.</p>}</section>
+		</>;
+		if (activePage === "observability") return <>
+			<div className="workspace-page-heading"><div><span className="eyebrow">RUNTIME DIAGNOSTICS</span><h2>System observability</h2><p>Read-only runtime, provider, pipeline, session, and execution status. Diagnostics do not modify project state.</p></div><button className="secondary-action" type="button" onClick={() => setPageRevision((value) => value + 1)}>Refresh diagnostics</button></div>
+			<div className="metric-strip"><span>Core: {stringValue(object(pageData?.health).status, "unknown")}</span><span>{Number(object(pageData?.history).count ?? 0)} pipeline records</span><span>{records(pageData?.runs, "runs").length} recent runs</span><span>{Number(object(pageData?.sessionSummary).scanned_sessions ?? 0)} sessions scanned</span></div>
+			<section className="settings-capability-status"><h3>Provider and capability status</h3><pre>{JSON.stringify(safeDisplay(pageData?.intelligence ?? {}), null, 2)}</pre></section>
+			<section className="settings-capability-status"><h3>Recent pipeline history</h3><pre>{JSON.stringify(safeDisplay(pageData?.history ?? {}), null, 2)}</pre></section>
+			<section className="settings-capability-status"><h3>Recent execution runs</h3><pre>{JSON.stringify(safeDisplay(pageData?.runs ?? {}), null, 2)}</pre></section>
+		</>;
 		if (activePage === "settings") return <>
-			<div className="workspace-page-heading"><div><span className="eyebrow">PREFERENCES</span><h2>Workspace settings</h2><p>Panel preferences are saved locally on this device.</p></div><button className="secondary-action" type="button" onClick={async () => { try { const result = await api.exportSessions({ limit: 100, include_recent_messages: false }); await navigator.clipboard.writeText(JSON.stringify(result, null, 2)); setActionNotice("Redacted session metadata export copied to clipboard."); } catch (error) { setPageError(formatError(error).message); } }}>Export session metadata</button></div>
+			<div className="workspace-page-heading"><div><span className="eyebrow">PREFERENCES</span><h2>Workspace settings</h2><p>Panel preferences are saved locally on this device.</p></div><div className="settings-actions"><button className="secondary-action" type="button" onClick={async () => { try { const result = await api.exportSessions({ limit: 100, include_recent_messages: false }); await navigator.clipboard.writeText(JSON.stringify(result, null, 2)); setActionNotice("Redacted session metadata export copied to clipboard."); } catch (error) { setPageError(formatError(error).message); } }}>Export session metadata</button><button className="secondary-action" type="button" onClick={async () => { try { const blob = await api.downloadDataBackup(); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = "lumira-backup.zip"; link.click(); URL.revokeObjectURL(url); setActionNotice("Lumira backup downloaded."); } catch (error) { setPageError(formatError(error).message); } }}>Download backup</button><label className="secondary-action">Restore backup<input type="file" accept=".zip,application/zip" hidden onChange={async (event) => { const file = event.target.files?.[0]; if (!file) return; try { await api.restoreDataBackup(file); setActionNotice("Lumira backup restored. Refresh views to reload persisted data."); setPageRevision((value) => value + 1); } catch (error) { setPageError(formatError(error).message); } finally { event.currentTarget.value = ""; } }} /></label></div></div>
+			<section className="settings-capability-status" aria-label="AI provider mode">
+				<h3>AI provider mode</h3>
+				<p>Hybrid prefers local models. Cloud providers are never used until you explicitly enable cloud access here. Cloud credentials must still be configured separately.</p>
+				<div className="settings-list">
+					<label>Provider mode<select aria-label="AI provider mode" value={aiMode} disabled={aiModeBusy} onChange={(event) => { const value = event.target.value; if (value === "offline" || value === "hybrid" || value === "cloud") void changeAiProviderMode(value); }}>
+						<option value="offline">Offline — local models only</option>
+						<option value="hybrid">Hybrid — local first</option>
+						<option value="cloud" disabled={!cloudEnabled}>Cloud — cloud model only</option>
+					</select></label>
+					<label>Allow cloud providers<input aria-label="Allow cloud providers" type="checkbox" checked={cloudEnabled} disabled={aiModeBusy} onChange={(event) => void changeCloudPermission(event.target.checked)} /></label>
+				</div>
+				<p>Effective access: {aiMode === "offline" ? "Local providers only." : cloudEnabled ? aiMode === "hybrid" ? "Local first; cloud fallback permitted." : "Cloud providers permitted." : "Cloud providers blocked."}</p>
+			</section>
 			{pageData?.sessionSummary && <div className="metric-strip"><span>{Number(object(pageData.sessionSummary).scanned_sessions ?? 0)} sessions scanned</span><span>{Number(object(object(pageData.sessionSummary)["status_counts"]).active ?? 0)} active</span><span>{Number(object(object(pageData.sessionSummary)["status_counts"]).paused ?? 0)} paused</span><span>{records(pageData.sessionSummary, "stale_session_ids").length} stale</span><span>{records(pageData.sessionSummary, "sessions_with_recovery_snapshots").length} recoverable</span></div>}
 			{session?.session_id && <section className="settings-capability-status"><h3>Current session diagnostics</h3><p>Inspect context completeness and linked workflow records without changing the session.</p><div className="entity-actions"><button className="secondary-action" type="button" onClick={async () => { try { setSessionHealth(await api.getSessionHealth(session.session_id)); } catch (error) { setPageError(formatError(error).message); } }}>Inspect session health</button><button className="secondary-action" type="button" onClick={async () => { try { setSessionWorkflows(await api.getSessionWorkflows(session.session_id)); } catch (error) { setPageError(formatError(error).message); } }}>Load linked workflows</button></div>{sessionHealth && <pre>{JSON.stringify(safeDisplay(sessionHealth), null, 2)}</pre>}{sessionWorkflows && <pre>{JSON.stringify(safeDisplay(sessionWorkflows), null, 2)}</pre>}</section>}
 			<div className="settings-list"><label>Main navigation<select value={navMode} onChange={(event) => isPanelMode(event.target.value) && setNavMode(event.target.value)}><option value="full">Full</option><option value="compact">Icon only</option><option value="hidden">Hidden</option></select></label><label>Chat sidebar<select value={chatMode} onChange={(event) => isPanelMode(event.target.value) && setChatMode(event.target.value)}><option value="full">Full</option><option value="compact">Compact</option><option value="hidden">Hidden</option></select></label><label>Development panel<select value={rightMode} onChange={(event) => isPanelMode(event.target.value) && setRightMode(event.target.value)}><option value="full">Full</option><option value="compact">Compact</option><option value="hidden">Hidden</option></select></label><label>Assistant input<select value={inputMode} onChange={(event) => setInputMode(event.target.value as "full" | "compact" | "hidden")}><option value="full">Full</option><option value="compact">Compact</option><option value="hidden">Hidden</option></select></label></div>
@@ -2092,6 +2257,7 @@ async function runArtifactVoiceAction(artifactId: string, action: "process" | "t
 						<button className={`composer-tool ${voiceRecording ? "recording-active" : ""}`} type="button" aria-label={voiceRecording ? "Stop microphone recording" : "Start microphone recording"} title={voiceRecording ? "Stop and process recording" : "Record from microphone"} disabled={voiceBusy} onClick={() => voiceRecording ? stopVoiceRecording() : void startVoiceRecording()}>{voiceRecording ? "■" : "●"}</button>
 							<textarea ref={promptInputRef} aria-label="Describe what you want to work on" placeholder={workflow === "project" ? "Describe the project to generate…" : "Message Lumira…"} value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={onPromptKeyDown} rows={inputMode === "compact" ? 1 : 2} disabled={isRestoringSession} />
 							<label className="composer-mode"><span className="sr-only">Select Lumira mode</span><select aria-label="Composer mode" value={activeMode} onChange={(event) => void activateMode(event.target.value as LumiraMode)}><option value="auto">Auto</option><option value="personal">Personal</option><option value="builder">Builder</option><option value="growth">Growth</option><option value="business">Business</option><option value="creator">Creator</option><option value="generator">Generator</option><option value="research">Research</option><option value="assistant">Assistant</option><option value="operations">Operations</option></select></label>
+							{isSending && cancellableSessionId && <button className="composer-tool" type="button" aria-label="Cancel current request" title="Request cooperative cancellation" onClick={() => void cancelCurrentRequest()}><FiX /></button>}
 							<button className="send-button" type="submit" disabled={!prompt.trim() || isSending || isRestoringSession} aria-label="Send request" title="Send request"><FiArrowUp /></button>
 						</form>
 						{voiceRecording && <p className="voice-recording-status" role="status">Recording from your microphone. Select the stop button to save the audio and start transcription.</p>}{voiceRecordingError && <p className="voice-recording-error" role="alert">{voiceRecordingError}</p>}
@@ -2101,11 +2267,11 @@ async function runArtifactVoiceAction(artifactId: string, action: "process" | "t
 				<input ref={voiceFileRef} className="sr-only" type="file" accept="audio/wav,audio/mpeg,audio/mp4,audio/ogg,audio/webm,.wav,.mp3,.m4a,.ogg,.webm" aria-label="Capture voice file" onChange={(event) => void uploadVoice(event.target.files?.[0])} />
 			</section>
 			{workspaceView === "code" ? <RightPanel mode={effectiveRightMode} width={rightWidth} projects={projectItems} project={currentProject} version={selectedVersion} versions={projectVersions} files={projectFiles} selectedFile={selectedFile} fileContent={fileContent} fileLoading={fileLoading} previewUrl={previewUrl} previewStatus={previewStatus} previewInput={previewInput} onPreviewInput={setPreviewInput} onPreviewRegister={() => void registerPreview()} onPreviewStop={() => void stopPreview()} terminalCommands={terminalCommands} terminalRuns={terminalRuns} terminalBusy={terminalBusy} onTerminalRun={(commandId) => void runProjectTerminal(commandId)} apiPaths={apiPaths} runs={runs} activeTab={rightTab} onToggle={() => setRightMode(cyclePanel(rightMode))} onResize={(change) => setPanelWidth("right", rightWidth + change)} onTabChange={setRightTab} onProjectChange={(project) => project ? void selectProject(project) : setSelectedProject(null)} onVersionChange={(version) => void selectVersion(version)} onFileSelect={(file) => void selectFile(file)} /> : <aside className="utility-rail" aria-label="Lumira tools">
-				<button className={utilityPanel === "notepad" ? "active" : ""} type="button" onClick={() => setUtilityPanel(utilityPanel === "notepad" ? null : "notepad")}><span>▤</span>Notepad</button>
-				<button className={utilityPanel === "plugins" ? "active" : ""} type="button" onClick={() => setUtilityPanel(utilityPanel === "plugins" ? null : "plugins")}><span>◇</span>Plugins</button>
-				<button type="button" onClick={() => { setActivePage("generator"); setUtilityPanel(null); }}><span>✦</span>Imagine</button>
-				<button type="button" onClick={() => { setActivePage("goals"); setUtilityPanel(null); }}><span>✓</span>To-Do List</button>
-				{utilityPanel === "notepad" && <div className="utility-popover"><strong>Notepad</strong><textarea value={note} maxLength={20000} onChange={(event) => { setNote(event.target.value); setNoteSaveStatus("Unsaved changes"); }} placeholder="Write a quick note…" /><div className="notepad-actions"><small>{noteSaveStatus}</small><button type="button" disabled={noteSaveBusy} onClick={() => void saveNotepadNote()}>{noteSaveBusy ? "Saving…" : "Save to Lumira"}</button></div></div>}
+				<button className={utilityPanel === "notepad" ? "active" : ""} type="button" aria-label="Notepad" aria-expanded={utilityPanel === "notepad"} onClick={() => setUtilityPanel(utilityPanel === "notepad" ? null : "notepad")}><span aria-hidden="true">▤</span>Notepad</button>
+				<button className={utilityPanel === "plugins" ? "active" : ""} type="button" aria-label="Plugins" aria-expanded={utilityPanel === "plugins"} onClick={() => setUtilityPanel(utilityPanel === "plugins" ? null : "plugins")}><span aria-hidden="true">◇</span>Plugins</button>
+				<button type="button" aria-label="Imagine" onClick={() => { setActivePage("generator"); setUtilityPanel(null); }}><span aria-hidden="true">✦</span>Imagine</button>
+				<button type="button" aria-label="To-Do List" onClick={() => { setActivePage("goals"); setUtilityPanel(null); }}><span aria-hidden="true">✓</span>To-Do List</button>
+				{utilityPanel === "notepad" && <div className="utility-popover"><strong>Notepad</strong><textarea aria-label="Quick note" value={note} maxLength={20000} onChange={(event) => { setNote(event.target.value); setNoteSaveStatus("Unsaved changes"); }} placeholder="Write a quick note…" /><div className="notepad-actions"><small>{noteSaveStatus}</small><button type="button" disabled={noteSaveBusy} onClick={() => void saveNotepadNote()}>{noteSaveBusy ? "Saving…" : "Save to Lumira"}</button></div></div>}
 				{utilityPanel === "plugins" && <div className="utility-popover"><strong>Plugins</strong><p>Plugin slots are ready. No plugins are installed yet.</p></div>}
 			</aside>}
 		</main>

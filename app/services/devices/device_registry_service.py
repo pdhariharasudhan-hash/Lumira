@@ -19,7 +19,8 @@ class DeviceRegistryService:
     DEVICE_TYPES = {
         "raspberry_pi", "esp32", "arduino", "robotics", "cyberdeck",
         "smart_glasses", "mobile", "camera", "microphone", "sensor",
-        "bluetooth", "wifi", "smart_home", "vehicle",
+        "bluetooth", "wifi", "smart_home", "vehicle", "drone", "laptop",
+        "raspberry_pi_pico", "wearable", "smart_display", "printer", "other",
     }
     STATUSES = {"registered", "online", "offline", "maintenance"}
     PERMISSIONS = {

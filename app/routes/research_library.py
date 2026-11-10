@@ -58,6 +58,22 @@ def research_summary():
         raise HTTPException(status_code=503, detail="Research library is unavailable") from exc
 
 
+@router.get("/trends")
+def research_trends(limit: int = Query(default=1000, ge=0, le=1000)):
+    try:
+        return {"success": True, "trends": ResearchLibraryService().trend_analysis(limit)}
+    except (ValueError, OSError) as exc:
+        raise HTTPException(status_code=503, detail="Research library is unavailable") from exc
+
+
+@router.get("/graph")
+def research_graph(limit: int = Query(default=1000, ge=0, le=1000)):
+    try:
+        return {"success": True, "graph": ResearchLibraryService().knowledge_graph(limit)}
+    except (ValueError, OSError) as exc:
+        raise HTTPException(status_code=503, detail="Research library is unavailable") from exc
+
+
 @router.get("/{research_id}")
 def get_research(research_id: str):
     try:
@@ -98,7 +114,6 @@ def delete_research(research_id: str):
     if not deleted:
         raise HTTPException(status_code=404, detail="research item not found")
     return {"success": True, "deleted": True, "research_id": research_id}
-
 
 
 

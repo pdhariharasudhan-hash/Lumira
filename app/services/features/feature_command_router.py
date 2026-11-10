@@ -28,7 +28,7 @@ class FeatureCommandRouter:
         target = parsed.get("target")
 
         if command == "activate":
-            result = self.activation.activate(target)
+            result = self.activation.activate_with_dependencies(target)
         elif command == "disable":
             result = self.activation.deactivate(target)
         else:

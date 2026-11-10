@@ -49,10 +49,13 @@ class BrainAgentOrchestrator:
             }
         return None
 
-    def execute(self, task: str, agent_name: str | None = None, session_id: str | None = None, project_id: str | None = None, goal_id: str | None = None) -> dict:
+    def execute(self, task: str, agent_name: str | None = None, session_id: str | None = None, project_id: str | None = None, goal_id: str | None = None, autonomous: bool = False) -> dict:
         rejected = self._preflight(task, agent_name)
         if rejected:
             return rejected
+        authorization = self._authorize_autonomous(autonomous)
+        if not authorization["allowed"]:
+            return authorization
 
         if self.brain_service is None:
             self.brain_service = BrainService()
@@ -72,18 +75,22 @@ class BrainAgentOrchestrator:
                 metadata=metadata,
             )
         )
-        return self.execute_after_brain(task, brain, agent_name=agent_name)
+        return self.execute_after_brain(task, brain, agent_name=agent_name, autonomous=autonomous)
 
-    def execute_after_brain(self, task: str, brain_response, agent_name: str | None = None, core_context: dict | None = None) -> dict:
+    def execute_after_brain(self, task: str, brain_response, agent_name: str | None = None, core_context: dict | None = None, autonomous: bool = False) -> dict:
         """Dispatch only after the caller's primary-brain pass succeeded."""
         rejected = self._preflight(task, agent_name)
         if rejected:
             return rejected
+        authorization = self._authorize_autonomous(autonomous)
+        if not authorization["allowed"]:
+            return authorization
         # Only a literal boolean success may authorize downstream agent execution.
         # Truthy strings/integers are malformed and must fail closed.
         if getattr(brain_response, "success", False) is not True:
             error = getattr(brain_response, "error", None)
             return {
+                "allowed": False,
                 "success": False,
                 "state": "failed",
                 "code": "brain_validation_failed",
@@ -97,6 +104,7 @@ class BrainAgentOrchestrator:
         task = task.strip()
         if not self._dispatch_lock.acquire(blocking=False):
             return {
+                "allowed": False,
                 "success": False,
                 "state": "deferred",
                 "code": "agent_capacity_busy",
@@ -152,3 +160,31 @@ class BrainAgentOrchestrator:
             },
         }
         return result
+
+    @staticmethod
+    def _authorize_autonomous(autonomous: bool) -> dict:
+        if autonomous is not True:
+            return {"allowed": True}
+        from app.services.autonomy.autonomy_permission_service import AutonomyPermissionService
+        from app.services.persistence.atomic_json_store import PersistenceIntegrityError
+
+        try:
+            authorization = AutonomyPermissionService().authorize("agent.dispatch", autonomous=True)
+        except PersistenceIntegrityError:
+            return {
+                "allowed": False,
+                "success": False,
+                "state": "blocked",
+                "code": "autonomous_permission_state_unavailable",
+                "message": "Autonomous agent execution is blocked because permission state is unavailable.",
+            }
+        if not authorization["allowed"]:
+            return {
+                "allowed": False,
+                "success": False,
+                "state": "blocked",
+                "code": authorization["code"],
+                "message": authorization["message"],
+                "authorization": authorization,
+            }
+        return {"allowed": True}

@@ -1,3 +1,4 @@
+import inspect
 from fastapi import APIRouter, HTTPException
 
 from app.schemas.common import (
@@ -35,7 +36,11 @@ from app.services.brain.public_brain_view import public_brain_state, public_brai
 from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeService
 from app.services.sessions.session_manager_service import redact_sensitive_text
 from app.services.output.user_output_adapter import adapt as adapt_user_output
-from app.services.providers.ollama_chat_provider import OllamaChatProvider
+from app.services.conversation.conversation_context_service import ConversationContextService
+from app.services.conversation.conversation_provider_router import (
+    ConversationProviderRouter,
+    ConversationProviderUnavailable,
+)
 
 router = APIRouter()
 
@@ -193,85 +198,6 @@ def _command_impl(
             "session_id": session["session_id"],
         }
 
-    # Everyday conversation is a first-class Lumira interaction, not an
-    # unsupported command. Keep this deterministic when no external language
-    # provider is configured; capability work still uses the normal pipeline.
-    conversational_text = request.input.strip().lower()
-    conversational_replies = {
-        "how are you": "I'm doing well and ready to help. What would you like to work on?",
-        "how are u": "I'm doing well and ready to help. What would you like to work on?",
-        "what can you do": "I can help you plan, build and organize projects, manage goals and workflows, search your Lumira workspace, work with saved memory and artifacts, and use the capabilities that are configured on this device.",
-        "who are you": "I'm Lumira, your personal AI. I can talk with you and route practical requests through your local Lumira capabilities.",
-    }
-    normalized_conversation = " ".join(
-        conversational_text.replace("?", " ").replace("!", " ").replace(".", " ").split()
-    )
-    # Accept common keyboard slips in short conversational messages so Lumira
-    # behaves like an assistant rather than exposing an internal parser error.
-    conversational_aliases = {
-        "how arew u": "how are u",
-        "how r u": "how are u",
-        "how r you": "how are you",
-        "hows it going": "how are you",
-        "how's it going": "how are you",
-        "who are u": "who are you",
-        "what r u": "who are you",
-        "what are u": "who are you",
-    }
-    normalized_conversation = conversational_aliases.get(
-        normalized_conversation, normalized_conversation
-    )
-    if normalized_conversation in conversational_replies:
-        message = conversational_replies[normalized_conversation]
-        sessions.append_message(session["session_id"], "user", request.input)
-        sessions.append_message(
-            session["session_id"],
-            "assistant",
-            message,
-            metadata={"capability": "conversation", "success": True},
-        )
-        return {
-            "success": True,
-            "intent": "conversation",
-            "result": {"success": True, "capability": "conversation", "message": message},
-            "message": message,
-            "context": session,
-            "session_id": session["session_id"],
-        }
-
-    # If this is not an explicit Lumira capability, keep it on the normal
-    # conversation path. Do this before the execution pipeline so casual chat
-    # can never fall through and expose parser or brain diagnostics.
-    if not parsed.get("success"):
-        # Reuse Lumira's existing local Ollama chat provider for open-ended
-        # conversation. The command parser is only for actions; it must not be
-        # the intelligence layer for normal chat.
-        try:
-            message = OllamaChatProvider().chat(request.input)
-        except Exception:
-            # Provider availability must never leak internal exceptions or JSON
-            # into the normal conversation surface.
-            message = (
-                "I'm Lumira, your personal AI. I can help you think through ideas, "
-                "plan projects, organize your work, and use the capabilities available "
-                "on this device. Tell me what you want to do, and I'll help you take the next step."
-            )
-        sessions.append_message(session["session_id"], "user", request.input)
-        sessions.append_message(
-            session["session_id"],
-            "assistant",
-            message,
-            metadata={"capability": "conversation", "success": True},
-        )
-        return {
-            "success": True,
-            "intent": "conversation",
-            "result": {"success": True, "capability": "conversation", "message": message},
-            "message": message,
-            "context": session,
-            "session_id": session["session_id"],
-        }
-
     agent_orchestrator = None
     if parsed.get("success") and parsed.get("capability") == "agent_task":
         payload = parsed.get("payload", {})
@@ -315,6 +241,14 @@ def _command_impl(
         },
     )
 
+    conversation_context = ""
+    if not parsed.get("success"):
+        conversation_context = ConversationContextService().build(
+            request.input,
+            project_id=session.get("active_project"),
+            goal_id=session.get("goal_id"),
+        )
+
     brain_response = brain.execute(
         brain_request
     )
@@ -336,28 +270,77 @@ def _command_impl(
 
     intent = IntentClassifierService().classify(request.input)
     if not parsed["success"]:
-        # Never expose parser, agent-selection, or brain internals to the
-        # normal chat surface. Unsupported natural language remains a
-        # conversation, while explicit capability commands continue below.
-        message = (
-            "I'm Lumira, your personal AI. I can help you think through ideas, "
-            "plan projects, organize your work, and use the capabilities available "
-            "on this device. Tell me what you want to do, and I'll help you take the next step."
-        )
-        sessions.append_message(session["session_id"], "user", request.input)
+        # Every ordinary conversation now passes through Lumira's Main Brain
+        # before a model provider is called. The Brain already persisted the
+        # user turn, restored memory and updated cognitive context; this layer
+        # supplies the language-model response and persists only the assistant turn.
+        session = sessions.get_session(session["session_id"])
+        history = session.get("recent_messages", []) if isinstance(session, dict) else []
+        if not isinstance(history, list):
+            history = []
+        # BrainService persists the incoming user turn before provider execution.
+        # Remove that final copy because the provider appends the current message itself.
+        if (
+            history
+            and isinstance(history[-1], dict)
+            and history[-1].get("role") == "user"
+            and history[-1].get("content") == request.input
+        ):
+            history = history[:-1]
+        try:
+            conversation_router = ConversationProviderRouter()
+            chat_options = {"history": history}
+            if conversation_context:
+                try:
+                    parameters = inspect.signature(conversation_router.chat).parameters.values()
+                    supports_context = any(
+                        parameter.name == "context"
+                        or parameter.kind == inspect.Parameter.VAR_KEYWORD
+                        for parameter in parameters
+                    )
+                except (TypeError, ValueError):
+                    supports_context = False
+                if supports_context:
+                    chat_options["context"] = conversation_context
+            message = conversation_router.chat(request.input, **chat_options)
+            result = {"success": True, "capability": "conversation", "message": message}
+            success = True
+        except ConversationProviderUnavailable as exc:
+            message = exc.user_message
+            result = {
+                "success": False,
+                "status": "unavailable",
+                "code": exc.code,
+                "message": message,
+            }
+            success = False
+        except Exception:
+            message = "The configured chat provider failed. Check Lumira's provider status and try again."
+            result = {
+                "success": False,
+                "status": "failed",
+                "code": "chat_provider_error",
+                "message": message,
+            }
+            success = False
+
         sessions.append_message(
             session["session_id"],
             "assistant",
             message,
-            metadata={"capability": "conversation", "success": True},
+            metadata={"capability": "conversation", "success": success},
         )
         return {
-            "success": True,
+            "success": success,
             "intent": "conversation",
-            "result": {"success": True, "capability": "conversation", "message": message},
+            "result": result,
             "message": message,
             "context": session,
             "session_id": session["session_id"],
+            "brain": {
+                "state": public_brain_state(brain_response.state),
+                "trace": public_brain_trace(brain_response.trace),
+            },
         }
 
     mode_state = brain_response.state.mode
@@ -415,22 +398,22 @@ def _command_impl(
             result = {"success": False, "error": "Durable memory is unavailable or incompatible"}
     elif capability == "continue_project":
         active_project = session.get("active_project")
-        active_version = session.get("active_version")
-        existing = ProjectLifecycleService().get_project_version(
-            active_project,
-            active_version,
-        ) if active_project and active_version else {"success": False}
-        if not existing["success"]:
-            result = {"success": False, "error": "No active project version to continue"}
+        if not active_project:
+            result = {
+                "success": False,
+                "status": "reject",
+                "code": "active_project_missing",
+                "error": "No active project version is available to continue.",
+            }
         else:
-            result = ProjectLifecycleService().continue_project(
-                metadata=existing["data"]["metadata"],
-                instruction=parsed["payload"]["instruction"],
+            result = ProjectLifecycleService().continue_latest_project(
+                active_project,
+                parsed["payload"]["instruction"],
             )
-            if result.get("success"):
+            if result.get("success") is True:
                 session = sessions.update_context(
                     session["session_id"],
-                    active_version=result["saved_to"].replace("\\", "/").rsplit("/", 1)[-1],
+                    active_version=result["new_version"],
                 )
     else:
         result = CapabilityRouterService().execute(

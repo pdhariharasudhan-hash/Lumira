@@ -136,20 +136,52 @@ def send_device_command(device_id: str, request: DeviceCommandRequest):
     if ProviderRegistry.get("device_transport") is None:
         raise HTTPException(status_code=501, detail={"success": False, "code": "provider_unavailable"})
     if registered is None:
-        # Transport-backed gateways may own registration externally.
-        registered = {"device_id": device_id, "device_type": request.device_type, "permissions": ["commands.receive"], "status": "online"}
-        fresh_heartbeat = True
+        raise HTTPException(status_code=404, detail="Device is not registered; command was not sent")
     if registered.get("device_type") != request.device_type:
         raise HTTPException(status_code=422, detail="Device type does not match its registered type")
     if "commands.receive" not in registered.get("permissions", []):
         raise HTTPException(status_code=403, detail="Device has not granted the commands.receive permission")
+    declared_capabilities = set(registered.get("capabilities", []))
+    if request.action not in declared_capabilities:
+        raise HTTPException(status_code=403, detail="Device has not declared this command capability")
+    sensitive_permissions = {
+        "camera.capture", "microphone.capture", "robot.motion",
+        "smart_home.control", "vehicle.read", "files.read", "files.write",
+    }
+    if request.action in sensitive_permissions and request.action not in registered.get("permissions", []):
+        raise HTTPException(status_code=403, detail="Device has not granted the permission required by this capability")
     if registered.get("status") != "online" or not fresh_heartbeat:
         raise HTTPException(status_code=409, detail="Device has no fresh heartbeat/message within 120 seconds; command was not sent")
     result = DeviceGatewayService().send_command(device_id, request.device_type, request.action, request.payload)
     if not result["success"] and result.get("code") == "provider_unavailable":
         raise HTTPException(status_code=501, detail=result)
+    if not result["success"] and result.get("code") in {"external_provider_consent_required", "local_provider_blocked"}:
+        raise HTTPException(status_code=403, detail=result)
+    if not result["success"] and result.get("code") in {"provider_policy_unavailable", "provider_policy_invalid"}:
+        raise HTTPException(status_code=503, detail=result)
     if not result["success"] and result.get("code") in {"provider_error", "command_unconfirmed", "invalid_provider_response"}:
         raise HTTPException(status_code=502, detail=result)
     if not result["success"] and result.get("code", "").startswith("invalid_"):
         raise HTTPException(status_code=422, detail=result)
+    return result
+
+
+@router.get("/devices/ecosystem/overview")
+def device_ecosystem_overview():
+    from app.services.devices.device_ecosystem_service import DeviceEcosystemService
+    try:
+        return DeviceEcosystemService().overview()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Device ecosystem inventory is unavailable") from exc
+
+
+@router.get("/devices/ecosystem/plan/{device_id}")
+def device_ecosystem_plan(device_id: str, capability: str = Query(min_length=1, max_length=80)):
+    from app.services.devices.device_ecosystem_service import DeviceEcosystemService
+    try:
+        result = DeviceEcosystemService().plan(device_id, capability)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if result.get("code") == "device_not_registered":
+        raise HTTPException(status_code=404, detail=result)
     return result

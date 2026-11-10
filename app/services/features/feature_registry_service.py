@@ -51,6 +51,7 @@ FEATURE_CATALOG: Dict[str, Dict[str, Any]] = {
     "voice_idea_capture": {"version": "1.0", "category": "voice", "status": "AVAILABLE", "dependencies": ["voice_input", "artifact_manager", "memory"], "capabilities": ["voice.record", "voice.transcribe", "voice.idea"], "configuration": {}, "permissions": ["microphone", "filesystem.artifacts"], "health": "healthy", "tests": True},
     "wake_word_handoff": {"version": "1.0", "category": "voice", "status": "AVAILABLE", "dependencies": ["voice_input"], "capabilities": ["voice.wake.start", "voice.wake.consume"], "configuration": {"max_pending_events": 20}, "permissions": ["microphone"], "health": "healthy", "tests": True},
         "voice_transcript": {"version": "1.0", "category": "voice", "status": "AVAILABLE", "dependencies": ["voice_input", "artifact_manager"], "capabilities": ["voice.transcribe", "voice.language"], "configuration": {}, "permissions": ["microphone", "filesystem.artifacts"], "health": "healthy", "tests": True},
+    "audio_playback": {"version": "1.0", "category": "voice", "status": "AVAILABLE", "dependencies": ["voice_input", "artifact_manager"], "capabilities": ["audio.playback"], "configuration": {}, "permissions": ["filesystem.artifacts", "audio.output"], "health": "healthy", "tests": True},
     "idea_summarization": {"version": "1.0", "category": "voice", "status": "AVAILABLE", "dependencies": ["memory", "artifact_manager"], "capabilities": ["idea.summarize", "idea.store"], "configuration": {}, "permissions": ["memory.read", "memory.write", "filesystem.artifacts"], "health": "healthy", "tests": True},
     "image_understanding": {"version": "1.0", "category": "multimodal", "status": "EXPERIMENTAL", "dependencies": ["artifact_manager"], "capabilities": ["image.analyze", "image.ocr"], "configuration": {}, "permissions": ["filesystem.artifacts"], "health": "healthy", "tests": True},
     "image_generation": {"version": "1.0", "category": "multimodal", "status": "AVAILABLE", "dependencies": ["artifact_manager"], "capabilities": ["image.generate"], "configuration": {}, "permissions": ["filesystem.artifacts"], "health": "healthy", "tests": True},
@@ -297,6 +298,108 @@ class FeatureRegistryService:
         # response deterministic and avoid repeating the same blocker.
         blockers = list(dict.fromkeys(blockers))
         return not blockers, blockers
+
+    def can_enable_many(self, feature_names: list[str]) -> tuple[bool, list[str], list[str]]:
+        """Check a complete dependency-ordered activation without changing persisted state."""
+        if not isinstance(feature_names, list) or not feature_names:
+            return False, ["activation order must be a non-empty list"], []
+        ordered = []
+        for raw_name in feature_names:
+            name = self._normalize_name(raw_name)
+            if not name:
+                return False, ["invalid feature name in activation order"], []
+            if name not in ordered:
+                ordered.append(name)
+
+        registry = self._read()
+        selected = set(ordered)
+        completed = set()
+        blockers = []
+        for name in ordered:
+            if name == "terminal":
+                blockers.append("verified OS-level sandbox is not currently available; terminal activation is blocked")
+                continue
+            item = registry.get(name)
+            if item is None:
+                blockers.append(f"unknown feature: {name}")
+                continue
+            if item.get("health") not in {"healthy", "degraded"} or item.get("status") == "FAILED":
+                blockers.append(f"feature is not healthy enough to activate: {name}")
+            for provider_name in FEATURE_PROVIDER_REQUIREMENTS.get(name, ()):
+                if ProviderRegistry.get(provider_name) is None:
+                    blockers.append(f"required provider is not configured: {provider_name} (feature: {name})")
+            for dependency in item.get("dependencies", []):
+                dependency_item = registry.get(dependency)
+                if dependency_item is None:
+                    blockers.append(f"unknown feature dependency: {name} -> {dependency}")
+                elif dependency in selected:
+                    if dependency not in completed and dependency_item.get("enabled") is not True:
+                        blockers.append(f"activation order is invalid: {dependency} must precede {name}")
+                elif dependency_item.get("enabled") is not True:
+                    blockers.append(f"dependency is not enabled: {name} -> {dependency}")
+            completed.add(name)
+        blockers = list(dict.fromkeys(blockers))
+        return not blockers, blockers, ordered
+
+    def enable_many(self, feature_names: list[str]) -> tuple[bool, list[str], list[str]]:
+        """Preflight and persist a dependency-ordered activation as one registry write."""
+        if not isinstance(feature_names, list) or not feature_names:
+            return False, ["activation order must be a non-empty list"], []
+
+        ordered = []
+        for raw_name in feature_names:
+            name = self._normalize_name(raw_name)
+            if not name:
+                return False, ["invalid feature name in activation order"], []
+            if name not in ordered:
+                ordered.append(name)
+
+        registry = self._read()
+        selected = set(ordered)
+        completed = set()
+        blockers = []
+
+        for name in ordered:
+            if name == "terminal":
+                blockers.append("verified OS-level sandbox is not currently available; terminal activation is blocked")
+                continue
+            item = registry.get(name)
+            if item is None:
+                blockers.append(f"unknown feature: {name}")
+                continue
+            health = item.get("health")
+            if health not in {"healthy", "degraded"} or item.get("status") == "FAILED":
+                blockers.append(f"feature is not healthy enough to activate: {name}")
+            for provider_name in FEATURE_PROVIDER_REQUIREMENTS.get(name, ()):
+                if ProviderRegistry.get(provider_name) is None:
+                    blockers.append(f"required provider is not configured: {provider_name} (feature: {name})")
+            for dependency in item.get("dependencies", []):
+                dependency_item = registry.get(dependency)
+                if dependency_item is None:
+                    blockers.append(f"unknown feature dependency: {name} -> {dependency}")
+                elif dependency in selected:
+                    if dependency not in completed and dependency_item.get("enabled") is not True:
+                        blockers.append(f"activation order is invalid: {dependency} must precede {name}")
+                elif dependency_item.get("enabled") is not True:
+                    blockers.append(f"dependency is not enabled: {name} -> {dependency}")
+            completed.add(name)
+
+        blockers = list(dict.fromkeys(blockers))
+        if blockers:
+            return False, blockers, []
+
+        activated = []
+        for name in ordered:
+            item = registry[name]
+            if item.get("enabled") is True and item.get("status") == "ENABLED":
+                continue
+            item["enabled"] = True
+            item["status"] = "ENABLED"
+            activated.append(name)
+
+        if activated:
+            self.store.write(registry)
+        return True, [], activated
 
     def enable(self, feature_name: str) -> tuple[bool, list[str]]:
         name = self._normalize_name(feature_name)

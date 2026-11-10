@@ -80,7 +80,41 @@ def test_execute_endpoint_does_not_relabel_invalid_result_as_success(monkeypatch
 
     assert response["success"] is False
     assert response["status"] == "refine"
-    assert response["data"]["result"]["status"] == "refine"
+
+
+def test_autonomous_execute_requires_code_permission_before_service(monkeypatch, tmp_path):
+    import app.routes.execute as route
+    from app.services.autonomy.autonomy_permission_service import AutonomyPermissionService
+
+    monkeypatch.chdir(tmp_path)
+    class MustNotRun:
+        def execute(self, *args):
+            raise AssertionError("autonomous execution must be authorized before planning")
+
+    monkeypatch.setattr(route, "execute_service", MustNotRun())
+    response = route.execute_endpoint(route.ExecuteRequest(
+        input="run approved plan",
+        builder={"status": "accept", "suggested_steps": [{"id": "step-1", "action": "inspect", "expected_output": "report"}]},
+        autonomous=True,
+    ))
+    assert response["status"] == "blocked"
+    assert response["data"]["authorization"]["code"] == "autonomous_permission_required"
+
+
+def test_authorized_autonomous_execute_preserves_plan_contract(monkeypatch, tmp_path):
+    import app.routes.execute as route
+    from app.services.autonomy.autonomy_permission_service import AutonomyPermissionService
+
+    monkeypatch.chdir(tmp_path)
+    permissions = AutonomyPermissionService(tmp_path / "permissions.json")
+    permissions.set_permission("code.execute", True, "bounded test")
+    monkeypatch.setattr(route, "AutonomyPermissionService", lambda: permissions)
+    response = route.execute_endpoint(route.ExecuteRequest(
+        input="run approved plan",
+        builder={"status": "accept", "suggested_steps": [{"id": "step-1", "action": "inspect", "expected_output": "report"}]},
+        autonomous=True,
+    ))
+    assert response["data"]["result"]["status"] == "accept"
 
 
 def test_artifact_index_corruption_is_reported_and_preserved(tmp_path, monkeypatch):

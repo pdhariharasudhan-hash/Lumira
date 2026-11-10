@@ -24,6 +24,9 @@ class BrainModule(ABC):
     and returns the updated BrainState.
     """
 
+    # A stage must explicitly opt in before the executor may retry it.
+    retry_safe: bool = False
+
     @property
     @abstractmethod
     def name(self) -> str:

@@ -3,11 +3,34 @@ import json
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.agents.agent_manager import AgentManager
+from app.services.brain.brain_agent_orchestrator import BrainAgentOrchestrator
 from app.services.artifacts.artifact_manager_service import ArtifactManagerService
 from app.services.work_items.work_item_service import WorkItemService, WorkItemValidationError, PersistenceIntegrityError
+from app.services.autonomy.autonomy_permission_service import AutonomyPermissionService
 
 router = APIRouter()
+
+
+def _publish_workflow_outcome(workflow_id: str, task_id: str, outcome: dict, status: str) -> None:
+    """Best-effort observability bridge; task persistence remains authoritative."""
+    try:
+        from app.services.system.core_event_log_service import CoreEventLogService
+        from app.services.notifications.notification_service import NotificationService
+
+        event = CoreEventLogService().record(
+            event=f"workflow_task_{status}",
+            source="workflow_agent_execution",
+            data={
+                "workflow_id": workflow_id,
+                "task_id": task_id,
+                "success": outcome.get("success") is True,
+                "code": outcome.get("code"),
+            },
+        )
+        if event.get("success") is True:
+            NotificationService().create_from_core_event(event)
+    except (OSError, TypeError, ValueError):
+        return
 
 
 class TaskStatusUpdate(BaseModel):
@@ -193,6 +216,7 @@ class WorkflowAgentRunRequest(BaseModel):
     max_tasks: int = Field(default=1, ge=1, le=3)
     stop_on_failure: bool = True
     agent_mode: str = Field(default="auto", pattern="^(auto|planner_agent|research_agent|code_agent)$")
+    autonomous: bool = False
 
 
 @router.post("/workflows/{workflow_id}/run-ready")
@@ -206,10 +230,32 @@ def run_ready_workflow_tasks(workflow_id: str, request: WorkflowAgentRunRequest)
     if workflow is None:
         raise HTTPException(status_code=404, detail="workflow not found")
 
+    autonomy = AutonomyPermissionService()
+    try:
+        authorization = autonomy.authorize("workflow.run", autonomous=request.autonomous)
+    except (ValueError, PersistenceIntegrityError) as exc:
+        raise HTTPException(status_code=503, detail="Autonomy permission state is unavailable") from exc
+    if not authorization["allowed"]:
+        return {
+            "success": False,
+            "workflow_id": workflow_id,
+            "executed_count": 0,
+            "requested_max_tasks": request.max_tasks,
+            "stop_on_failure": request.stop_on_failure,
+            "stop_reason": "autonomous_permission_required",
+            "outcomes": [],
+            "workflow": workflow,
+            "progress": service.get_workflow_progress(workflow_id),
+            "authorization": authorization,
+        }
+    run_id = f"workflow:{workflow_id}"
+    if request.autonomous:
+        autonomy.record_state("workflow.run", "started", run_id=run_id)
+
     outcomes = []
     executed_count = 0
     stop_reason = "task_limit_reached"
-    manager = AgentManager(timeout_seconds=20.0)
+    orchestrator = BrainAgentOrchestrator()
 
     while executed_count < request.max_tasks:
         # Re-read durable state after every task so dependency checks use the
@@ -253,7 +299,7 @@ def run_ready_workflow_tasks(workflow_id: str, request: WorkflowAgentRunRequest)
             f"Project context: {workflow.get('project_id') or 'not specified'}"
         )
         try:
-            outcome = manager.dispatch(agent_prompt) if request.agent_mode == "auto" else manager.run(request.agent_mode, agent_prompt)
+            outcome = orchestrator.execute(agent_prompt, agent_name=None if request.agent_mode == "auto" else request.agent_mode, project_id=workflow.get("project_id"), goal_id=workflow.get("goal_id"))
         except Exception as exc:
             # Persist infrastructure failures instead of leaving tasks stuck in progress.
             outcome = {"success": False, "state": "failed", "code": "agent_dispatch_exception",
@@ -286,6 +332,7 @@ def run_ready_workflow_tasks(workflow_id: str, request: WorkflowAgentRunRequest)
             outcomes.append({"task_id": task_id, "title": task_title, "success": True,
                              "agent": outcome.get("agent"), "state": "completed",
                              "result": outcome.get("result"), "artifact_id": artifact_id, "artifact_storage": artifact_storage})
+            _publish_workflow_outcome(workflow_id, task_id, outcome, "completed")
             executed_count += 1
         else:
             failure_reason = str(outcome.get("message") or outcome.get("code") or "agent_execution_failed")
@@ -299,6 +346,7 @@ def run_ready_workflow_tasks(workflow_id: str, request: WorkflowAgentRunRequest)
             outcomes.append({"task_id": task_id, "title": task_title, "success": False,
                              "agent_state": outcome.get("state"), "code": outcome.get("code"),
                              "message": failure_reason[:500], "artifact_id": artifact_id, "artifact_storage": artifact_storage})
+            _publish_workflow_outcome(workflow_id, task_id, outcome, "failed")
             stop_reason = "agent_task_failed"
             if request.stop_on_failure:
                 break
@@ -309,6 +357,8 @@ def run_ready_workflow_tasks(workflow_id: str, request: WorkflowAgentRunRequest)
         progress = service.get_workflow_progress(workflow_id)
     except (KeyError, WorkItemValidationError, PersistenceIntegrityError) as exc:
         raise HTTPException(status_code=503, detail="Workflow progress could not be retrieved") from exc
+    if request.autonomous:
+        autonomy.record_state("workflow.run", "completed" if all(item.get("success") for item in outcomes) else "failed", run_id=run_id, detail=stop_reason)
     return {
         "success": bool(outcomes) and all(item.get("success") is True for item in outcomes),
         "workflow_id": workflow_id,
@@ -320,6 +370,7 @@ def run_ready_workflow_tasks(workflow_id: str, request: WorkflowAgentRunRequest)
         "workflow": final_workflow,
         "progress": progress,
         "note": "Agent execution produces recorded task outcomes. It does not execute arbitrary generated code or guarantee external side effects."
+        ,"authorization": authorization,
     }
 
 

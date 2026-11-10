@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from app.services.persistence.atomic_json_store import AtomicJsonStore, PersistenceIntegrityError
 from app.services.providers.provider_registry import ProviderRegistry
+from app.services.providers.provider_access_policy_service import ProviderAccessDenied, ProviderAccessPolicyService
 from app.services.sessions.session_manager_service import redact_sensitive_value
 
 
@@ -21,14 +22,16 @@ class DeviceGatewayService:
     DEVICE_TYPES = {
         "raspberry_pi", "esp32", "arduino", "robotics", "cyberdeck", "smart_glasses",
         "mobile", "camera", "microphone", "sensor", "bluetooth", "wifi", "smart_home", "vehicle",
+        "drone", "laptop", "raspberry_pi_pico", "wearable", "smart_display", "printer", "other",
     }
     MESSAGE_TYPES = {"telemetry", "heartbeat", "command_result"}
     MAX_PAYLOAD_BYTES = 64_000
     MAX_MESSAGES = 200
     STORE_SCHEMA_VERSION = 1
 
-    def __init__(self, transport: DeviceTransport | None = None, path: str | Path = "memory/device_messages.json"):
+    def __init__(self, transport: DeviceTransport | None = None, path: str | Path = "memory/device_messages.json", *, provider_policy=None):
         self.transport = ProviderRegistry.get("device_transport") if transport is None else transport
+        self.provider_policy = provider_policy or ProviderAccessPolicyService()
         self.store = AtomicJsonStore(path)
         self.path = Path(path)
         if not self.path.exists():
@@ -126,7 +129,10 @@ class DeviceGatewayService:
         if self.transport is None:
             return {"success": False, "code": "provider_unavailable", "message": "No device transport is configured; no command was sent."}
         try:
+            self.provider_policy.authorize(self.transport, "device command transport")
             result = self.transport.send_command(device_id, device_type, action.strip(), redact_sensitive_value(payload))
+        except ProviderAccessDenied as error:
+            return {"success": False, "code": error.code, "message": error.user_message}
         except Exception:
             return {"success": False, "code": "provider_error", "message": "The device transport failed; command delivery is unconfirmed."}
         if not isinstance(result, dict) or result.get("success") is not True:

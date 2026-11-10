@@ -2,12 +2,14 @@ from typing import Dict, Any
 import json
 
 from fastapi import APIRouter
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, StrictBool, field_validator
 
 from app.services.execution.execute_service import ExecuteService
 from app.services.response.response_service import (
     build_structured_response
 )
+from app.services.autonomy.autonomy_permission_service import AutonomyPermissionService
+from app.services.persistence.atomic_json_store import PersistenceIntegrityError
 
 router = APIRouter()
 
@@ -46,6 +48,7 @@ def analyze_execution_request(content: str, builder: Dict[str, Any] | None = Non
 class ExecuteRequest(BaseModel):
     input: str = Field(max_length=10000)
     builder: Dict[str, Any]
+    autonomous: StrictBool = False
 
     @field_validator("builder")
     @classmethod
@@ -114,6 +117,46 @@ def validate_execute_output(
 def execute_endpoint(
     payload: ExecuteRequest
 ):
+    if payload.autonomous:
+        try:
+            authorization = AutonomyPermissionService().authorize("code.execute", autonomous=True)
+        except PersistenceIntegrityError:
+            return build_structured_response(
+                endpoint="execute",
+                status="blocked",
+                data={
+                    "module": "execute",
+                    "result": {
+                        "status": "reject",
+                        "blockers": ["Autonomous execution permission state is unavailable."],
+                        "execution_order": [],
+                        "today_task": None,
+                        "task_steps": [],
+                        "expected_output": "",
+                    },
+                    "authorization": {
+                        "allowed": False,
+                        "code": "autonomous_permission_state_unavailable",
+                    },
+                },
+            )
+        if not authorization["allowed"]:
+            return build_structured_response(
+                endpoint="execute",
+                status="blocked",
+                data={
+                    "module": "execute",
+                    "result": {
+                        "status": "reject",
+                        "blockers": [authorization["message"]],
+                        "execution_order": [],
+                        "today_task": None,
+                        "task_steps": [],
+                        "expected_output": "",
+                    },
+                    "authorization": authorization,
+                },
+            )
 
     result = execute_service.execute(
         payload.input,

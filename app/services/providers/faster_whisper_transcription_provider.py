@@ -14,11 +14,14 @@ from app.services.resources.resource_budget_service import ResourceBudgetService
 
 
 class FasterWhisperTranscriptionProvider:
+
     """Transcribe supported audio locally; never send recordings to a remote API."""
 
+    provider_scope = "local"
     MAX_AUDIO_BYTES = 25_000_000
     MAX_TRANSCRIPT_CHARS = 100_000
-    SUPPORTED_EXTENSIONS = {"wav", "mp3", "m4a"}
+    # faster-whisper/AV can decode the same formats accepted by Lumira's audio store.
+    SUPPORTED_EXTENSIONS = {"wav", "mp3", "m4a", "ogg", "webm"}
     _model_cache: dict[tuple[str, str, str], Any] = {}
     _model_lock = Lock()
     _inference_lock = Lock()
@@ -73,6 +76,38 @@ class FasterWhisperTranscriptionProvider:
             self._model_cache[key] = model
             return model
 
+    @staticmethod
+    def _decode_audio_compat(path: Path):
+        """Decode through PyAV without the metadata_errors kwarg removed by some PyAV builds.
+
+        faster-whisper 1.2.x currently passes metadata_errors to av.open(). Some
+        installed PyAV builds reject that keyword. Passing a decoded float32
+        waveform to WhisperModel.transcribe() avoids that incompatible call
+        while retaining PyAV's bundled FFmpeg support for stored audio formats.
+        """
+        import av
+        import numpy as np
+
+        resampler = av.audio.resampler.AudioResampler(
+            format="s16",
+            layout="mono",
+            rate=16000,
+        )
+        chunks = []
+        with av.open(str(path), mode="r") as container:
+            audio_streams = container.streams.audio
+            if not audio_streams:
+                raise ValueError("Audio file contains no audio stream.")
+            for frame in container.decode(audio=audio_streams[0].index):
+                for converted in resampler.resample(frame):
+                    chunks.append(converted.to_ndarray().reshape(-1))
+            for converted in resampler.resample(None):
+                chunks.append(converted.to_ndarray().reshape(-1))
+        if not chunks:
+            raise ValueError("Audio file contains no decodable audio frames.")
+        waveform = np.concatenate(chunks).astype(np.float32)
+        return waveform / 32768.0
+
     def transcribe(self, audio_path: str) -> str:
         path = Path(audio_path)
         extension = path.suffix.removeprefix(".").lower()
@@ -96,11 +131,17 @@ class FasterWhisperTranscriptionProvider:
         try:
             model = self._load_model()
             try:
+                waveform = self._decode_audio_compat(path)
+                initial_prompt = os.getenv(
+                    "LUMIRA_LOCAL_TRANSCRIPTION_INITIAL_PROMPT",
+                    "Lumira",
+                ).strip()[:500]
                 segments, _info = model.transcribe(
-                    str(path),
+                    waveform,
                     beam_size=1,
                     vad_filter=True,
                     condition_on_previous_text=False,
+                    initial_prompt=initial_prompt or None,
                 )
                 pieces: list[str] = []
                 total_chars = 0

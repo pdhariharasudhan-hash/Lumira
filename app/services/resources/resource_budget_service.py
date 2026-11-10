@@ -176,5 +176,5 @@ class ResourceBudgetService:
             "max_context_characters": policy["max_context_characters"],
             "max_file_characters": policy["max_file_characters"],
             "avoid_loading_multiple_local_models": policy["avoid_loading_multiple_local_models"],
-            "defer_optional_heavy_media_work": policy["defer_optional_heavy_media_work"],
+            "defer_optional_heavy_media_work": policy["defer_optional_heavy_media_work_when_under_pressure"],
         }

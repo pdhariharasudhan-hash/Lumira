@@ -49,7 +49,7 @@ class FakeSandbox:
 
 
 def test_terminal_requires_a_verified_execution_boundary():
-    assert ProjectTerminalService.OS_SANDBOX_ENABLED is True
+    assert ProjectTerminalService.OS_SANDBOX_ENABLED is False
     service = ProjectTerminalService(sandbox=FakeSandbox(False))
     assert service._os_sandbox_verified() is False
 

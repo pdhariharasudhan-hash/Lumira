@@ -79,6 +79,46 @@ describe("Lumira workspace shell", () => {
 		expect(await screen.findByRole("heading", { name: "Workflows & recovery" })).toBeTruthy();
 	});
 
+	it("loads goal-driven planning and read-only system observability", async () => {
+		const fetchMock = mockFetch((input) => {
+			const path = String(input);
+			if (path === "/goals/next-actions") return jsonResponse({ actions: [{ goal: { goal_id: "goal-1", title: "Finish Lumira", status: "active", progress: 35 }, reason: "Unblocked and dependencies satisfied" }] });
+			if (path.startsWith("/goals/timeline")) return jsonResponse({ events: [{ goal_id: "goal-1", goal_title: "Finish Lumira", event: "milestone_completed", at: "2026-11-04T10:00:00Z" }] });
+			if (path === "/goals/summary") return jsonResponse({ total: 12, by_status: { active: 10, completed: 2 } });
+			if (path === "/intelligence/status") return jsonResponse({ providers: { local: { registered: true } } });
+			if (path.startsWith("/intelligence/history")) return jsonResponse({ count: 1, history: [{ status: "completed" }] });
+			if (path === "/runs") return jsonResponse({ runs: [{ run_id: "run-1" }] });
+			if (path === "/sessions/summary") return jsonResponse({ scanned_sessions: 2 });
+			return defaultResponse(input);
+		});
+		render(<MainLayout />);
+		fireEvent.click(screen.getByRole("button", { name: "Planner" }));
+		expect((await screen.findAllByText("Finish Lumira")).length).toBeGreaterThan(0);
+		expect(await screen.findByText("Unblocked and dependencies satisfied")).toBeTruthy();
+		expect(screen.getByText("12 goals")).toBeTruthy();
+		expect(screen.getByText("10 active")).toBeTruthy();
+		expect(screen.getByText("2 completed")).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: "System Observability" }));
+		expect(await screen.findByRole("heading", { name: "System observability" })).toBeTruthy();
+		expect(await screen.findByText(/1 pipeline records/)).toBeTruthy();
+		expect(fetchMock.mock.calls.some(([input]) => String(input) === "/intelligence/status")).toBe(true);
+	});
+
+	it("explains blocked planner state and links to goal management", async () => {
+		mockFetch((input) => {
+			const path = String(input);
+			if (path === "/goals/next-actions") return jsonResponse({ actions: [], total_eligible: 0 });
+			if (path.startsWith("/goals/timeline")) return jsonResponse({ events: [], total: 0, days: 30 });
+			if (path === "/goals/summary") return jsonResponse({ total: 12, by_status: { active: 12 }, blocked_with_blockers: 12 });
+			return defaultResponse(input);
+		});
+		render(<MainLayout />);
+		fireEvent.click(screen.getByRole("button", { name: "Planner" }));
+		expect(await screen.findByText(/12 goal\(s\) have blockers/)).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: "Review blocked goals" }));
+		expect(await screen.findByRole("heading", { name: "Goals" })).toBeTruthy();
+	});
+
 	it("restores a saved session and its real recent conversation", async () => {
 		setSessionId("session-12345678");
 		const fetchMock = mockFetch((input) => {
@@ -465,3 +505,151 @@ describe("Lumira workspace shell", () => {
 		expect(window.localStorage.getItem("lumira.sessionId")).toBeNull();
 		expect(await screen.findByText(/Conversation permanently deleted/)).toBeTruthy();
 	});
+
+	it("loads the saved AI provider mode and persists a mode change from Settings", async () => {
+		let savedMode = "offline";
+		const fetchMock = mockFetch((input, init) => {
+			if (String(input) === "/ai-mode" && init?.method === "PUT") {
+				savedMode = String(JSON.parse(String(init.body)).mode);
+				return jsonResponse({ success: true, mode: savedMode, cloud_enabled: false, external_providers_allowed: false });
+			}
+			if (String(input) === "/ai-mode") return jsonResponse({ success: true, mode: savedMode, cloud_enabled: false });
+			return defaultResponse(input);
+		});
+		render(<MainLayout />);
+		fireEvent.click(screen.getByRole("button", { name: "Open settings" }));
+		const mode = await screen.findByRole("combobox", { name: "AI provider mode" });
+		expect((mode as HTMLSelectElement).value).toBe("offline");
+		fireEvent.change(mode, { target: { value: "hybrid" } });
+		await waitFor(() => expect(savedMode).toBe("hybrid"));
+		expect(fetchMock.mock.calls.some(([input, init]) => String(input) === "/ai-mode" && init?.method === "PUT" && JSON.parse(String(init.body)).mode === "hybrid")).toBe(true);
+		expect(await screen.findByText(/AI provider mode changed to hybrid/)).toBeTruthy();
+	});
+
+	it("requires explicit confirmation before enabling cloud providers", async () => {
+		const confirmMock = vi.fn(() => true);
+		vi.stubGlobal("confirm", confirmMock);
+		const fetchMock = mockFetch((input, init) => {
+			if (String(input) === "/ai-mode") return jsonResponse({ success: true, mode: "hybrid", cloud_enabled: false });
+			if (String(input) === "/ai-mode/cloud" && init?.method === "PUT") {
+				return jsonResponse({ success: true, cloud_enabled: JSON.parse(String(init.body)).cloud_enabled });
+			}
+			return defaultResponse(input);
+		});
+		render(<MainLayout />);
+		fireEvent.click(screen.getByRole("button", { name: "Open settings" }));
+		const permission = await screen.findByRole("checkbox", { name: "Allow cloud providers" });
+		fireEvent.click(permission);
+		await waitFor(() => expect(confirmMock).toHaveBeenCalledTimes(1));
+		await waitFor(() => expect(fetchMock.mock.calls.some(([input, init]) => String(input) === "/ai-mode/cloud" && init?.method === "PUT" && JSON.parse(String(init.body)).cloud_enabled === true)).toBe(true));
+		expect((permission as HTMLInputElement).checked).toBe(true);
+	});
+
+	it("keeps a quick note locally and saves it to Lumira's Notepad API", async () => {
+		const fetchMock = mockFetch((input, init) => {
+			if (String(input) === "/notepad" && init?.method === "POST") {
+				return jsonResponse({ success: true, note: { note_id: "note-quick-1", title: "Quick Note", content: JSON.parse(String(init.body)).content } });
+			}
+			if (String(input) === "/notepad") return jsonResponse({ notes: [] });
+			return defaultResponse(input);
+		});
+		render(<MainLayout />);
+		fireEvent.click(screen.getByRole("button", { name: "Notepad" }));
+		const note = screen.getByRole("textbox", { name: "Quick note" });
+		fireEvent.change(note, { target: { value: "Remember to finish Lumira's desktop workflow." } });
+		await waitFor(() => expect(window.localStorage.getItem("lumira.notepad")).toBe("Remember to finish Lumira's desktop workflow."));
+		fireEvent.click(screen.getByRole("button", { name: "Save to Lumira" }));
+		await waitFor(() => expect(fetchMock.mock.calls.some(([input, init]) => String(input) === "/notepad" && init?.method === "POST")).toBe(true));
+		expect(await screen.findByText("Saved to Lumira")).toBeTruthy();
+	});
+
+	it("requests cooperative cancellation for the active Brain session", async () => {
+		setSessionId("session-12345678");
+		let finishCommand!: (response: MockResponse) => void;
+		const pendingCommand = new Promise<MockResponse>((resolve) => { finishCommand = resolve; });
+		const fetchMock = mockFetch((input) => {
+			const path = String(input);
+			if (path === "/sessions/session-12345678") return jsonResponse(activeSession());
+			if (path === "/command") return pendingCommand;
+			if (path === "/brain/cancel/session-12345678") return jsonResponse({ success: true, cancelled_executions: 1 });
+			if (path === "/sessions?limit=100") return jsonResponse({ sessions: [activeSession()] });
+			return defaultResponse(input);
+		});
+		render(<MainLayout />);
+		const composer = await screen.findByRole("textbox", { name: "Describe what you want to work on" });
+		fireEvent.change(composer, { target: { value: "Build a small tool" } });
+		fireEvent.click(screen.getByRole("button", { name: "Send request" }));
+		fireEvent.click(await screen.findByRole("button", { name: "Cancel current request" }));
+		expect(await screen.findByText(/Cancellation requested/)).toBeTruthy();
+		expect(fetchMock.mock.calls.some(([input, init]) => String(input) === "/brain/cancel/session-12345678" && init?.method === "POST")).toBe(true);
+		finishCommand(jsonResponse({ success: true, session_id: "session-12345678", message: "Finished", result: { capability: "conversation", success: true } }));
+		await waitFor(() => expect(screen.queryByRole("button", { name: "Cancel current request" })).toBeNull());
+	});
+
+
+describe("agent and background execution workspace", () => {
+	it("shows registered agents and dispatches a user-requested task", async () => {
+		const fetchMock = mockFetch((input, init) => {
+			const path = String(input);
+			if (path === "/agents") return jsonResponse({ success: true, agents: [{ name: "planner_agent", description: "Plans bounded work", capabilities: ["planning"] }] });
+			if (path === "/agents/dispatch" && init?.method === "POST") return jsonResponse({ success: true, state: "completed", agent: "planner_agent" });
+			return defaultResponse(input);
+		});
+		render(<MainLayout />);
+		fireEvent.click(screen.getByRole("button", { name: "Agents" }));
+		expect(await screen.findByText("planner_agent")).toBeTruthy();
+		fireEvent.change(screen.getByRole("textbox", { name: "Agent task" }), { target: { value: "Plan a project" } });
+		fireEvent.click(screen.getByRole("button", { name: "Run agent task" }));
+		expect(await screen.findByText("Execution reported success.")).toBeTruthy();
+		expect(fetchMock.mock.calls.some(([input]) => String(input) === "/agents/dispatch")).toBe(true);
+	});
+
+	it("shows the durable background task queue and submits only explicit tasks", async () => {
+		const fetchMock = mockFetch((input, init) => {
+			const path = String(input);
+			if (path.startsWith("/background-tasks") && init?.method === "POST") return jsonResponse({ success: true, status: "queued", task: { task_id: "job-1", task: "Prepare a report", status: "queued" } });
+			if (path.startsWith("/background-tasks")) return jsonResponse({ success: true, tasks: [{ task_id: "job-old", task: "Previous report", status: "completed" }] });
+			return defaultResponse(input);
+		});
+		render(<MainLayout />);
+		fireEvent.click(screen.getByRole("button", { name: "Background Tasks" }));
+		expect(await screen.findByText("Previous report")).toBeTruthy();
+		fireEvent.change(screen.getByRole("textbox", { name: "Background task description" }), { target: { value: "Prepare a report" } });
+		fireEvent.click(screen.getByRole("button", { name: "Queue background task" }));
+		await waitFor(() => expect(fetchMock.mock.calls.some(([input]) => String(input) === "/background-tasks" && (fetchMock.mock.calls.find(([candidate]) => String(candidate) === "/background-tasks")?.[1] as RequestInit | undefined)?.method === "POST")).toBe(true));
+	});
+});
+
+
+it("exposes verified self-improvement diagnostics without mutating policy", async () => {
+	const fetchMock = mockFetch((input) => {
+		const path = String(input);
+		if (path === "/system/learning/status") return jsonResponse({ success: true, learning_active: true, samples: 4, recommendation: "Reuse verified patterns." });
+		if (path.startsWith("/system/learning/")) return jsonResponse({ success: true, mode: "read_only", recommendation: "Review before applying." });
+		return defaultResponse(input);
+	});
+	render(<MainLayout />);
+	fireEvent.click(screen.getByRole("button", { name: "Self-Improvement" }));
+	expect(await screen.findByRole("heading", { name: "Verified learning loop" })).toBeTruthy();
+	expect(await screen.findByText("4 verified samples")).toBeTruthy();
+	expect(screen.getByText(/does not rewrite Lumira's source code/)).toBeTruthy();
+	expect(fetchMock.mock.calls.some(([input]) => String(input) === "/system/learning/policy")).toBe(true);
+});
+
+
+it("renders the system dashboard and navigates to core workspaces", async () => {
+	mockFetch((input) => {
+		const path = String(input);
+		if (path === "/projects/summary") return jsonResponse({ project_count: 4, version_count: 7 });
+		if (path === "/goals/summary") return jsonResponse({ total: 6 });
+		if (path === "/workflows/summary") return jsonResponse({ scanned_workflows: 3, task_completion_percent: 50 });
+		if (path === "/agents") return jsonResponse({ agents: [{ name: "planner_agent" }, { name: "research_agent" }] });
+		return defaultResponse(input);
+	});
+	render(<MainLayout />);
+	fireEvent.click(screen.getByRole("button", { name: "Dashboard" }));
+	expect(await screen.findByRole("heading", { name: "System dashboard" })).toBeTruthy();
+	expect(await screen.findByText("4 projects")).toBeTruthy();
+	fireEvent.click(screen.getByRole("button", { name: "Open agents" }));
+	expect(await screen.findByRole("heading", { name: "Registered agents" })).toBeTruthy();
+});

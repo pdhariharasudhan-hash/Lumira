@@ -8,6 +8,9 @@ from app.services.artifacts.artifact_manager_service import (
 from app.services.resources.resource_budget_service import ResourceBudgetService
 
 
+
+from app.services.providers.provider_access_policy_service import ProviderAccessDenied, ProviderAccessPolicyService
+
 class ImageGenerationProvider(Protocol):
     def generate(self, prompt: str, image_type: str) -> dict:
         ...
@@ -18,7 +21,7 @@ class ImageGenerationService:
     MAX_PROMPT_CHARS = 4_000
     MAX_IMAGE_BYTES = 25_000_000
 
-    def __init__(self, provider: ImageGenerationProvider | None = None):
+    def __init__(self, provider: ImageGenerationProvider | None = None, *, provider_policy=None):
 
         self.artifacts = (
             ArtifactManagerService()
@@ -28,6 +31,7 @@ class ImageGenerationService:
 
             provider = ProviderRegistry.get("image_generation")
         self.provider = provider
+        self.provider_policy = provider_policy or ProviderAccessPolicyService()
 
     def generate(
         self,
@@ -39,6 +43,27 @@ class ImageGenerationService:
                 "success": False,
                 "code": "invalid_prompt",
                 "message": "Image prompt must contain 1 to 4,000 characters.",
+            }
+
+        supported_types = {
+            "image",
+            "diagram",
+            "blueprint",
+            "schematic"
+        }
+
+        if image_type not in supported_types:
+            return {
+                "success": False,
+                "code": "unsupported_image_type",
+                "message": f"Unsupported image type: {image_type}",
+            }
+
+        if self.provider is None:
+            return {
+                "success": False,
+                "code": "provider_unavailable",
+                "message": "No image rendering provider is configured; no image artifact was created.",
             }
 
         # Rendering is optional heavy work. Defer it when the host is under
@@ -56,34 +81,11 @@ class ImageGenerationService:
                 "message": "Image generation was deferred because available system memory is constrained.",
             }
 
-        supported_types = {
-
-            "image",
-            "diagram",
-            "blueprint",
-            "schematic"
-        }
-
-        if image_type not in supported_types:
-
-            return {
-
-                "success":
-                False,
-
-                "message":
-                f"Unsupported image type: {image_type}"
-            }
-
-        if self.provider is None:
-            return {
-                "success": False,
-                "code": "provider_unavailable",
-                "message": "No image rendering provider is configured; no image artifact was created.",
-            }
-
         try:
+            self.provider_policy.authorize(self.provider, "image generation")
             result = self.provider.generate(prompt, image_type)
+        except ProviderAccessDenied as error:
+            return {"success": False, "code": error.code, "message": error.user_message}
         except ValueError:
             return {
                 "success": False,

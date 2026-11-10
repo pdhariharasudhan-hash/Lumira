@@ -23,11 +23,13 @@ def test_voice_activation_and_playback_have_truthful_provider_boundaries(tmp_pat
     assert playback.json()["detail"]["code"] == "provider_unavailable"
 
     class WakeWord:
+        provider_scope = "local"
         def detect(self, audio_path):
             assert audio_path.endswith(".wav")
             return {"success": True, "detected": True}
 
     class Synthesis:
+        provider_scope = "local"
         def synthesize(self, text, language):
             assert (text, language) == ("வணக்கம் Lumira", "ta-en")
             return {"success": True, "content": b"RIFF\x00\x00\x00\x00WAVE", "extension": "wav"}
@@ -52,6 +54,7 @@ def test_transcript_provider_registry_persists_transcript_and_detects_tamil_engl
     )
 
     class Transcription:
+        provider_scope = "local"
         def transcribe(self, audio_path):
             return "வணக்கம் Lumira, create a report"
 
@@ -78,6 +81,7 @@ def test_transcription_validates_only_audio_header_not_entire_recording(tmp_path
     )
 
     class Transcription:
+        provider_scope = "local"
         def transcribe(self, audio_path):
             assert Path(audio_path).is_file()
             return "header-only validation works"

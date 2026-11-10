@@ -10,6 +10,7 @@ from app.services.modes.mode_detection_service import ModeDetectionService
 from app.services.modes.mode_registry_service import ModeRegistryService
 from app.services.providers.provider_registry import ProviderRegistry, PROVIDER_STATUS_NAMES
 from app.services.sessions.session_manager_service import SessionManagerService
+from app.services.multi_model.multi_model_orchestrator import MultiModelIntelligenceOrchestrator
 
 router = APIRouter()
 
@@ -21,6 +22,10 @@ class AnalyzeRequest(BaseModel):
 class SelectModeRequest(BaseModel):
     session_id: str = Field(min_length=1, max_length=128)
     mode_id: str = Field(min_length=1, max_length=50)
+
+
+class ToolSelectionRequest(BaseModel):
+    task: str = Field(min_length=1, max_length=20000)
 
 
 @router.get("/intelligence/core-bridge")
@@ -128,6 +133,11 @@ def analyze_input(request: AnalyzeRequest):
         "mode": mode.model_dump(mode="json"),
         "execution_started": False,
     }
+
+
+@router.post("/intelligence/tools/select")
+def select_intelligence_tool(request: ToolSelectionRequest):
+    return MultiModelIntelligenceOrchestrator.select_tool(request.task)
 
 
 @router.get("/modes")

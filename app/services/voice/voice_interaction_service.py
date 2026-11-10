@@ -4,6 +4,9 @@ from app.services.artifacts.artifact_manager_service import ArtifactManagerServi
 from app.services.providers.provider_registry import ProviderRegistry
 
 
+
+from app.services.providers.provider_access_policy_service import ProviderAccessDenied, ProviderAccessPolicyService
+
 class WakeWordProvider(Protocol):
     def detect(self, audio_path: str) -> dict:
         """Return whether the configured local recognizer heard Lumira."""
@@ -15,8 +18,9 @@ class SpeechPlaybackProvider(Protocol):
 
 
 class WakeWordActivationService:
-    def __init__(self, provider: WakeWordProvider | None = None):
+    def __init__(self, provider: WakeWordProvider | None = None, *, provider_policy=None):
         self.provider = ProviderRegistry.get("wake_word") if provider is None else provider
+        self.provider_policy = provider_policy or ProviderAccessPolicyService()
         self.artifacts = ArtifactManagerService()
 
     def activate(self, audio_artifact_id: str) -> dict:
@@ -29,7 +33,10 @@ class WakeWordActivationService:
             path = self.artifacts.get_artifact_path(audio_artifact_id)
             if path is None or not path.is_file() or path.stat().st_size > self.artifacts.MAX_BINARY_CONTENT_BYTES:
                 return {"success": False, "code": "invalid_audio_artifact", "message": "Audio artifact is unavailable or exceeds the processing limit."}
+            self.provider_policy.authorize(self.provider, "wake-word detection")
             result = self.provider.detect(str(path))
+        except ProviderAccessDenied as error:
+            return {"success": False, "code": error.code, "message": error.user_message}
         except Exception:
             return {"success": False, "code": "provider_error", "message": "The wake-word detector failed; Lumira was not activated."}
         if not isinstance(result, dict) or result.get("success") is not True or not isinstance(result.get("detected"), bool):
@@ -45,8 +52,9 @@ class WakeWordActivationService:
 class SpeechPlaybackService:
     SUPPORTED_LANGUAGES = {"en", "ta", "ta-en"}
 
-    def __init__(self, provider: SpeechPlaybackProvider | None = None):
+    def __init__(self, provider: SpeechPlaybackProvider | None = None, *, provider_policy=None):
         self.provider = ProviderRegistry.get("speech_synthesis") if provider is None else provider
+        self.provider_policy = provider_policy or ProviderAccessPolicyService()
         self.artifacts = ArtifactManagerService()
 
     def play(self, text: str, language: str = "en") -> dict:
@@ -57,7 +65,10 @@ class SpeechPlaybackService:
         if self.provider is None:
             return {"success": False, "code": "provider_unavailable", "message": "No speech synthesis provider is configured."}
         try:
+            self.provider_policy.authorize(self.provider, "speech synthesis")
             result = self.provider.synthesize(text.strip(), language)
+        except ProviderAccessDenied as error:
+            return {"success": False, "code": error.code, "message": error.user_message}
         except RuntimeError as error:
             if "deferred" in str(error).lower():
                 return {

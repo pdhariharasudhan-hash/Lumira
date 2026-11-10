@@ -1,7 +1,27 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from app.services.knowledge.document_ingestion_service import DocumentIngestionService
 from app.services.knowledge.knowledge_library_service import KnowledgeLibraryService
 
 router = APIRouter(prefix="/knowledge", tags=["Knowledge Library"])
+document_ingestion = DocumentIngestionService()
+
+
+@router.post("/documents")
+async def ingest_document(
+    file: UploadFile = File(...),
+    project_id: str | None = Query(default=None, max_length=200),
+):
+    try:
+        content = await file.read(DocumentIngestionService.MAX_BYTES + 1)
+        result = document_ingestion.ingest(file.filename or "", content, project_id=project_id)
+        if not result["success"]:
+            status = 413 if result["code"] == "document_too_large" else 422
+            raise HTTPException(status_code=status, detail=result)
+        return result
+    except HTTPException:
+        raise
+    except (ValueError, OSError) as exc:
+        raise HTTPException(status_code=503, detail="Document ingestion is unavailable") from exc
 
 @router.get("/overview")
 def knowledge_overview():

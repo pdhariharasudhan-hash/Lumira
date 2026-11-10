@@ -11,6 +11,10 @@ def test_router_integrity_reports_registered_route_modules():
 def test_provider_readiness_has_known_provider_statuses():
     result = ProviderReadinessService().snapshot()
     assert result["total_known_providers"] >= result["registered_count"]
+    assert all(
+        set(provider) >= {"registered", "provider_scope", "reachable", "last_success"}
+        for provider in result["providers"].values()
+    )
 
 
 def test_feature_dependency_audit_returns_bounded_findings():

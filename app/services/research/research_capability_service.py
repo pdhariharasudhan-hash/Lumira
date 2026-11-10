@@ -4,6 +4,9 @@ from app.services.search.unified_search_service import UnifiedSearchService
 from app.services.research.research_library_service import ResearchLibraryService
 
 
+
+from app.services.providers.provider_access_policy_service import ProviderAccessDenied, ProviderAccessPolicyService
+
 class ResearchProvider(Protocol):
     def research(self, request: str, research_type: str) -> dict[str, Any]:
         """Return findings with supporting source references."""
@@ -12,12 +15,13 @@ class ResearchProvider(Protocol):
 class ResearchCapabilityService:
     """Provider-backed research plus retrieval from Lumira's local index."""
 
-    def __init__(self, provider: ResearchProvider | None = None, library: ResearchLibraryService | None = None):
+    def __init__(self, provider: ResearchProvider | None = None, library: ResearchLibraryService | None = None, *, provider_policy=None):
         if provider is None:
             from app.services.providers.provider_registry import ProviderRegistry
 
             provider = ProviderRegistry.get("research")
         self.provider = provider
+        self.provider_policy = provider_policy or ProviderAccessPolicyService()
         self.search = UnifiedSearchService()
         self.library = library or ResearchLibraryService()
 
@@ -40,7 +44,10 @@ class ResearchCapabilityService:
                 "message": "No external research provider is configured; no findings were generated.",
             }
         try:
+            self.provider_policy.authorize(self.provider, "web research")
             response = self.provider.research(request, research_type)
+        except ProviderAccessDenied as error:
+            return {"success": False, "status": "blocked", "code": error.code, "research_type": research_type, "message": error.user_message}
         except Exception:
             return {
                 "success": False,
@@ -121,6 +128,28 @@ class ResearchCapabilityService:
             # Research itself remains usable when optional library persistence
             # fails; never claim a durable record was created.
             result["storage_status"] = "failed"
+        try:
+            from app.services.artifacts.artifact_manager_service import ArtifactManagerService
+            import json
+            artifact = ArtifactManagerService().create_artifact(
+                artifact_type="reports",
+                content=json.dumps({
+                    "request": request,
+                    "research_type": research_type,
+                    "findings": findings,
+                    "sources": sources,
+                    "research_id": result.get("research_id"),
+                }, ensure_ascii=False),
+                source=f"research:{research_type}",
+                extension="json",
+            )
+            if isinstance(artifact, dict) and isinstance(artifact.get("artifact_id"), str):
+                result["artifact_id"] = artifact["artifact_id"]
+                result["artifact_storage"] = "stored"
+            else:
+                result["artifact_storage"] = "failed"
+        except (OSError, TypeError, ValueError):
+            result["artifact_storage"] = "failed"
         return result
 
     @classmethod

@@ -405,3 +405,56 @@ This addendum contains the latest work because the existing `HANDOFF_CURRENT.md`
 - Per instruction, tests/build/lint/runtime checks were not run. All changes remain unverified.
 
 - Added a 10,000-character request bound for provider-backed research, with rejection before provider invocation. Regression case authored but not run.
+
+
+## 2026-11-05 — Phase 2 capability-expansion fixes
+
+- The revised Handoff 10 Phase 2 scope was re-audited against the live worktree. Added `docs/phase_2_capability_expansion.md` with the eight subphases, implementation coverage and explicit runtime blockers.
+- Closed three concrete implementation gaps: missing audio-playback registry feature, non-atomic feature dependency activation/readiness reporting, and voice-idea memory persistence using an experience type rejected by MemoryService.
+- Improved provider-format compatibility for voice capture (local OGG/WebM, cloud WebM, explicit unsupported-format response) and normalized Unified Search empty-query category shape.
+- Added regression tests for these cases. No tests/builds/lint/provider calls were run. Static AST parsing passed for all changed Python files and `git diff --check` passed. Runtime/provider/hardware acceptance remains pending.
+
+
+## 2026-11-05 — Brain execution control and retry-safety integration
+
+- Connected a per-run execution control object through BrainService → BrainPipeline → BrainExecutor. The control uses a 120-second default deadline (600-second maximum) and session-scoped cooperative cancellation.
+- Added pre/post-stage cancellation and deadline checks, explicit cancelled/timed_out/failed terminal handling, module-count and total-attempt bounds, and strict BrainState return validation in the traced executor.
+- BrainService now records cancelled, timed-out and failed pipeline outcomes as unsuccessful; final state validation cannot convert them into success. Added POST /brain/cancel/{session_id}.
+- Retry behavior is fail-closed: a module must explicitly declare retry_safe = True. Built-in cognitive modules are not opted in because provider/service calls may be billable or have side effects. Learning is not retryable. Resume follows the same rule.
+- Added focused tests for deadline expiry, cancellation before/between stages, safe/unsafe retry behavior, registry release and the cancellation route. Result: 8 passed. Python compileall passed for touched Brain modules/routes/tests. git diff --check passed (existing LF-to-CRLF notices only).
+- Cancellation is cooperative, not preemptive: a currently running synchronous service/provider call must return before the next cancellation check. Full-suite/provider/hardware/desktop packaged acceptance remains outstanding. No commit or push.
+
+
+## Additional focused verification — 2026-11-05
+
+- Phase 2 feature registry, dependency activation, command routing, voice idea pipeline, transcription-format compatibility, OpenAI-compatible transcription and Unified Search tests: **51 passed**.
+- Phase 1 provider-policy, provider-boundary, chat routing, OpenAI-compatible chat, AI-mode route/service and command-conversation integration tests: **37 passed**.
+- Brain execution-control and recovery tests: **8 passed**.
+- Combined selected regression evidence: **96 passed, 0 failed** across these three focused runs. These are targeted suites, not a full repository run.
+- No live cloud API, local model inference, microphone, wake-word hardware, image-generation provider, packaged Electron installer, or end-to-end desktop acceptance was exercised. Do not mark either phase fully complete from these unit/regression results.
+
+
+## 2026-11-05 — Phase 1 / Phase 2 implementation pass and acceptance
+
+- Phase 1: added a dedicated acceptance ledger at docs/phase_1_core_correctness.md. The existing chat router/output adapter, centralized provider policy, persisted AI-mode/cloud consent and desktop API integration were exercised. Added a desktop composer cancel control backed by POST /brain/cancel/{session_id}.
+- Brain execution hardening: execute() now delegates to the bounded traced executor; resume() now applies pipeline and attempt limits, validates return types, honors verification rejection and retries only explicitly retry-safe stages. Existing built-in cognitive modules remain non-retryable by default.
+- Handoff 10 Phase 2 fixes remain documented at docs/phase_2_capability_expansion.md; its scope is not the same as roadmap Phase 2 (Brain reliability).
+- Latest focused backend verification: 99 passed, 0 failed across Phase 1 provider/chat policy, Handoff 10 capability expansion and Brain execution-control suites.
+- Full desktop Vitest suite: 34 passed across 5 files. Desktop lint: 0 warnings/errors. Production TypeScript/Vite build passed.
+- Python compileall across app and tests passed. git diff --check passed; only working-copy LF-to-CRLF notices were emitted.
+- Not a full release sign-off: full backend suite was not run; no packaged installer, live cloud/local provider inference, microphone/speaker/wake-word hardware, live image generation, or visual packaged-app acceptance was performed. Generated-code terminal remains disabled until OS-level isolation is independently verified.
+- Cancellation is cooperative between synchronous Brain stages and process-local; it cannot interrupt an in-flight provider call or coordinate cancellation across multiple backend worker processes.
+- Existing working tree and runtime data preserved. No commit/push/reset/cleanup, package installation, or BIOS/Windows settings change.
+
+
+## Latest acceptance update — 2026-11-05
+
+- Expanded the combined safe focused backend matrix to **190 passed, 0 failed** across Phase 1, Handoff 10 Phase 2, Brain execution control, provider access, chat, audio playback, artifacts, voice capture/recovery, wake-word routes/listener, image-generation route/resource behavior, memory, search and language guidance/detection. Generated-project execution tests were deliberately excluded; this is not a full backend suite.
+- Added protected same-language response guidance for Tamil Unicode, romanized Tamil and Tamil-English mixed input; expanded a bounded romanized-Tamil lexicon and regression tests for Tamil/English classification.
+- Added a BrainService regression proving cancelled runs persist as failures and execution-control entries are released. Failure paths now clear current_stage.
+- Desktop Vitest: 34 passed across 5 files. Lint: 0 warnings/errors. Production build passed. Python compileall for app/tests and git diff check passed.
+- No packaged installer, real local/cloud inference, microphone/speaker/wake-word hardware, live image generation or visual packaged-app acceptance was performed. Semantic Tamil fluency depends on the configured model and still needs real-provider testing. OS-level isolation remains unverified and terminal execution stays disabled.
+- Phase reports and roadmap updated. Existing working tree/runtime data preserved; no commit/push/reset/cleanup, package install or system/BIOS change.
+
+
+- Final API registration smoke test: the real FastAPI application exposes POST /brain/cancel/{session_id}; route test passes. Brain execution-control suite: 12 passed. Latest backend focused matrix count is now 191 passing tests when including this additional API registration check; earlier 190-test combined run remains the broad matrix baseline.

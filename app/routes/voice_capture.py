@@ -18,9 +18,21 @@ router = APIRouter()
 _wake_word_listener = WakeWordListenerService()
 
 
-def _raise_for_voice_readiness(result: dict) -> None:
-    """Map missing providers and resource-pressure deferrals to retryable HTTP errors."""
+def _raise_for_provider_access(result: dict) -> None:
+    """Map explicit provider-policy denials to authorization/service errors."""
     code = result.get("code") if isinstance(result, dict) else None
+    if code in {"external_provider_consent_required", "local_provider_blocked"}:
+        raise HTTPException(status_code=403, detail=result)
+    if code in {"provider_policy_unavailable", "provider_policy_invalid"}:
+        raise HTTPException(status_code=503, detail=result)
+
+
+def _raise_for_voice_readiness(result: dict) -> None:
+    """Map policy denials and retryable provider readiness conditions."""
+    _raise_for_provider_access(result)
+    code = result.get("code") if isinstance(result, dict) else None
+    if code == "unsupported_audio_format":
+        raise HTTPException(status_code=422, detail=result)
     if code not in {"provider_unavailable", "resource_pressure_deferred"}:
         return
     headers = {"Retry-After": "30"} if code == "resource_pressure_deferred" else None
@@ -154,6 +166,10 @@ def start_wake_word_listener():
     result = _wake_word_listener.start()
     if not result["success"] and result.get("code") == "provider_unavailable":
         raise HTTPException(status_code=501, detail=result)
+    if not result["success"] and result.get("code") in {"external_provider_consent_required", "local_provider_blocked"}:
+        raise HTTPException(status_code=403, detail=result)
+    if not result["success"] and result.get("code") in {"provider_policy_unavailable", "provider_policy_invalid"}:
+        raise HTTPException(status_code=503, detail=result)
     return result
 
 
@@ -268,6 +284,7 @@ def process_voice_capture(request: VoiceProcessRequest):
         raise HTTPException(status_code=404, detail="audio artifact not found")
 
     transcript = TranscriptService().generate_transcript(request.audio_artifact_id)
+    _raise_for_provider_access(transcript)
     result = {
         "success": False,
         "audio_artifact_id": request.audio_artifact_id,
@@ -296,6 +313,7 @@ def process_voice_capture(request: VoiceProcessRequest):
         return result
 
     summary = SummaryService().generate_summary(transcript_id)
+    _raise_for_provider_access(summary)
     result["summary"] = summary
     result["memory"] = _persist_voice_capture_memory(request.audio_artifact_id, transcript_id, transcript, summary)
     if summary.get("success"):

@@ -53,6 +53,7 @@ def test_provider_status_reports_local_registration_without_claiming_reachabilit
     class OllamaVisionProvider:
         model_name = "moondream"
         base_url = "http://127.0.0.1:11434"
+        provider_scope = "local"
 
     monkeypatch.setattr(ProviderRegistry, "_providers", {})
     monkeypatch.setenv("LUMIRA_OLLAMA_VISION_ENABLED", "1")
@@ -65,6 +66,9 @@ def test_provider_status_reports_local_registration_without_claiming_reachabilit
         assert vision["configured"] is True
         assert vision["implementation"] == "OllamaVisionProvider"
         assert vision["execution_mode"] == "local"
+        assert vision["provider_scope"] == "local"
+        assert vision["reachable"] is None
+        assert vision["last_success"] is None
         assert vision["model"] == "moondream"
         assert "base_url" not in vision
         assert "reachable" not in vision["availability"]

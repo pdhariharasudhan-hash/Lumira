@@ -12,16 +12,18 @@ from app.services.resources.resource_budget_service import ResourceBudgetService
 
 
 class OpenAICompatibleTranscriptionProvider:
+
     """Bounded audio transcription through an OpenAI-compatible API.
 
     Credentials are read from the local environment and are never included in
     exceptions or logs. The provider is opt-in and does not download a model.
     """
 
+    provider_scope = "external"
     MAX_AUDIO_BYTES = 25_000_000
     MAX_RESPONSE_BYTES = 1_000_000
     MAX_TRANSCRIPT_CHARS = 100_000
-    SUPPORTED_EXTENSIONS = {"wav", "mp3", "m4a"}
+    SUPPORTED_EXTENSIONS = {"wav", "mp3", "m4a", "webm"}
 
     def __init__(
         self,
@@ -36,6 +38,7 @@ class OpenAICompatibleTranscriptionProvider:
         self.model = model or os.getenv("LUMIRA_TRANSCRIPTION_MODEL", "whisper-1")
         self.timeout = max(5, min(int(timeout), 120))
         parsed_url = urlparse(self.base_url)
+        self.provider_scope = "local" if parsed_url.scheme == "http" and parsed_url.hostname in {"localhost", "127.0.0.1", "::1"} else "external"
         try:
             parsed_url.port  # Validate malformed or out-of-range ports at startup.
         except ValueError:
@@ -114,4 +117,4 @@ class OpenAICompatibleTranscriptionProvider:
 
     @staticmethod
     def _content_type(extension: str) -> str:
-        return {"wav": "audio/wav", "mp3": "audio/mpeg", "m4a": "audio/mp4"}[extension]
+        return {"wav": "audio/wav", "mp3": "audio/mpeg", "m4a": "audio/mp4", "webm": "video/webm"}[extension]

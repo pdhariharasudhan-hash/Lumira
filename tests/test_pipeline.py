@@ -101,6 +101,7 @@ def test_brain_retry_continues_through_learning_and_records_history(tmp_path, mo
     class FlakyConversation:
         name = "conversation"
         order = 1
+        retry_safe = True
 
         def __init__(self):
             self.attempts = 0

@@ -5,13 +5,15 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app.services.providers.provider_registry import ProviderRegistry
+from app.services.providers.provider_access_policy_service import ProviderAccessDenied, ProviderAccessPolicyService
 
 
 class WakeWordListenerService:
     """Own one opt-in local microphone listener; detection never runs commands."""
 
-    def __init__(self, provider: Any | None = None) -> None:
+    def __init__(self, provider: Any | None = None, *, provider_policy=None) -> None:
         self._provider_override = provider
+        self.provider_policy = provider_policy or ProviderAccessPolicyService()
         self._lock = threading.RLock()
         self._stop_event = threading.Event()
         self._detected_event = threading.Event()
@@ -48,6 +50,10 @@ class WakeWordListenerService:
                 "code": "provider_unavailable",
                 "message": "Wake-word listening is not configured. Enable the provider and configure its local model and access key.",
             }
+        try:
+            self.provider_policy.authorize(provider, "wake-word listening")
+        except ProviderAccessDenied as error:
+            return {"success": False, "code": error.code, "message": error.user_message}
         with self._lock:
             if self._thread is not None and self._thread.is_alive():
                 return {"success": True, "already_running": True, **self.status()}
@@ -165,7 +171,10 @@ class WakeWordListenerService:
                         self._activated = True
                         self._last_detected_at = datetime.now(timezone.utc).isoformat()
                         self._state = "activated"
-                    self._emit_core_event("wake_word_detected")
+                    # Do not refresh the Core Runtime context synchronously on
+                    # the real-time microphone thread. That bridge may perform
+                    # persistence work and must not delay stop()/resource cleanup.
+                    # The listener already captured its core context at startup.
                     with self._lock:
                         event = {
                             "event": "wake_word_detected",

@@ -19,6 +19,10 @@ def generate_image(request: ImageGenerationRequest):
         return result
 
     code = result.get("code")
+    if code in {"external_provider_consent_required", "local_provider_blocked"}:
+        raise HTTPException(status_code=403, detail=result)
+    if code in {"provider_policy_unavailable", "provider_policy_invalid"}:
+        raise HTTPException(status_code=503, detail=result)
     if code in {"provider_unavailable", "resource_pressure_deferred"}:
         headers = {"Retry-After": "30"} if code == "resource_pressure_deferred" else None
         raise HTTPException(status_code=503, detail=result, headers=headers)

@@ -10,6 +10,7 @@ PNG_HEADER = b"\x89PNG\r\n\x1a\n" + b"minimal-test-image"
 
 
 class FakeVisionProvider:
+    provider_scope = "local"
     def analyze(self, image_bytes, prompt):
         assert image_bytes == PNG_HEADER
         assert prompt == "Read this image"
@@ -28,7 +29,11 @@ def test_image_understanding_validates_image_and_prompt():
     assert service.analyze(PNG_HEADER, " ")["code"] == "invalid_prompt"
 
 
-def test_image_understanding_returns_validated_provider_description():
+def test_image_understanding_returns_validated_provider_description(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.image.image_understanding_service.ResourceBudgetService.execution_guidance",
+        lambda self: {"defer_optional_heavy_media_work": False, "resource_pressure": "normal"},
+    )
     result = ImageUnderstandingService(provider=FakeVisionProvider()).analyze(PNG_HEADER, "Read this image")
     assert result == {
         "success": True,
@@ -39,6 +44,7 @@ def test_image_understanding_returns_validated_provider_description():
 
 def test_image_analysis_route_returns_description(monkeypatch):
     class FakeService:
+        provider_scope = "local"
         def analyze(self, image_bytes, prompt, *, save_artifact=False):
             assert image_bytes == PNG_HEADER
             assert prompt == "Read this image"
@@ -100,6 +106,7 @@ def test_vision_provider_rejects_invalid_image_bytes():
 
 def test_image_analysis_route_returns_service_unavailable_without_provider(monkeypatch):
     class UnavailableService:
+        provider_scope = "local"
         def analyze(self, image_bytes, prompt, *, save_artifact=False):
             return {"success": False, "code": "provider_unavailable", "message": "No image-understanding provider is configured."}
 
@@ -114,7 +121,7 @@ def test_image_analysis_route_returns_service_unavailable_without_provider(monke
         raise AssertionError("missing provider must return HTTP 503")
 
 
-def test_image_analysis_can_save_a_report_without_saving_original_image():
+def test_image_analysis_can_save_a_report_without_saving_original_image(monkeypatch):
     import hashlib
     import json
 
@@ -135,6 +142,10 @@ def test_image_analysis_can_save_a_report_without_saving_original_image():
                 "timestamp": "2026-10-26T00:00:00+00:00",
             }
 
+    monkeypatch.setattr(
+        "app.services.image.image_understanding_service.ResourceBudgetService.execution_guidance",
+        lambda self: {"defer_optional_heavy_media_work": False, "resource_pressure": "normal"},
+    )
     artifacts = FakeArtifacts()
     service = ImageUnderstandingService(provider=FakeVisionProvider(), artifacts=artifacts)
     result = service.analyze(PNG_HEADER, "Read this image", save_artifact=True)
@@ -155,11 +166,15 @@ def test_image_analysis_can_save_a_report_without_saving_original_image():
     assert "image_bytes" not in report
 
 
-def test_image_analysis_keeps_result_when_artifact_storage_fails():
+def test_image_analysis_keeps_result_when_artifact_storage_fails(monkeypatch):
     class BrokenArtifacts:
         def create_artifact(self, *args, **kwargs):
             raise OSError("local disk detail must not leak")
 
+    monkeypatch.setattr(
+        "app.services.image.image_understanding_service.ResourceBudgetService.execution_guidance",
+        lambda self: {"defer_optional_heavy_media_work": False, "resource_pressure": "normal"},
+    )
     result = ImageUnderstandingService(
         provider=FakeVisionProvider(),
         artifacts=BrokenArtifacts(),
@@ -173,6 +188,7 @@ def test_image_analysis_keeps_result_when_artifact_storage_fails():
 
 def test_image_analysis_route_reports_resource_pressure_as_temporary_unavailable(monkeypatch):
     class DeferredService:
+        provider_scope = "local"
         def analyze(self, image_bytes, prompt, *, save_artifact=False):
             return {
                 "success": False,
@@ -201,6 +217,7 @@ def test_image_analysis_can_use_saved_image_artifact(monkeypatch, tmp_path):
         def get_artifact_path(self, artifact_id):
             return image_path if artifact_id == "image-1" else None
     class FakeService:
+        provider_scope = "local"
         MAX_IMAGE_BYTES = 10_000_000
         def analyze(self, image_bytes, prompt, *, save_artifact=False):
             assert image_bytes == PNG_HEADER

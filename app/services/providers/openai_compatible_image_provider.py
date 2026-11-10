@@ -10,8 +10,10 @@ import requests
 
 
 class OpenAICompatibleImageProvider:
+
     """Bounded image-generation adapter for an OpenAI-compatible images API."""
 
+    provider_scope = "external"
     MAX_PROMPT_CHARS = 10_000
     MAX_RESPONSE_BYTES = 32_000_000
     MAX_IMAGE_BYTES = 20_000_000
@@ -30,6 +32,7 @@ class OpenAICompatibleImageProvider:
         self.model = model or os.getenv("LUMIRA_IMAGE_MODEL", "gpt-image-1")
         self.timeout = max(5, min(int(timeout), 120))
         parsed_url = urlparse(self.base_url)
+        self.provider_scope = "local" if parsed_url.scheme == "http" and parsed_url.hostname in {"localhost", "127.0.0.1", "::1"} else "external"
         try:
             parsed_url.port  # Validate malformed or out-of-range ports at startup.
         except ValueError:

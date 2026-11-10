@@ -7,6 +7,17 @@ from typing import Any, Dict
 
 class CreatorCapabilityService:
 
+    _OUTPUT_KINDS = {
+        "content_planning": "document",
+        "presentations": "presentation",
+        "posters": "poster",
+        "thumbnails": "thumbnail",
+        "scripts": "script",
+        "storyboards": "storyboard",
+        "ui_concepts": "ui_mockup",
+        "marketing_assets": "marketing_brief",
+    }
+
     def content_planning(self, request):
         return self._result("content_planning", request, "content planning",
             ["define audience", "define objective", "define topic",
@@ -48,8 +59,8 @@ class CreatorCapabilityService:
             ["define campaign objective", "define audience", "define message",
              "define asset format", "define branding", "verify asset requirements"])
 
-    @staticmethod
-    def _result(capability, request, objective, steps):
+    @classmethod
+    def _result(cls, capability, request, objective, steps):
         normalized = request.strip() if isinstance(request, str) else ""
         if not normalized or len(normalized) > 10_000:
             return {"success": False, "status": "rejected", "code": "invalid_request", "capability": capability}
@@ -85,5 +96,32 @@ class CreatorCapabilityService:
                 "code": "artifact_storage_failed",
                 "capability": capability,
                 "message": "Creator plan could not be stored as an artifact.",
+            }
+        try:
+            from app.services.creator.creator_os_service import CreatorOSService
+
+            creator_kind = cls._OUTPUT_KINDS[capability]
+            creator_result = CreatorOSService().create(
+                kind=creator_kind,
+                title=f"Lumira {objective}",
+                brief=normalized,
+                audience="Lumira user",
+            )
+            if creator_result.get("success") is True:
+                output["creator_artifact"] = creator_result["artifact"]
+                output["creator_output"] = {
+                    "kind": creator_result["kind"],
+                    "format": creator_result["format"],
+                    "status": creator_result["status"],
+                }
+            else:
+                output["creator_output"] = {
+                    "status": "unavailable",
+                    "message": "Creator artifact integration did not produce an artifact.",
+                }
+        except (KeyError, OSError, ValueError):
+            output["creator_output"] = {
+                "status": "unavailable",
+                "message": "Creator artifact integration is unavailable; the planning artifact was preserved.",
             }
         return output

@@ -9,8 +9,10 @@ import requests
 
 
 class OpenAICompatibleVisionProvider:
+
     """Bounded OpenAI-compatible vision adapter for image description and OCR-like analysis."""
 
+    provider_scope = "external"
     MAX_PROMPT_CHARS = 4_000
     MAX_IMAGE_BYTES = 10_000_000
     MAX_RESPONSE_BYTES = 1_000_000
@@ -22,6 +24,7 @@ class OpenAICompatibleVisionProvider:
         self.model = model or os.getenv("LUMIRA_VISION_MODEL", "gpt-4o-mini")
         self.timeout = max(5, min(int(timeout), 90))
         parsed = urlparse(self.base_url)
+        self.provider_scope = "local" if parsed.scheme == "http" and parsed.hostname in {"localhost", "127.0.0.1", "::1"} else "external"
         try:
             parsed.port  # Validate malformed or out-of-range ports at startup.
         except ValueError:

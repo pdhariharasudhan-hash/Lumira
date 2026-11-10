@@ -1,4 +1,3 @@
-import re
 import time
 import multiprocessing
 from queue import Empty
@@ -9,6 +8,7 @@ from app.agents.code_agent import CodeAgent
 from app.agents.planner_agent import PlannerAgent
 from app.agents.research_agent import ResearchAgent
 from app.services.resources.resource_budget_service import ResourceBudgetService
+from app.services.multi_model.multi_model_orchestrator import MultiModelIntelligenceOrchestrator
 
 
 def _execute_agent_process(agent, task, output):
@@ -181,31 +181,29 @@ class AgentManager:
                 "reason": "invalid_task",
                 "available_agents": self.list_agents(),
             }
-        normalized = " ".join(task.casefold().split())
-        families = (
-            ("research_agent", (
-                r"\b(research|compare|comparison|versus|vs|investigate|analy[sz]e|analysis|evidence|summari[sz]e|extract knowledge|market research|technical research|document research|knowledge retrieval|find sources|gather sources|fact check|fact-check)\b",
-            )),
-            ("planner_agent", (
-                r"\b(plan|planning|steps|roadmap|prioriti[sz]e|break down|decompose|milestone|schedule|sequence tasks|goal)\b",
-            )),
-            ("code_agent", (
-                r"\b(debug|fix|repair|refactor|implement|code|api|app|website|software|program|script|compile|syntax error|bug|patch|generate files)\b",
-            )),
-        )
-        for agent_name, patterns in families:
-            if any(re.search(pattern, normalized) for pattern in patterns):
+        selection = MultiModelIntelligenceOrchestrator.select_tool(task)
+        available_agents = self.list_agents()
+        if selection.get("success") is True:
+            agent_name = selection.get("agent")
+            if agent_name in available_agents:
                 return {
                     "success": True,
                     "selected_agent": agent_name,
-                    "reason": "deterministic_capability_match",
-                    "available_agents": self.list_agents(),
+                    "selected_tool": selection.get("selected_tool"),
+                    "reason": selection.get("reason", "deterministic_task_capability_match"),
+                    "available_agents": available_agents,
                 }
+            return {
+                "success": False,
+                "selected_agent": None,
+                "reason": "selected_agent_unavailable",
+                "available_agents": available_agents,
+            }
         return {
             "success": False,
             "selected_agent": None,
             "reason": "no_matching_agent",
-            "available_agents": self.list_agents(),
+            "available_agents": available_agents,
         }
 
     def dispatch(self, task: str):
@@ -221,7 +219,23 @@ class AgentManager:
         recommendation = self.select_agent(task)
         selected = recommendation.get("selected_agent")
         if selected:
-            return self.run(selected, task)
+            result = self.run(selected, task)
+            if not isinstance(result, dict):
+                return {
+                    "success": False,
+                    "state": "failed",
+                    "code": "invalid_agent_result",
+                    "message": "Selected agent returned an invalid result.",
+                    "agent": selected,
+                }
+            return {
+                **result,
+                "selection": {
+                    "tool": recommendation.get("selected_tool"),
+                    "agent": selected,
+                    "reason": recommendation.get("reason"),
+                },
+            }
         return {
             "success": False,
             "state": "rejected",

@@ -191,6 +191,7 @@ class BrainPipeline:
     def execute_with_trace(
         self,
         state: BrainState,
+        control=None,
     ):
         """
         Execute the Intelligence Layer and return
@@ -198,7 +199,8 @@ class BrainPipeline:
         """
 
         return self.executor.execute_with_trace(
-            state
+            state,
+            control=control,
         )
 
     def get_execution_order(self) -> List[str]:

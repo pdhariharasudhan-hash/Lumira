@@ -21,6 +21,7 @@ from app.services.learning.learning_service import (
 class LearningModule(
     BrainModule
 ):
+    # Learning may persist insights; never retry without idempotency guarantees.
 
     def __init__(self):
 

@@ -67,6 +67,7 @@ from app.routes.core_runtime import router as core_runtime_router
 from app.routes.reminders import router as reminders_router
 from app.routes.notifications import router as notifications_router
 from app.routes.quick_tasks import router as quick_tasks_router
+from app.routes.background_tasks import router as background_tasks_router
 from app.routes.task_insights import router as task_insights_router
 from app.routes.core_events import router as core_events_router
 from app.routes.system_health import router as system_health_router
@@ -99,6 +100,12 @@ from app.routes.recovery_resume import router as recovery_resume_router
 from app.routes.recovery_transition import router as recovery_transition_router
 from app.routes.multi_model import router as multi_model_router
 from app.routes.system_prompt import router as system_prompt_router
+from app.routes.market_intelligence import router as market_intelligence_router
+from app.routes.creator import router as creator_router
+from app.routes.autonomy import router as autonomy_router
+from app.routes.capabilities import router as capabilities_router
+from app.routes.data_backup import router as data_backup_router
+from app.routes.security import router as security_router
 
 
 ROUTERS = [
@@ -110,7 +117,8 @@ ROUTERS = [
     (compare_router, ["Compare"]), (project_versions_router, ["Project Versions"]),
     (project_files_router, ["Project Files"]), (project_file_content_router, ["Project File Content"]),
     (search_router, ["Search"]), (text_ideas_router, ["Idea Capture"]), (idea_planning_router, ["Idea Planning"]), (voice_capture_router, ["Voice Capture"]), (voice_history_router, ["Voice History"]), (artifacts_router, ["Artifacts"]),
-    (command_router, ["Command"]), (session_insights_router, ["Session Insights"]), (sessions_router, ["Sessions"]),
+    (command_router, ["Command"]), (security_router, ["Security"]), (session_insights_router, ["Session Insights"]), (sessions_router, ["Sessions"]),
+    (autonomy_router, ["Autonomy"]), (capabilities_router, ["Capabilities"]), (data_backup_router, ["Data Backup"]),
     (goals_router, ["Goals"]), (goal_intelligence_router, ["Goal Intelligence"]), (agents_router, ["Agents"]),
     (workflow_insights_router, ["Workflow Insights"]), (workflows_router, ["Workflows"]),
     (auth_router, ["Authentication"]), (devices_router, ["Device Gateway"]), (device_profiles_router, ["Device Profiles"]), (ai_modes_router, ["AI Modes"]), (personal_preferences_router, ["Personal Preferences"]),
@@ -122,7 +130,7 @@ ROUTERS = [
     (research_library_router, ["Research Library"]), (research_compare_router, ["Research"]), (recovery_checkpoints_router, ["Recovery Checkpoints"]),
     (personal_context_router, ["Personal Context"]), (knowledge_router, None), (personal_library_router, ["Personal Library"]), (electronics_assistant_router, ["Electronics Assistant"]), (circuit_planning_router, ["Circuit Planning"]), (microcontroller_projects_router, ["Microcontroller Projects"]), (project_documentation_router, ["Project Documentation"]), (personal_todos_router, ["Personal To-Do"]), (system_status_router, None),
     (core_features_router, None), (core_runtime_router, None), (reminders_router, ["Reminders"]),
-    (notifications_router, ["Notifications"]), (quick_tasks_router, ["Quick Tasks"]),
+    (notifications_router, ["Notifications"]), (quick_tasks_router, ["Quick Tasks"]), (background_tasks_router, ["Background Tasks"]),
     (task_insights_router, ["Task Insights"]), (core_events_router, ["Core Events"]),
     (system_health_router, ["System Health"]), (core_diagnostics_router, ["Core Diagnostics"]),
     (goal_insights_router, ["Goal Insights"]), (next_actions_router, ["Next Actions"]),
@@ -143,6 +151,8 @@ ROUTERS = [
     (recovery_resume_router, ['Recovery Resume']),
     (recovery_transition_router, ['Recovery Transition']),
     (multi_model_router, ["Multi-Model Intelligence"]),
+    (market_intelligence_router, ["Kronos Market Intelligence"]),
+    (creator_router, ["Creator OS"]),
 ]
 
 

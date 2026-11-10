@@ -21,6 +21,7 @@ from app.services.brain.brain_state import (
 )
 
 from app.services.brain.pipeline_guard import PipelineGuard
+from app.services.brain.execution_control import BrainExecutionControl, BrainExecutionInterrupted
 
 from app.services.brain.recovery import (
     RecoveryController,
@@ -61,117 +62,13 @@ class BrainExecutor:
         self,
         state: BrainState,
     ) -> BrainState:
-        """
-        Execute every registered Intelligence module.
-
-        Failures are captured by the native recovery subsystem.
-        Recovery retries the failed stage deterministically.
-
-        The recovery state is owned by this execution and is
-        persisted to last_recovery_state whether execution
-        succeeds or fails.
-        """
-
-        modules = self.registry.get_modules()
-
-        ordered_modules = sorted(
-            modules,
-            key=lambda module: module.order,
-        )
-
-        recovery_state = RecoveryState()
-
-        self.last_recovery_state = recovery_state
-
-        controller = RecoveryController(
-            RecoveryPolicy(
-                max_retries=2,
-                allow_recovery=True,
-            )
-        )
-
-        for module in ordered_modules:
-
-            module_name = getattr(
-                module,
-                "name",
-                module.__class__.__name__,
-            )
-
-            order = getattr(
-                module,
-                "order",
-                None,
-            )
-
-            while True:
-
-                try:
-
-                    result = module.execute(
-                        state
-                    )
-
-                    if result is not None:
-                        state = result
-
-                    state.last_completed_stage = module_name
-                    if PipelineGuard.should_stop(module_name, state):
-                        state.status = "rejected"
-                        state.current_stage = ""
-                        self.last_recovery_state = recovery_state
-                        return state
-
-                    if recovery_state.failures:
-
-                        latest = recovery_state.failures[-1]
-
-                        if (
-                            latest.stage == module_name
-                            and latest.order == order
-                            and not latest.aborted
-                            and not latest.recovered
-                        ):
-                            controller.recover(
-                                recovery_state
-                            )
-
-                            controller.reset_retry(
-                        recovery_state
-                    )
-
-                    break
-
-                except Exception as exc:
-
-                    recovery_state.record_failure(
-                        stage=module_name,
-                        order=order,
-                        error=str(exc),
-                    )
-
-                    if controller.retry(
-                        recovery_state
-                    ):
-                        continue
-
-                    controller.abort(
-                        recovery_state
-                    )
-
-                    self.last_recovery_state = (
-                        recovery_state
-                    )
-
-                    raise
-
-        self.last_recovery_state = recovery_state
-
-        return state
+        """Execute through the same bounded, validated path as traced runs."""
+        return self.execute_with_trace(state)["state"]
 
     def execute_with_trace(
         self,
         state: BrainState,
+        control: BrainExecutionControl | None = None,
     ) -> Dict[str, Any]:
         """
         Execute the Brain pipeline with deterministic recovery
@@ -184,6 +81,8 @@ class BrainExecutor:
         trace: List[Dict[str, Any]] = []
 
         modules = self.registry.get_modules()
+        if not modules or len(modules) > 12:
+            raise ValueError("Brain pipeline must contain 1 to 12 modules")
 
         ordered_modules = sorted(
             modules,
@@ -200,6 +99,7 @@ class BrainExecutor:
                 allow_recovery=True,
             )
         )
+        total_attempts = 0
 
         for module in ordered_modules:
 
@@ -219,7 +119,23 @@ class BrainExecutor:
 
             while True:
 
+                if control is not None:
+                    try:
+                        control.check()
+                    except BrainExecutionInterrupted as interrupted:
+                        state.status = interrupted.status
+                        trace.append({"module": module_name, "order": module_order,
+                                      "status": interrupted.status, "attempt": attempt,
+                                      "recovery": False, "error": str(interrupted)})
+                        self.last_recovery_state = recovery_state
+                        return {"state": state, "trace": trace}
+
                 attempt += 1
+                total_attempts += 1
+                if total_attempts > 36:
+                    state.status = "failed"
+                    state.current_stage = ""
+                    raise RuntimeError("Brain total attempt budget exceeded")
                 state.current_stage = module_name
                 state.status = "running"
 
@@ -241,6 +157,8 @@ class BrainExecutor:
                     )
 
                     if result is not None:
+                        if not isinstance(result, BrainState):
+                            raise TypeError("Brain module must return BrainState or None")
                         state = result
 
                     trace_entry["status"] = "completed"
@@ -253,6 +171,16 @@ class BrainExecutor:
                         trace_entry["reason"] = "verification_gate"
                         self.last_recovery_state = recovery_state
                         return {"state": state, "trace": trace}
+
+                    if control is not None:
+                        try:
+                            control.check()
+                        except BrainExecutionInterrupted as interrupted:
+                            state.status = interrupted.status
+                            state.current_stage = ""
+                            trace_entry["execution_status"] = interrupted.status
+                            self.last_recovery_state = recovery_state
+                            return {"state": state, "trace": trace}
 
                     if recovery_state.failures:
 
@@ -278,8 +206,8 @@ class BrainExecutor:
                             ] = "recovered"
 
                             controller.reset_retry(
-                        recovery_state
-                    )
+                                recovery_state
+                            )
 
                     break
 
@@ -287,7 +215,8 @@ class BrainExecutor:
 
                     trace_entry["status"] = "failed"
                     trace_entry["error"] = str(exc)
-                    trace_entry["recovery"] = True
+                    retry_safe = getattr(module, "retry_safe", False) is True
+                    trace_entry["recovery"] = retry_safe
                     trace_entry[
                         "recovery_status"
                     ] = "failure"
@@ -298,7 +227,7 @@ class BrainExecutor:
                         error=str(exc),
                     )
 
-                    if controller.retry(
+                    if retry_safe and total_attempts < 36 and controller.retry(
                         recovery_state
                     ):
                         trace_entry[
@@ -311,6 +240,7 @@ class BrainExecutor:
                         recovery_state
                     )
                     state.status = "failed"
+                    state.current_stage = ""
 
                     trace_entry[
                         "recovery_status"
@@ -367,7 +297,10 @@ class BrainExecutor:
 
         execution_order = self.get_execution_order()
 
-        if not isinstance(start_order, int):
+        if not execution_order or len(execution_order) > 12:
+            raise ValueError("Brain pipeline must contain 1 to 12 modules")
+
+        if isinstance(start_order, bool) or not isinstance(start_order, int):
             raise TypeError(
                 "start_order must be an integer"
             )
@@ -385,6 +318,7 @@ class BrainExecutor:
                 allow_recovery=True,
             )
         )
+        total_attempts = 0
 
         for order in range(
             start_order,
@@ -420,6 +354,14 @@ class BrainExecutor:
                 )
 
             while True:
+                total_attempts += 1
+                if total_attempts > 36:
+                    state.status = "failed"
+                    state.current_stage = ""
+                    self.last_recovery_state = recovery_state
+                    raise RuntimeError("Brain total attempt budget exceeded")
+                state.current_stage = module_name
+                state.status = "running"
 
                 try:
 
@@ -428,8 +370,16 @@ class BrainExecutor:
                     )
 
                     if result is not None:
+                        if not isinstance(result, BrainState):
+                            raise TypeError("Brain module must return BrainState or None")
                         state = result
 
+                    state.last_completed_stage = module_name
+                    if PipelineGuard.should_stop(module_name, state):
+                        state.status = "rejected"
+                        state.current_stage = ""
+                        self.last_recovery_state = recovery_state
+                        return state
                     break
 
                 except Exception as exc:
@@ -440,14 +390,17 @@ class BrainExecutor:
                         error=str(exc),
                     )
 
-                    if controller.retry(
-                        recovery_state
+                    if (
+                        getattr(module, "retry_safe", False) is True
+                        and controller.retry(recovery_state)
                     ):
                         continue
 
                     controller.abort(
                         recovery_state
                     )
+                    state.status = "failed"
+                    state.current_stage = ""
 
                     self.last_recovery_state = (
                         recovery_state
@@ -472,5 +425,7 @@ class BrainExecutor:
                     )
 
         self.last_recovery_state = recovery_state
+        state.status = "completed"
+        state.current_stage = ""
 
         return state

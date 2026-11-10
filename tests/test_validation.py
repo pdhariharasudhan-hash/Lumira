@@ -177,8 +177,36 @@ def test_failed_brain_does_not_commit_requested_mode(tmp_path, monkeypatch):
     assert SessionManagerService().get_session(session["session_id"])["active_mode"] == original_mode
 
 
+def _install_deterministic_continuation_provider(monkeypatch):
+    """Keep project-lifecycle tests independent of external/local model availability."""
+
+    class DeterministicContinuationRouter:
+        def chat(self, prompt, history=None, context=None):
+            marker = "PROJECT DATA (JSON):\n"
+            if marker not in prompt:
+                raise AssertionError("Continuation prompt is missing its structured project data.")
+            payload = json.loads(prompt.split(marker, 1)[1])
+            project_data = json.loads(json.dumps(payload))
+            files = {
+                item["filename"]: item["content"]
+                for item in project_data["existing_source_files"]
+            }
+            instruction = project_data["user_change_request"]
+            files["main.py"] += f"\n\n# Deterministic test fixture change: {instruction}\n"
+            return json.dumps({
+                "summary": f"Deterministic test fixture applied: {instruction}",
+                "files": files,
+            })
+
+    monkeypatch.setattr(
+        "app.services.projects.project_continuation_service.ConversationProviderRouter",
+        DeterministicContinuationRouter,
+    )
+
+
 def test_builder_mode_project_and_followups_keep_context(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
+    _install_deterministic_continuation_provider(monkeypatch)
     client = TestClient(app)
 
     mode = client.post("/command", json={"input": "Lumira, enter Builder Mode."}).json()
@@ -197,8 +225,8 @@ def test_builder_mode_project_and_followups_keep_context(tmp_path, monkeypatch):
     assert tests["context"]["active_project"] == "expense_api"
     assert tests["context"]["active_version"] != created["context"]["active_version"]
     assert tests["result"]["instructions"] == [
-        "add jwt authentication.",
-        "add tests.",
+        "Add JWT authentication.",
+        "Add tests.",
     ]
     assert "generated/expense_api/" in tests["result"]["saved_to"].replace("\\", "/")
 
@@ -294,6 +322,7 @@ def test_unified_search_finds_records_in_all_supported_sources(tmp_path, monkeyp
 
 def test_session_restart_recovers_project_decision_and_scoped_memory(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
+    _install_deterministic_continuation_provider(monkeypatch)
     first_process = TestClient(app)
 
     created = first_process.post(

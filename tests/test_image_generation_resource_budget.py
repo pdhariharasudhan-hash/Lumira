@@ -5,6 +5,7 @@ from app.services.resources.resource_budget_service import ResourceBudgetService
 
 
 class NeverCalledImageProvider:
+    provider_scope = "local"
     def generate(self, prompt: str, image_type: str) -> dict:
         raise AssertionError("provider must not be called for invalid or deferred requests")
 
@@ -52,6 +53,7 @@ from app.services.image.image_understanding_service import ImageUnderstandingSer
 
 
 class NeverCalledVisionProvider:
+    provider_scope = "local"
     def analyze(self, image_bytes: bytes, prompt: str) -> dict:
         raise AssertionError("provider must not be called while media work is deferred")
 
@@ -76,6 +78,7 @@ def test_image_understanding_defers_when_memory_pressure_requires_it(monkeypatch
     assert result["resource_pressure"] == "critical"
 
 class OversizedImageProvider:
+    provider_scope = "local"
     def generate(self, prompt: str, image_type: str) -> dict:
         return {
             "success": True,
@@ -104,6 +107,7 @@ def test_image_generation_rejects_oversized_provider_output(monkeypatch):
     assert result["max_image_bytes"] == 8
 
 class InvalidImageResponseProvider:
+    provider_scope = "local"
     def generate(self, prompt: str, image_type: str) -> dict:
         raise ValueError("Image service returned an invalid image response.")
 

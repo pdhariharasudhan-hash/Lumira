@@ -11,8 +11,10 @@ from app.services.resources.resource_budget_service import ResourceBudgetService
 
 
 class OllamaSummaryProvider:
+
     """Bounded transcript summarizer using Ollama's OpenAI-compatible API."""
 
+    provider_scope = "local"
     MAX_INPUT_CHARS = 40_000
     MAX_OUTPUT_CHARS = 20_000
     _request_lock = Lock()

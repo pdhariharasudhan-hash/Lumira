@@ -157,6 +157,7 @@ def test_brain_executor_recovers_and_retries_failed_stage():
     class FlakyConversation:
         name = "conversation"
         order = 1
+        retry_safe = True
 
         def __init__(self):
             self.attempts = 0

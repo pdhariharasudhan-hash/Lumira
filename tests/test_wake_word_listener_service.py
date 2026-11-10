@@ -11,6 +11,7 @@ from app.services.voice.wake_word_listener_service import WakeWordListenerServic
 
 
 class FakeProvider:
+    provider_scope = "local"
     access_key = "test-only-key"
     model_path = "C:/fake/lumira.ppn"
     sensitivity = 0.5
@@ -88,7 +89,14 @@ def test_listener_starts_detects_and_stops_cleanly(monkeypatch):
     detector = FakeDetector(detect=True)
     recorders = install_audio_fakes(monkeypatch, detector)
     listener = WakeWordListenerService(provider=FakeProvider())
+    core_context_operations = []
+    original_emit_core_event = listener._emit_core_event
 
+    def record_core_context_operation(operation):
+        core_context_operations.append(operation)
+        return original_emit_core_event(operation)
+
+    listener._emit_core_event = record_core_context_operation
     started = listener.start()
     assert started["success"] is True
     assert wait_for(lambda: listener.status()["activated"])
@@ -107,6 +115,9 @@ def test_listener_starts_detects_and_stops_cleanly(monkeypatch):
     assert recorders[0].started is True
     assert recorders[0].stopped is True
     assert recorders[0].deleted is True
+    # Core Runtime context is captured once at startup, not synchronously
+    # refreshed from the hot microphone loop on every wake-word detection.
+    assert core_context_operations == ["wake_word_start"]
 
 
 def test_listener_start_is_idempotent(monkeypatch):

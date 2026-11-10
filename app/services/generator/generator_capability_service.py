@@ -5,6 +5,7 @@ Deterministic Generator capability service.
 
 from typing import Any, Dict
 from typing import Protocol
+from app.services.providers.provider_access_policy_service import ProviderAccessDenied, ProviderAccessPolicyService
 
 
 class VideoGenerationProvider(Protocol):
@@ -20,6 +21,7 @@ class GeneratorCapabilityService:
 
             video_provider = ProviderRegistry.get("video_generation")
         self.video_provider = video_provider
+        self.provider_policy = ProviderAccessPolicyService()
 
     def document_generation(self, request):
         if not isinstance(request, str) or not request.strip() or len(request) > 10_000:
@@ -47,7 +49,10 @@ class GeneratorCapabilityService:
         if self.video_provider is None:
             return {"success": False, "status": "unavailable", "code": "provider_unavailable", "capability": "video_generation", "message": "No video generation provider is configured; no video artifact was created."}
         try:
+            self.provider_policy.authorize(self.video_provider, "video generation")
             result = self.video_provider.generate(request.strip())
+        except ProviderAccessDenied as error:
+            return {"success": False, "status": "blocked", "code": error.code, "capability": "video_generation", "message": error.user_message}
         except Exception:
             return {"success": False, "status": "failed", "code": "provider_error", "capability": "video_generation", "message": "The video provider failed; no video artifact was created."}
         content = result.get("content") if isinstance(result, dict) else None

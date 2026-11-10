@@ -1,5 +1,112 @@
 # Lumira Current Handoff — 2026-10-20
 
+## Phase C authorization implementation — 2026-11-08
+
+- Implemented durable, fail-closed autonomous-operation permissions in
+  `app/services/autonomy/autonomy_permission_service.py`.
+- Added explicit permission status and grant/revoke routes under
+  `/autonomy/permissions`. Supported operations are `agent.dispatch`,
+  `workflow.run`, and `code.execute`; unknown operations are rejected.
+- Added explicit `autonomous` opt-in handling to agent dispatch and workflow
+  execution. Autonomous requests require a persisted grant before Brain or
+  agent side effects begin. Interactive behavior remains compatible.
+- Added bounded lifecycle event persistence for autonomous workflow runs and
+  exposed recent state in the permission status response.
+- Verification: **46 focused tests passed** across authorization persistence,
+  route behavior, Brain-agent gating, agent integration, and workflow
+  execution.
+- Phase A and Phase B matrix statuses were not changed. Phase C remains
+  incomplete because live providers, packaged acceptance, and genuine
+  OS-level execution isolation remain blocked.
+
+## Phase C background scheduling authorization — 2026-11-08
+
+- Extended durable background-agent jobs with an explicit `autonomous` flag.
+- Autonomous jobs are authorized before queue persistence through the shared
+  `agent.dispatch` permission. Unauthorized jobs never enter the queue.
+- Autonomous jobs record terminal lifecycle state; existing interactive
+  executors retain their original call contract.
+- Focused regression verification: **33 passed**.
+- Broad Phase C acceptance batch: **224 passed, 6 failed**. Five failures
+  were expected low-memory resource deferrals in provider-contract tests; one
+  health test expected `healthy` while the host correctly reported `degraded`.
+
+## Phase C code execution authorization — 2026-11-08
+
+- Added fail-closed `code.execute` authorization to the `/execute` route.
+- Autonomous execute requests are rejected before `ExecuteService` runs unless
+  the persisted permission is enabled. Interactive planning behavior remains
+  unchanged.
+- Focused execute and authorization verification: **15 passed**.
+
+## Phase C build-only completion checkpoint — 2026-11-08
+
+- Autonomous-development coordinator now supports explicit `autonomous=True`
+  authorization through durable `code.execute` permission before recovery or
+  workflow creation; interactive calls remain compatible.
+- Creator capability requests now produce real Creator OS artifacts in addition
+  to the existing planning artifact.
+- Validated research results now persist a bounded searchable report artifact
+  alongside the research library record.
+- Workflow task terminal outcomes now bridge to core events and notifications
+  without affecting authoritative task state.
+- Focused evidence: autonomous development **3 passed**, Creator **11
+  passed**, research **17 passed**, workflow events **11 passed**.
+- Matrix calculation now shows Phase C **8/10 rows verified (80%)** and
+  implementation readiness **90%**. Live providers, hardware, packaging, and
+  OS isolation remain blocked.
+
+## Phase A conversation provider hardening — 2026-11-08
+
+- Conversation provider routing now validates provider output before returning
+  it. Empty, `None`, and non-text responses become
+  `provider_invalid_response` and cannot be persisted as successful assistant
+  messages.
+- Existing local/cloud policy and hybrid fallback behavior remains unchanged.
+- Focused conversation, command-routing, and context tests: **15 passed**.
+
+## Phase D data export and restore — 2026-11-08
+
+- Added bounded manifest/checksum-verified JSON/JSONL backup and atomic restore
+  in `app/services/data/data_backup_service.py`.
+- Added `GET /data/backup` and `POST /data/restore`, registered through the
+  existing router registry with upload size limits and temporary-file cleanup.
+- Focused service, route, and integrity tests: **5 passed**.
+- Phase D now has **5/9 verified rows (56%)** after desktop and repository
+  integration verification; packaging, hardware, live
+  providers, and OS-isolation acceptance remain blocked.
+
+## Advanced four-phase verification — 2026-11-08
+
+- Focused Phase A/B contract suites passed **71 tests**; the broader voice,
+  memory, search, recovery, agent, and sandbox batch passed **104 tests**.
+- Phase A now has **10/12 verified rows (83%)** at repository level.
+- Phase C now has **9/10 verified rows (90%)** at repository level after
+  specialized-agent integration verification.
+- Phase D now has **7/9 verified rows (78%)** after reliability and
+  cross-service journey verification.
+- Phase B remains below target because voice hardware, live multimodal
+  providers, and execution isolation cannot be verified with mocks.
+
+## Capability expansion milestone — 2026-11-08
+
+- Added a regression proving voice processing stops after transcription failure
+  and never invokes summary or memory persistence.
+- Phase A now records **11/12 verified rows (92%)** at repository level.
+- Phase B now records **6/10 verified rows (60%)** after transcription,
+  summarization, image, artifact, and failure-boundary verification.
+- Phase D remains **7/9 verified rows (78%)**; Windows packaging and
+  OS-isolation gates remain external blockers.
+
+## Phase B/D completion hardening — 2026-11-08
+
+- Artifact records now persist SHA-256 and byte-size metadata. Retrieval can
+  distinguish missing content from checksum corruption without mutating the
+  index.
+- Focused artifact, voice, playback, and document tests passed (**41 passed**).
+- Added Electron backend-runtime lifecycle tests covering legacy user-data
+  migration and runtime upgrade preservation (**2 passed**).
+
 ## Working locations
 - Active project: E:\\Hari\\personal_ai_core
 - Local snapshot: E:\\Lumira_Local_Backups\\personal_ai_core_20261020_163108
@@ -751,3 +858,315 @@ Deployment remains pending:
 - The installed app and its existing user-data directory remain untouched; the pre-migration backup is preserved.
 - UI interaction was validated through automated component tests only. Remote shell/file access does not provide screenshot or mouse control, so visual acceptance still requires the owner to inspect the running desktop app.
 - Next: wait for stable RAM headroom above 2 GB, package into a new release output directory so the old installer is not overwritten, install without deleting the backup, and perform packaged startup/data-migration/API acceptance.
+
+
+## 2026-11-05 — Phase 2 Capability Expansion continuation
+
+- Continued the agreed revised Phase 2 / Handoff 10 scope, not the separate Project Continuation V1 phase.
+- Fixed atomic dependency activation and dependency-plan readiness; identity activation commands now use the dependency bridge.
+- Added the missing `audio_playback` feature-registry entry to match the identity alias and existing playback service.
+- Fixed voice idea memory persistence (unsupported experience type) and made downstream memory-write failures recoverable without discarding saved media.
+- Aligned local/cloud transcription format declarations with supported upload formats and added explicit provider-format mismatch responses. Added WebM MIME handling to the OpenAI-compatible transcription adapter; OGG remains local-only.
+- Fixed the empty Unified Search response shape to include research.
+- Full detail and Phase 2 subphase map: `docs/phase_2_capability_expansion.md`.
+- Static AST parsing passed for 16 changed implementation/test files; `git diff --check` passed. Tests/build/lint/provider/hardware runtime checks were not run. Free RAM was about 1.01 GB.
+- Keep provider-dependent capabilities labelled unavailable until a real provider check passes; keep generated-project terminal disabled until verified OS isolation exists. No BIOS/Windows settings changed, no commit/push/reset/cleanup.
+
+
+## 2026-11-05 — Brain execution control and retry-safety integration
+
+- Connected a per-run execution control object through BrainService → BrainPipeline → BrainExecutor. The control uses a 120-second default deadline (600-second maximum) and session-scoped cooperative cancellation.
+- Added pre/post-stage cancellation and deadline checks, explicit cancelled/timed_out/failed terminal handling, module-count and total-attempt bounds, and strict BrainState return validation in the traced executor.
+- BrainService now records cancelled, timed-out and failed pipeline outcomes as unsuccessful; final state validation cannot convert them into success. Added POST /brain/cancel/{session_id}.
+- Retry behavior is fail-closed: a module must explicitly declare retry_safe = True. Built-in cognitive modules are not opted in because provider/service calls may be billable or have side effects. Learning is not retryable. Resume follows the same rule.
+- Added focused tests for deadline expiry, cancellation before/between stages, safe/unsafe retry behavior, registry release and the cancellation route. Result: 8 passed. Python compileall passed for touched Brain modules/routes/tests. git diff --check passed (existing LF-to-CRLF notices only).
+- Cancellation is cooperative, not preemptive: a currently running synchronous service/provider call must return before the next cancellation check. Full-suite/provider/hardware/desktop packaged acceptance remains outstanding. No commit or push.
+
+
+## Additional focused verification — 2026-11-05
+
+- Phase 2 feature registry, dependency activation, command routing, voice idea pipeline, transcription-format compatibility, OpenAI-compatible transcription and Unified Search tests: **51 passed**.
+- Phase 1 provider-policy, provider-boundary, chat routing, OpenAI-compatible chat, AI-mode route/service and command-conversation integration tests: **37 passed**.
+- Brain execution-control and recovery tests: **8 passed**.
+- Combined selected regression evidence: **96 passed, 0 failed** across these three focused runs. These are targeted suites, not a full repository run.
+- No live cloud API, local model inference, microphone, wake-word hardware, image-generation provider, packaged Electron installer, or end-to-end desktop acceptance was exercised. Do not mark either phase fully complete from these unit/regression results.
+
+
+## 2026-11-05 — Phase 1 / Phase 2 implementation pass and acceptance
+
+- Phase 1: added a dedicated acceptance ledger at docs/phase_1_core_correctness.md. The existing chat router/output adapter, centralized provider policy, persisted AI-mode/cloud consent and desktop API integration were exercised. Added a desktop composer cancel control backed by POST /brain/cancel/{session_id}.
+- Brain execution hardening: execute() now delegates to the bounded traced executor; resume() now applies pipeline and attempt limits, validates return types, honors verification rejection and retries only explicitly retry-safe stages. Existing built-in cognitive modules remain non-retryable by default.
+- Handoff 10 Phase 2 fixes remain documented at docs/phase_2_capability_expansion.md; its scope is not the same as roadmap Phase 2 (Brain reliability).
+- Latest focused backend verification: 99 passed, 0 failed across Phase 1 provider/chat policy, Handoff 10 capability expansion and Brain execution-control suites.
+- Full desktop Vitest suite: 34 passed across 5 files. Desktop lint: 0 warnings/errors. Production TypeScript/Vite build passed.
+- Python compileall across app and tests passed. git diff --check passed; only working-copy LF-to-CRLF notices were emitted.
+- Not a full release sign-off: full backend suite was not run; no packaged installer, live cloud/local provider inference, microphone/speaker/wake-word hardware, live image generation, or visual packaged-app acceptance was performed. Generated-code terminal remains disabled until OS-level isolation is independently verified.
+- Cancellation is cooperative between synchronous Brain stages and process-local; it cannot interrupt an in-flight provider call or coordinate cancellation across multiple backend worker processes.
+- Existing working tree and runtime data preserved. No commit/push/reset/cleanup, package installation, or BIOS/Windows settings change.
+
+
+## Latest acceptance update — 2026-11-05
+
+- Expanded the combined safe focused backend matrix to **190 passed, 0 failed** across Phase 1, Handoff 10 Phase 2, Brain execution control, provider access, chat, audio playback, artifacts, voice capture/recovery, wake-word routes/listener, image-generation route/resource behavior, memory, search and language guidance/detection. Generated-project execution tests were deliberately excluded; this is not a full backend suite.
+- Added protected same-language response guidance for Tamil Unicode, romanized Tamil and Tamil-English mixed input; expanded a bounded romanized-Tamil lexicon and regression tests for Tamil/English classification.
+- Added a BrainService regression proving cancelled runs persist as failures and execution-control entries are released. Failure paths now clear current_stage.
+- Desktop Vitest: 34 passed across 5 files. Lint: 0 warnings/errors. Production build passed. Python compileall for app/tests and git diff check passed.
+- No packaged installer, real local/cloud inference, microphone/speaker/wake-word hardware, live image generation or visual packaged-app acceptance was performed. Semantic Tamil fluency depends on the configured model and still needs real-provider testing. OS-level isolation remains unverified and terminal execution stays disabled.
+- Phase reports and roadmap updated. Existing working tree/runtime data preserved; no commit/push/reset/cleanup, package install or system/BIOS change.
+
+
+- Final API registration smoke test: the real FastAPI application exposes POST /brain/cancel/{session_id}; route test passes. Brain execution-control suite: 12 passed. Latest backend focused matrix count is now 191 passing tests when including this additional API registration check; earlier 190-test combined run remains the broad matrix baseline.
+
+
+## 2026-11-06 — Phase 3 Project Continuation V1 verification
+
+- Reconnected to the authorized Windows development laptop; active repo remains `E:\\Hari\\personal_ai_core`.
+- Verified the Phase 3 source-aware continuation implementation, lifecycle latest-version resolution, explicit-version path, provider-policy router, and staged ProjectWriter integration by source inspection.
+- Focused `tests/test_project_continuation_service.py`: **7 passed, 0 failed**. These are mocked/service-level tests; no generated project was executed and no live provider or real-disk continuation was exercised.
+- Python byte-compilation passed for the Phase 3 service, lifecycle service, route, provider router, ProjectWriter, and focused test module. `git diff --check` passed (existing LF-to-CRLF notices only).
+- Host free RAM was 0.8 GB before the focused run and 1.22 GB after. No broad test run, frontend build, packaging, or live provider inference was attempted.
+- Phase 1 and Handoff 10 Phase 2 remain at the latest documented focused verification: backend matrix 190 passed plus one API registration check (191 passing results overall); desktop 34 tests passed, lint 0 warnings/errors, production build passed. These are not full release acceptance.
+- Phase 3 implementation and focused verification are complete. Remaining acceptance across the project: live local/cloud provider inference; real microphone/speaker/wake-word and image provider tests; packaged Windows installer/upgrade and visual app acceptance; independently verified OS-level isolation before generated-code execution. Do not claim 100% release readiness.
+- Existing working-tree changes and runtime JSON were preserved. No commit, push, reset, cleanup, package installation, or BIOS/Windows setting change was made.
+
+
+## 2026-11-06 — Phase 4 and Phase 5 implementation continuation
+
+- Phase 4 UI: added a Dashboard, dedicated Agents workspace, and navigation for background tasks and self-improvement diagnostics. Existing project, artifact, memory, goals, planner, operations and observability pages remain the workspace surface. The agent dispatch API now accepts an explicit registered agent selection.
+- Phase 5 multi-agent workflows: each dependency-ready workflow task now passes through BrainAgentOrchestrator instead of invoking AgentManager directly, preserving the main Brain gate. Tasks remain sequential and bounded.
+- Phase 5 self-improvement: added a read-only dashboard for outcome patterns, recommendations, adaptive guidance, execution policy and failure guard. It does not automatically rewrite source code or permissions.
+- Phase 5 background tasks: added a persistent user-submitted one-shot agent queue and /background-tasks API with queued/running/completed/failed/interrupted states, bounded atomic persistence, restart interruption marking, no automatic replay, and secret redaction. This is not a recurring scheduler or distributed worker broker.
+- Backend focused verification: **23 passed, 0 failed** across background task service/API, workflow agent execution, agent dispatch contract and outcome-learning tests. Python byte-compilation passed for touched backend files.
+- Full desktop Vitest: **38 passed across 5 files**. Desktop lint: **0 warnings / 0 errors**. TypeScript/Vite production build passed.
+- Release blockers remain: live local/cloud inference; real voice and wake-word hardware; live image provider; packaged Windows installer/upgrade and visual app acceptance; independently verified OS-level isolation before generated-code terminal execution. Free RAM was below 2 GB, so packaging was skipped.
+- No commit, push, reset, cleanup, package installation, or BIOS/Windows setting change. Existing working-tree edits and user runtime data were preserved.
+- Phase 4 and Phase 5 implementation and focused verification are complete. Do not claim 100% release readiness.
+
+
+## 2026-11-06 — Phase 6–8 verification and acceptance status
+
+- Phase 6 report: `docs/phase_6_ai_intelligence.md`. Offline mode is active; cloud is disabled. Local Ollama loopback `/api/tags` responded successfully and lists `qwen2.5-coder:3b` and `moondream:latest`. No inference was attempted because free RAM was about 1.05 GB, below either model's listed size. Cloud chat configuration is absent from the inspected process environment.
+- Phase 7 report: `docs/phase_7_voice_intelligence.md`. Windows enumerates Microphone Array and Realtek Speaker endpoints; `faster-whisper` is installed. No real recording/playback test was performed. Picovoice runtime dependencies and wake-word credentials/model are absent; local transcription and TTS are not enabled in the inspected environment.
+- Phase 8 report: `docs/phase_8_media_intelligence.md`. Image/video artifact contracts and fake-provider tests exist. Image provider credentials/enable flag are absent. `moondream:latest` is installed but not activated for inference. No video provider is implemented/registered/configured; the current capability truthfully returns `provider_unavailable`.
+- Focused backend Phase 6–8 test matrix: **104 passed, 0 failed** across chat routing/provider policy/startup, language detection, voice pipeline/recovery/routes/wake-word, audio playback, speech/transcription adapters, image generation/understanding, media artifact and research provider tests.
+- Focused desktop UI matrix: **32 passed, 0 failed** across MainLayout, ProviderDiagnosticsPanel and ImageUnderstandingPanel tests.
+- This verification is code/mock/service-level evidence, not live AI inference, real audio hardware acceptance, or live media provider acceptance. Phases 6–8 are **partially implemented, not complete/release accepted**.
+- No external provider was contacted, no credentials were read or displayed, no audio was recorded, and no model was loaded for inference. Current free RAM: about 1.05 GB; free C: about 27.75 GB.
+- No source code or runtime data was reset, cleaned, or deleted. No commit or push was made.
+
+
+## 2026-11-06 — Older expansion roadmap selected: Phases 9–11 implementation pass
+
+- User explicitly selected the older expansion roadmap: Phase 9 Market Intelligence/Kronos, Phase 10 Creator OS, Phase 11 Device Ecosystem. This overrides the newer Phase 9 release-hardening numbering for this expansion handoff.
+- Phase 9 source added: persistent watchlist and portfolio records; bounded OHLCV import; SMA/EMA-derived MACD, RSI, Bollinger Bands, ATR and trend analysis; watchlist scanner; user-imported fundamental metrics and peer averages; long-only SMA crossover backtesting with fee/slippage assumptions; optional Yahoo Finance chart adapter.
+- Yahoo adapter is registered only when LUMIRA_MARKET_DATA_ENABLED=true and every request is checked by the existing external-provider consent policy. It is not a guaranteed exchange feed. No live network request was made.
+- Phase 9 desktop UI added at Kronos Market Intelligence: watchlist, holdings, history fetch/import, fundamentals import, scanner, indicators and backtest.
+- Phase 10 source added: Creator API and desktop Creator Studio for SVG poster/logo/thumbnail/infographic/UI mockup/blueprint concepts, HTML presentations, JSON storyboards and Markdown scripts/video scripts/social posts/documents/marketing briefs. Artifacts are stored through Artifact Manager.
+- Phase 10 limitation: this is editable vector/text/storyboard generation. It does not claim to render final raster images or videos; configured media providers remain separate requirements.
+- Phase 11 source added: expanded device registry/gateway type coverage, expanded hardware profile types, bounded profile metadata rejecting secret-like keys, device ecosystem overview and capability readiness planning based on registry + fresh heartbeat. Desktop Device Ecosystem page added.
+- Existing device command authorization, fresh-heartbeat, permission and provider-policy checks remain in place. No device scan or physical command was issued.
+- New report: docs/phase_9_11_expansion.md.
+- Explicitly deferred: all tests, compile checks, lint, TypeScript/Vite build, packaging, live market provider calls, media provider calls and hardware acceptance. No tests/builds were run in this pass.
+- No Git commit/push/reset/cleanup or runtime data deletion was performed.
+- Verdict: meaningful source implementation slices are in place, but Phases 9–11 are not yet fully complete or verified. The next pass must perform focused acceptance and close remaining provider/hardware gaps.
+
+- Phase 10 follow-up: Creator Studio now exposes the existing guarded raster image-generation API and previews the saved image artifact when a provider is configured. Video rendering/encoding, timeline editing and animation remain unimplemented.
+
+- Phase 9 follow-up: added a bounded position-risk calculator API using account value, risk percentage (capped at 5%), entry price, stop price and long/short direction. It returns mathematical sizing estimates only and does not place orders.
+
+- Kronos remaining scope: no audited fundamental ingestion, news/social sentiment, forecasting models, automated pattern discovery, intraday feeds, broker/order integration, paper-trading ledger or real-money trading. Yahoo chart history is optional and not an exchange-certified live feed.
+
+
+## Source-bridge review update — 2026-11-06
+
+- Reviewed the actual router registry, market/creator/device routes, API client, workspace routing, sidebar imports, page components, device registry and profile service.
+- Confirmed the three desktop workspaces are included in the persisted workspace-page union, sidebar navigation, MainLayout imports and page rendering. Sidebar icon imports are present.
+- Removed an unnecessary duplicate Device Ecosystem overview request from MainLayout; the Device Ecosystem page owns its inventory load.
+- Completed the missing Kronos desktop bridges for imported fundamental lookup, peer comparison, and the position-risk calculator; added a reporting-date input for imported fundamentals and the matching API client method.
+- Aligned the Device Profile accepted type set with the types exposed by the Device Ecosystem profile selector, including robotics, wearable, smart display, printer, vehicle, Bluetooth and Wi-Fi profile categories.
+- Source review found no duplicate router registration for the new Market or Creator routers. Device routes and device-profile routes are both already registered in the central registry.
+- These are source-level integration findings only. No Python compile, TypeScript check, lint, tests, build, live provider request or hardware command was run. The expansion phases remain unverified and their external provider/hardware/media gaps remain open.
+
+- Final low-cost source-integrity review: `git diff --check` exited 0. Git status shows the existing broad working tree (88 tracked files changed plus untracked additions at review time); all changes were preserved and no commit/reset/cleanup was performed. This is not a compile, test, lint or build result.
+
+## Phase A completion checkpoint — 2026-11-07
+
+### Completed integration and bridge work
+- Normal open-ended chat remains gated by a successful Main Brain run before the provider router can be constructed or called.
+- Relevant, read-only memory context is now explicitly covered by a route-level regression test proving it is forwarded to the chat provider; archived/sensitive-memory filtering remains covered by the context-service tests.
+- Local Ollama and explicitly consented cloud chat continue to use the centralized provider policy and bounded conversation history.
+- Corrected the retry test fixture to declare retry_safe = True, matching the pipeline's explicit retry contract; the test now verifies recovery and learning history rather than failing because its test double lacked the required declaration.
+- Removed a duplicate Nanobot attribution section while retaining the single MIT attribution and full license notice.
+
+### Verification
+- Conversation route/context/budget/provider tests: **25 passed**.
+- Brain pipeline tests: **10 passed**.
+- Provider-access policy/integration, AI-mode service/routes, and startup-registration tests: **23 passed**.
+- Total focused Phase A and policy bridge verification: **58 passed**.
+- git diff --check: passed; only pre-existing Git LF-to-CRLF notices were emitted.
+
+### Explicit acceptance limits
+- Real local Ollama inference has not been demonstrated in this pass. The earlier full backend run recorded 766 passed, 3 failed, and 1 skipped; one failure was the retry test-double contract corrected above. Two broader end-to-end validation tests still depend on a functioning local chat provider and reported local_provider_unavailable. The full suite was not repeated because available RAM fell to about 1.2 GB.
+- A separate image-provider boundary test was attempted during the broader bridge check and was deferred by the resource guard (resource_pressure_deferred); this is not a Phase A conversation failure.
+- Cloud mode/consent settings were not changed. No provider credentials, model settings, or runtime data were modified.
+- Packaged Electron acceptance, real provider inference, and unrelated plugin/sandbox/modality gaps remain separate work and must not be represented as completed by this Phase A checkpoint.
+
+**Phase A implementation status:** integrated and focused-test verified. **Live-provider acceptance:** pending a reachable local model and adequate RAM headroom. No commit, reset, cleanup, or user-data deletion was performed.
+
+
+## Phase A acceptance recheck — 2026-11-07
+
+- Reproduced the two previously reported `tests/test_validation.py` failures and isolated them to project-continuation tests invoking the real local chat provider without a test provider fixture. Added a deterministic, test-only continuation provider to those two tests so they verify project versioning, follow-up context, and session/memory recovery without requiring external inference. Both tests now pass (`2 passed in 18.08s`). The fixture does not change production provider behavior and does not count as live-model verification.
+- Confirmed the local Ollama HTTP service responds to `/api/tags` and reports `qwen2.5-coder:3b` installed. No actual completion request was sent: available physical RAM fell to approximately 463 MB during the recheck, which is insufficient headroom to safely load the 1.9 GB model. Protecting the user's laptop took priority over forcing inference.
+- The previously recorded 58 focused Phase A/policy tests remain the latest passing focused acceptance result. They were not rerun during this low-memory recheck. The complete backend suite was not rerun; the earlier run was 766 passed, 3 failed, 1 skipped, and one previously failing test fixture has since been corrected.
+- **Status:** Phase A implementation and focused regression coverage are in place. Strict end-to-end acceptance is still open until one real local Ollama chat completion succeeds and the full backend suite is rerun with adequate memory. Do not describe Phase A as 100% accepted until those checks pass.
+
+## Provider lifecycle diagnostics — 2026-11-08
+
+- Extended the existing provider status/readiness payloads with explicit `provider_scope`, `reachable`, and `last_success` fields. The latter two remain `null` because these lightweight endpoints intentionally do not probe providers or claim successful inference.
+- Existing registration/configuration and security fields are preserved. Unknown provider scope remains fail-closed through the shared provider access policy.
+- Targeted verification: `tests/test_health.py` and `tests/test_integration_gap_closure.py` passed (`6 passed`).
+- This does not establish live provider reachability, successful inference, packaged desktop acceptance, hardware acceptance, or OS isolation.
+
+## Full completion directive baseline — 2026-11-08
+
+- Created [docs/phase_abc_completion_matrix.md](docs/phase_abc_completion_matrix.md) as the current Phase A/B/C acceptance ledger with explicit status definitions and release-blocking gates.
+- Fresh backend suite, run with a new writable temp root, completed with **747 passed, 23 failed, 1 skipped**. The failures are concentrated in resource-pressure deferrals for heavy provider/autonomous-development paths while this host had approximately **0.65 GiB free RAM**; they are not treated as proof of production contract defects.
+- Focused acceptance passed: core pipeline/memory/search/recovery **107 passed**; Phase A provider-policy/context/feature/health **58 passed**; Phase C agents/recovery/notifications/reminders **47 passed**.
+- Desktop acceptance passed: **38 tests**, production TypeScript/Vite build, and Oxlint.
+- `pip check` passed. Ollama `/api/tags` is reachable and reports `qwen2.5-coder:3b` and `moondream:latest`; no inference request was sent because loading either approximately 1.8 GiB model with 0.65 GiB free RAM would risk system instability.
+- Phase A/B/C are not marked 100% complete. Remaining blockers include safe live Ollama inference, live external providers, microphone/speaker/wake-word hardware, packaged Electron acceptance, and genuine OS-level generated-code isolation.
+
+## Main Brain outcome bridge — 2026-11-08
+
+- Wired the existing `BrainService` core-event/notification bridge into production success, validation-failure, pipeline-exception, cancellation, rejection, and final-validation failure exits.
+- Initialized the existing `CoreEventLogService` and `NotificationService` dependencies without changing pipeline ordering or failure semantics.
+- Preserved compatibility with lightweight `BrainService.__new__` test doubles by treating absent optional bridge attributes as unavailable.
+- Focused Brain/pipeline/event/recovery verification passed: **47 passed**.
+
+## Resource safety and document ingestion — 2026-11-08
+
+- Verified resource-pressure behavior across the budget service and heavy-provider consumers: **16 passed, 1 skipped**. Critical pressure continues to defer heavy work before provider invocation; no safety guard was weakened.
+- Added bounded `DocumentIngestionService` and `POST /knowledge/documents`. UTF-8 text, Markdown, JSON, CSV, and HTML are normalized into the existing Personal Library with size/type/empty-input validation. PDF extraction is optional and fails explicitly when `pypdf` is unavailable.
+- Document ingestion plus persistence/search focused verification passed: **24 passed**.
+- The Phase A/B/C matrix now records Main Brain and resource safety as repository-verified and document processing as integration testing pending PDF extractor availability/acceptance.
+
+## PDF extraction dependency — 2026-11-08
+
+- Added the lightweight `pypdf==5.4.0` runtime dependency and installed it in the existing virtual environment.
+- Document ingestion now supports bounded PDF extraction in addition to text, Markdown, JSON, CSV, and HTML. Missing/invalid/empty/oversized documents still fail explicitly.
+- Focused document/persistence/search/PDF/multipart verification passed: **26 passed**.
+
+## Strict batch review and Phase B provider precedence — 2026-11-08
+
+- Reviewed the complete previous batch surfaces: Brain bridge, document ingestion, knowledge route, dependency manifest, tests, third-party notice, matrix, and handoff updates.
+- Confirmed Brain bridge does not alter stage order, is invoked once per terminal outcome, runs after persistence, and swallows event/notification errors. Missing optional bridge attributes remain safe for lightweight test doubles.
+- Hardened document ingestion with strict CSV parsing and explicit `document_storage_failed` handling. Oversized content is rejected before extraction; malformed JSON/CSV/PDF, unsupported types, empty documents, and storage failures are covered without adding library entries.
+- Corrected image generation/understanding validation precedence so unavailable providers and invalid image types are reported before resource deferral; the resource guard still runs before any configured provider call.
+- Focused Phase B voice/image/builder/document verification passed: **59 passed**. Provider-behavior tests use a normal resource snapshot; dedicated low-memory tests remain active.
+
+## Phase B provider and artifact acceptance — 2026-11-08
+
+- Ran the remaining summarization, transcription, speech, image boundary, provider-format, resource-budget, and artifact-library suites: **32 passed**.
+- Provider contract tests now explicitly mock only the resource telemetry decision to `normal`; dedicated resource-budget tests still verify critical-pressure deferral. No production safety guard was weakened.
+- The Phase B matrix records transcript/summarization and artifact indexing as integration testing because live providers and complete corruption/restart acceptance remain open.
+
+
+## 2026-11-10 — Sandbox boundary hardening continuation
+
+- Confirmed the host Windows Sandbox runtime can launch a disposable guest and execute a harmless smoke command. The output was written from the guest account `WDAGUtilityAccount`; this proves basic guest boot/command execution only, not Lumira project-terminal integration or complete isolation acceptance.
+- Hardened `ContainerSandboxProvider` invocations with a non-root numeric user (`65534:65534`), disabled IPC, PID/memory/CPU limits, `no-new-privileges`, bounded file/process ulimits, a read-only project mount, a read-only root filesystem, no network, dropped Linux capabilities, and a restricted writable `/tmp` tmpfs.
+- Added regression assertions for the additional isolation controls. Focused sandbox/terminal gate tests: **8 passed**. `git diff --check`: passed; only pre-existing LF-to-CRLF notices were emitted.
+- Full backend baseline remains **840 passed, 1 skipped, 0 failed**; desktop **40/40 Vitest**, **2/2 Node runtime**, production build and lint passed in the earlier verification batch.
+- Current host free RAM at the start of this continuation was approximately **1.15 GB / 7.70 GB**. No additional full-suite run, Docker execution, or second Windows Sandbox launch was attempted under this memory pressure.
+- The actual project terminal remains fail-closed by default. The Windows Sandbox smoke test is not yet wired into `ProjectTerminalService`; Docker availability and an image containing the required project test tools are also not confirmed. Do not mark OS isolation or Phase D security complete from this work.
+- Existing uncommitted files and runtime data were preserved. No reset, cleanup, commit, push, package installation, or user-data deletion was performed.
+
+
+- Follow-up hardening: `ContainerSandboxProvider.status()` now verifies that the configured default image is present locally after confirming the Docker daemon. A running daemon without the required image returns `sandbox_image_unavailable` instead of a false `verified` status. Added a missing-image regression test; the sandbox/terminal focused suite now passes **9/9** and `git diff --check` passes.
+
+
+- Environment recheck: Docker CLI is **not installed**; `WindowsSandbox.exe` is present. The earlier one-off Windows Sandbox smoke result confirms the guest can boot and execute a basic command, but no reusable Lumira provider is connected to it. Current free RAM after focused verification: approximately **1.36 GB / 7.70 GB**. Project terminal remains disabled by default.
+
+
+## 2026-11-10 — Voice pipeline idempotency hardening (Phase B)
+
+- Added an idempotency guard to `VoiceIdeaPipelineService.process()`: before starting a new transcription, it checks persisted cognitive-memory experiences for the audio artifact ID.
+- If that audio capture already has a persisted experience, the pipeline returns the existing experience and linked artifact IDs without generating another transcript, summary, or duplicate memory record.
+- This prevents repeated user retries or duplicate requests from multiplying transcript/summary artifacts and memory entries after a completed capture.
+- Added `tests/test_voice_idea_idempotency.py` covering completed-capture replay and ensuring a different audio ID is not incorrectly treated as a duplicate.
+- Focused verification: **21 passed** across voice pipeline idempotency/recovery, voice interaction, and artifact content-integrity tests. No live microphone/provider acceptance was attempted.
+- Phase B aggregate completion remains unchanged until the complete Phase B acceptance gates are independently satisfied.
+
+
+## 2026-11-10 — Continued cross-phase verification
+
+- Desktop UI: fresh Vitest run **40/40 passed** across 6 files (single-worker cap). Electron backend-runtime tests **2/2 passed**. Oxlint **0 warnings / 0 errors**. TypeScript + Vite production build passed; generated bundle: 448.53 kB JS (118.05 kB gzip), 36.33 kB CSS (8.68 kB gzip).
+- Backend cross-phase regression batch: **81 passed** across Phase A pipeline/validation/memory, Phase B voice/artifact/sandbox, Phase C autonomy/agent collaboration, and Phase D backup/security tests.
+- Voice idempotency follow-up: **7 passed** across idempotency, recovery, and pipeline tests. The pipeline now fails closed before retranscription if the production memory lookup fails, preventing a duplicate write when it cannot establish whether the audio artifact was already processed. Lightweight injected test adapters without `get_all()` remain supported.
+- Python compilation and whitespace checks were run after the source edits; no compile or diff-check failure was observed.
+- Fresh capability inventory: **37/99 VERIFIED (37.37%)**, 19 TESTED, 16 IN_PROGRESS, 1 NOT_STARTED, 26 BLOCKED. Do not infer phase completion from the green tests; hardware, live-provider, OS-isolation, and packaging gates remain.
+- Fresh terminal sandbox status: `docker_not_installed`; Docker CLI not found. `ProjectTerminalService` remains fail-closed unless an explicit provider passes its availability check. The prior Windows Sandbox guest smoke test does not supply the missing per-run terminal integration.
+- Host memory at the end of verification: approximately **1.63 GiB free / 7.70 GiB total**. No full backend suite, live model inference, microphone/speaker acceptance, installer build, or generated-project execution was attempted in this constrained session.
+- Phase aggregate status remains A **11/12 (92%)**, B **6/10 (60%)**, C **9/10 (90%)**, D **7/9 (78%)**. No phase is certified 100%; external acceptance gates remain open.
+
+
+## 2026-11-10 — Phase B voice-summary recovery integration
+
+- Continued implementation in `VoiceIdeaPipelineService.retry_summary()`: after a successful summary retry, it now locates an existing cognitive-memory experience containing the transcript artifact and idempotently attaches the recovered summary artifact through `MemoryService.attach_artifacts_to_experience()`.
+- If the summary artifact is missing or the memory link cannot be confirmed, the retry reports a recoverable failure and explicitly preserves the transcript/summary artifact IDs rather than claiming completion.
+- Added `tests/test_voice_summary_retry_link.py` for successful memory linkage and memory-store failure preservation.
+- Fresh focused voice acceptance: **18 passed** across summary retry linkage, idempotency, recovery, pipeline, and voice interaction tests.
+- This is a real Phase B implementation increment; it does not close live transcription/speech providers, microphone/speaker acceptance, or other external gates. Phase B remains below 100%.
+
+
+## 2026-11-10 — Backup restore and summary retry hardening
+
+- Phase D backup restore now rejects duplicate ZIP entries, duplicate manifest paths, unlisted archive payloads, symbolic links, encrypted entries, invalid checksum metadata, declared-size mismatches, total-size mismatches, symlinked restore targets, and target directories that resolve outside the configured data root. Export skips symlinked source files.
+- Added adversarial backup tests for unlisted payloads, duplicate manifest paths, total-size mismatch, and symlink export leakage. Backup service + route suite: **10 passed**.
+- Phase B summary retries now reuse a prior active summary for the same transcript only after SHA-256 integrity verification. Corrupt or missing existing summaries fail closed rather than generating duplicate replacements.
+- Added replay and corruption tests for summary idempotency. Combined fresh focused acceptance across summary provider/resource handling, voice retry linkage/idempotency, and backup service/routes: **18 passed**.
+- These changes improve retry safety and backup trust boundaries; they do not close the external live-provider, microphone/speaker, Windows packaging, or OS-isolation gates. Phase aggregates and Phase Zero inventory remain unchanged pending their full acceptance criteria.
+
+
+## 2026-11-10 — Continued build and final acceptance checkpoint
+
+- Full backend suite rerun on the current worktree: **866 passed, 1 skipped, 0 failed** in **339.23s**. `pip check` found no broken requirements. The only warning is the deliberate Pydantic mutable-state-corruption test.
+- Desktop suite/build/lint: **40/40 Vitest**, **2/2 Node runtime**, Oxlint **0 warnings / 0 errors**, TypeScript/Vite production build passed.
+- Live local qwen chat passed through Lumira's `ConversationProviderRouter`; live Ollama summarization persisted a checksum-verified summary artifact.
+- Fixed Moondream adapter's empty `/api/chat` response by switching to `/api/generate`; live `ImageUnderstandingService` analysis succeeded and saved a report artifact.
+- Fixed Faster-Whisper/PyAV compatibility by decoding with PyAV into a 16 kHz float32 waveform; added a configurable initial prompt (default `Lumira`). Two decoder tests pass, and a live tiny-model transcription correctly recognized “Lumira is ready to capture a new idea.”
+- Ran a live voice idea pipeline with Faster-Whisper + Ollama summary. Audio, transcript, summary and cognitive-memory artifact linkage all succeeded in isolated temporary storage. This was a generated SAPI WAV, not physical microphone acceptance.
+- Hardened backup restore/export and added adversarial tests (**10 backup service/route tests passed**). Project terminal is hard-disabled by default until OS isolation is integrated and independently verified.
+- Updated phase ledger: Phase 0 **37/99 (37.37%)**; Phase A **12/12 (100%)**; Phase B **6/10 (60%)**; Phase C **9/10 (90%)**; Phase D **7/9 (78%)**. No false 100% claim for remaining phases.
+- Remaining blockers: physical microphone/speaker/wake-word and Tamil voice acceptance; configured image-generation, speech-synthesis and research providers; packaged Windows install/upgrade/restart; genuine OS-level generated-code isolation. Docker CLI is not installed and Windows Sandbox is not integrated into ProjectTerminalService.
+
+
+## 2026-11-10 — Local Windows speech synthesis
+
+- Added `WindowsSapiSpeechProvider`, a local Windows text-to-speech adapter using the built-in `System.Speech` voices through PowerShell. It requires no cloud key, network call, or additional Python package.
+- The provider validates bounded input, language, process timeout, WAV header and output size; it passes text/path through a base64-encoded process environment payload, sanitizes process failures, and removes temporary files.
+- Startup registration is explicit via `LUMIRA_WINDOWS_SAPI_TTS_ENABLED`; packaged Electron launches enable this local provider by default. Health diagnostics identify it as local and do not claim reachability.
+- The installed Windows host exposes English voices (Microsoft David and Zira) but no Tamil SAPI voice. This provider therefore advertises English only; Tamil/mixed speech requires a separately installed Tamil voice or configured compatible provider.
+- Focused provider, registration, creator-audio, speech-provider and health suite: **20 passed**. Live `CreatorOSService.synthesize_audio()` generated a real 6.69-second mono 22.05 kHz WAV and persisted a checksum-verified audio artifact.
+- This verifies local speech generation and artifact storage, not physical speaker playback or Tamil TTS quality.
+
+
+## 2026-11-10 — Current continuation checkpoint
+
+- Device connection recovered; full backend suite result retrieved: **873 passed, 1 skipped, 0 failed** in **904.16s**. pip check passed; git diff --check exited 0 with only line-ending notices.
+- Added Phase B transcript retry idempotency in TranscriptService: it reuses an existing active transcript for the same audio artifact only after SHA-256 verification and bounded/non-empty content checks; corrupt/missing prior artifacts fail closed; archived artifacts are not reused.
+- New focused voice/transcript retry regression: **12 passed**.
+- Current evidence ledger: Phase Zero **37/99 verified (37.37%)**; Phase A **12/12 (100%)**; Phase B **6/10 (60%)**; Phase C **9/10 (90%)**; Phase D **7/9 (78%)**.
+- Remaining acceptance blockers are physical microphone/speaker/wake-word and Tamil voice quality, configured image-generation/research providers, Windows upgrade/uninstall/signing, and reusable OS-level isolation for generated code. Do not enable ProjectTerminalService until a real sandbox provider is integrated and verified.
+- Existing dirty worktree and runtime files were preserved; no reset, cleanup, commit, push, or package installation was performed.
+
+## 2026-11-10 ? Windows Sandbox provider implementation and live guest verification
+
+- Added `WindowsSandboxProvider` with a disposable `.wsb` guest, disabled guest networking/clipboard/audio/video/printer/vGPU, protected-client mode, read-only control/runtime mappings, a bounded writable project snapshot, and a nonce-correlated result channel.
+- Project snapshots reject symlinks/reparse points and non-regular files, cap the tree at 5,000 files / 250 MiB, and exclude `.git`, virtual environments, caches, `.env*`, credential JSON, and key/certificate material. The temporary host staging tree grants access only to the current interactive identity.
+- The guest applies a Windows Job Object before starting the allowlisted command: 64-process limit, 768 MiB per-process memory, 1 GiB job memory, kill-on-job-close, and a 50% CPU hard cap. Result validation now rejects any guest result that does not explicitly attest these limits.
+- Live acceptance on the host: `WindowsSandboxProvider.status()` returned available; a fresh isolated guest executed a generated one-test pytest project as `WDAGUtilityAccount`; result was **1 passed in 0.18s**, exit code 0. The provider returned success only after validating the nonce, guest identity, and `job_limits_applied=true`, and confirming VM shutdown. The staging directory was removed and no Windows Sandbox VM/session process remained after completion.
+- Focused regression after tightening result validation: **33 passed** across Windows Sandbox, Docker sandbox, terminal feature-gate, and project-capability tests. Python compilation passed. `git diff --check` exited 0; Git emitted only LF-to-CRLF working-copy notices.
+- This is a verified provider-level live test, not yet the complete Lumira terminal integration. `ProjectTerminalService` remains hard-disabled by default and does not select this provider automatically; the feature activation/readiness path still needs to be wired to the platform-specific provider and tested end-to-end. Do not promote the Phase D security/isolation row or Phase C OS-isolated execution criterion yet.
+- Host memory after guest shutdown: approximately **2.39 GiB free / 7.70 GiB total**. No original project or user data was modified by this smoke test.

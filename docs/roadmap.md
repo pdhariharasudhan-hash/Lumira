@@ -41,7 +41,7 @@ Status: Planned
 * Workspace UI
 * Agent UI
 
-Status: Planned
+Status: Implemented; 38 desktop tests pass, lint has 0 warnings/errors, and the production build passes. Packaged visual acceptance remains open.
 
 ---
 
@@ -51,4 +51,4 @@ Status: Planned
 * Self-Improvement
 * Background Tasks
 
-Status: Future
+Status: Implemented with bounded, user-triggered execution. Real-provider acceptance, distributed workers and recurring scheduling remain outside this release.

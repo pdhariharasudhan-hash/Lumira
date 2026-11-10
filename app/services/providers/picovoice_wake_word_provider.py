@@ -7,6 +7,7 @@ from typing import Any
 
 
 class PicovoiceWakeWordProvider:
+
     """Detect the configured Lumira keyword in a bounded local WAV clip.
 
     This provider processes a supplied recording; it is not an always-listening
@@ -14,6 +15,7 @@ class PicovoiceWakeWordProvider:
     locally, and the optional pvporcupine package is imported only on use.
     """
 
+    provider_scope = "external"
     MAX_AUDIO_BYTES = 25_000_000
     MAX_DURATION_SECONDS = 60
     MAX_MODEL_PATH_CHARS = 1_024

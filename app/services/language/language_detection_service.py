@@ -8,7 +8,7 @@ class LanguageDetectionService:
         "aama", "aamaam", "anga", "angey", "appo", "enna", "ennaku",
         "enakku", "enga", "engae", "epdi", "eppadi", "inga", "inge",
         "illa", "illai", "inniku", "iniku", "ippo", "iruka", "irukku",
-        "irukkum", "kaami", "kaaminga", "kaatu", "kaattunga", "konjam",
+        "irukken", "iruken", "irukiren", "irukkiren", "irukkum", "kaami", "kaaminga", "kaatu", "kaattunga", "konjam",
         "nalla", "naalai", "naan", "naanga", "nee", "neenga", "oru", "paathu", "pannu",
         "pannalam", "pannalaam", "pannunga", "pannitu", "panra", "panren", "parunga", "po",
         "mudiyuma", "mudiyum", "venam", "romba", "sari", "seri", "sei", "seiya", "seiyunga", "sollu",

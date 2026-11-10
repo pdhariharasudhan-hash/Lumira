@@ -13,9 +13,9 @@ from app.services.workspace.container_sandbox_provider import ContainerSandboxPr
 class ProjectTerminalService:
     """Allowlisted validation runner; not an operating-system sandbox."""
 
-    # Keep this false until execution is isolated by a real OS security boundary.
-    # The flag alone is never proof that an OS sandbox exists.
-    OS_SANDBOX_ENABLED = True
+    # Hard-disabled until a reusable OS-level isolation provider is integrated
+    # and independently verified. Setting this true alone never proves isolation.
+    OS_SANDBOX_ENABLED = False
 
     def __init__(self, root: str | Path = "memory/project_terminal_runs.json", sandbox=None):
         self.store = AtomicJsonStore(root)

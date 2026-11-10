@@ -9,8 +9,10 @@ from app.services.resources.resource_budget_service import ResourceBudgetService
 
 
 class OpenAICompatibleSpeechProvider:
+
     """Bounded text-to-speech adapter for OpenAI-compatible audio APIs."""
 
+    provider_scope = "external"
     MAX_INPUT_CHARS = 20_000
     MAX_AUDIO_BYTES = 25_000_000
     SUPPORTED_LANGUAGES = {"en", "ta", "ta-en"}
@@ -30,6 +32,7 @@ class OpenAICompatibleSpeechProvider:
         self.voice = voice or os.getenv("LUMIRA_SPEECH_VOICE", "alloy")
         self.timeout = max(5, min(int(timeout), 120))
         parsed_url = urlparse(self.base_url)
+        self.provider_scope = "local" if parsed_url.scheme == "http" and parsed_url.hostname in {"localhost", "127.0.0.1", "::1"} else "external"
         try:
             parsed_url.port  # Validate malformed or out-of-range ports at startup.
         except ValueError:

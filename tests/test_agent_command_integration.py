@@ -191,3 +191,58 @@ def test_agent_selection_recommends_without_executing(monkeypatch):
     assert result["success"] is True
     assert result["selected_agent"] == "research_agent"
     assert called["run"] is False
+
+
+def test_agents_dispatch_accepts_explicit_registered_agent_selection(monkeypatch):
+    from fastapi.testclient import TestClient
+    from app.main import app
+    import app.routes.agents as route
+
+    class FakeOrchestrator:
+        def execute(self, task, agent_name=None):
+            return {"success": True, "agent": agent_name, "task": task}
+
+    monkeypatch.setattr(route, "BrainAgentOrchestrator", FakeOrchestrator)
+    response = TestClient(app).post("/agents/dispatch", json={"task": "Plan a project", "agent_name": "planner_agent"})
+    assert response.status_code == 200
+    assert response.json()["agent"] == "planner_agent"
+
+
+def test_primary_command_routes_through_central_tool_selection(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    brain_response = SimpleNamespace(
+        success=True,
+        error=None,
+        state=SimpleNamespace(
+            mode=SimpleNamespace(active_mode="personal"),
+            execution_context=SimpleNamespace(execution_id="tool-route-test"),
+            last_completed_stage="learning",
+        ),
+        trace=[],
+    )
+
+    class FakeBrainService:
+        def execute(self, request):
+            return brain_response
+
+    calls = []
+
+    def fake_agent_run(self, agent_name, task):
+        calls.append((agent_name, task))
+        return {"success": True, "state": "completed", "agent": agent_name}
+
+    monkeypatch.setattr("app.routes.command.BrainService", FakeBrainService)
+    monkeypatch.setattr("app.agents.agent_manager.AgentManager.run", fake_agent_run)
+
+    response = TestClient(app).post(
+        "/command",
+        json={"input": "delegate to agent: Investigate evidence for database options"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert calls == [("research_agent", "Investigate evidence for database options")]
+    assert body["result"]["selection"]["tool"] == "research"
+    assert body["result"]["selection"]["agent"] == "research_agent"
+    assert body["result"]["orchestration"]["brain_gate"] == "passed"

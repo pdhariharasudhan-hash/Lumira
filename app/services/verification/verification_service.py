@@ -138,12 +138,12 @@ class VerificationService:
         # Execution Readiness
         # ----------------------------------
 
-        # Only hard plan blockers prevent execution. Advisory prediction
-        # signals and descriptive dependencies remain visible as warnings.
-        # A plan that intentionally collects missing information is a valid
-        # cognitive outcome. Verification records blockers, while the executor
-        # continues so downstream reflection and learning can complete.
-        state.ready_for_execution = True
+        # A plan with no executable steps or unresolved planner blockers must
+        # not authorize a downstream side effect. Reflection and learning can
+        # still run, but the execution coordinator will fail closed.
+        state.ready_for_execution = bool(
+            planner.execution_steps and not planner.blocked_tasks
+        )
 
         # ----------------------------------
         # Confidence

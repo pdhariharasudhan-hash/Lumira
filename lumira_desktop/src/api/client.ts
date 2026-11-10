@@ -36,6 +36,15 @@ async function requestText(path: string): Promise<string> {
   return response.text();
 }
 
+async function requestBlob(path: string): Promise<Blob> {
+	const response = await fetch(path);
+	if (!response.ok) {
+		const body = (await response.json().catch(() => ({}))) as JsonObject;
+		throw new ApiError(String(body.detail ?? `Request failed (${response.status})`), response.status, body);
+	}
+	return response.blob();
+}
+
 function json(method: string, body: unknown): RequestInit {
 	return {
 		method,
@@ -46,6 +55,9 @@ function json(method: string, body: unknown): RequestInit {
 
 export const api = {
 	health: () => request<JsonObject>("/health"),
+	getAiMode: () => request<JsonObject>("/ai-mode"),
+	setAiMode: (mode: "offline" | "hybrid" | "cloud") => request<JsonObject>("/ai-mode", json("PUT", { mode })),
+	setCloudEnabled: (cloud_enabled: boolean) => request<JsonObject>("/ai-mode/cloud", json("PUT", { cloud_enabled })),
 	providerStatus: () => request<JsonObject>("/providers/status"),
 	resourceRuntime: () => request<JsonObject>("/resources/runtime"),
 	resourcePolicy: () => request<JsonObject>("/resources/policy"),
@@ -56,6 +68,17 @@ export const api = {
 	listModes: (sessionId?: string) => request<JsonObject>(`/modes${sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ""}`),
 	selectMode: (session_id: string, mode_id: string) => request<JsonObject>("/modes/select", json("POST", { session_id, mode_id })),
 	listFeatures: () => request<JsonObject>("/features"),
+	listAgents: () => request<JsonObject>("/agents"),
+	dispatchAgent: (task: string, agent_name?: string) => request<JsonObject>("/agents/dispatch", json("POST", { task, ...(agent_name ? { agent_name } : {}) })),
+	listBackgroundTasks: (status?: string, limit = 100) => request<JsonObject>("/background-tasks?limit=" + limit + (status ? "&status=" + encodeURIComponent(status) : "")),
+	createBackgroundTask: (task: string, agent_name?: string) => request<JsonObject>("/background-tasks", json("POST", { task, ...(agent_name ? { agent_name } : {}) })),
+	getBackgroundTask: (taskId: string) => request<JsonObject>("/background-tasks/" + encodeURIComponent(taskId)),
+	learningLoopStatus: (projectId?: string) => request<JsonObject>("/system/learning/status" + (projectId ? "?project_id=" + encodeURIComponent(projectId) : "")),
+	learningPatterns: (projectId?: string) => request<JsonObject>("/system/learning/patterns" + (projectId ? "?project_id=" + encodeURIComponent(projectId) : "")),
+	learningRecommendation: (projectId?: string) => request<JsonObject>("/system/learning/recommendation" + (projectId ? "?project_id=" + encodeURIComponent(projectId) : "")),
+	learningGuidance: (projectId?: string) => request<JsonObject>("/system/learning/guidance" + (projectId ? "?project_id=" + encodeURIComponent(projectId) : "")),
+	learningPolicy: (projectId?: string) => request<JsonObject>("/system/learning/policy" + (projectId ? "?project_id=" + encodeURIComponent(projectId) : "")),
+	learningFailureGuard: (projectId?: string) => request<JsonObject>("/system/learning/failure-guard" + (projectId ? "?project_id=" + encodeURIComponent(projectId) : "")),
 	activateFeature: (featureId: string) => request<JsonObject>(`/features/${encodeURIComponent(featureId)}/activate`, { method: "POST" }),
 	deactivateFeature: (featureId: string) => request<JsonObject>(`/features/${encodeURIComponent(featureId)}/deactivate`, { method: "POST" }),
 	listNotes: () => request<JsonObject>("/notepad"),
@@ -65,6 +88,12 @@ export const api = {
 	sessionSummary: () => request<JsonObject>("/sessions/summary"),
 	searchSessions: (query: string, filters: { status?: string; project_id?: string; limit?: number } = {}) => { const params = new URLSearchParams({ q: query }); for (const [key, value] of Object.entries(filters)) if (value !== undefined && value !== "") params.set(key, String(value)); return request<JsonObject>(`/sessions/search?${params.toString()}`); },
 	exportSessions: (filters: { status?: string; project_id?: string; include_recent_messages?: boolean; limit?: number } = {}) => { const params = new URLSearchParams(); for (const [key, value] of Object.entries(filters)) if (value !== undefined && value !== "") params.set(key, String(value)); return request<JsonObject>(`/sessions/export${params.size ? `?${params.toString()}` : ""}`); },
+	downloadDataBackup: () => requestBlob("/data/backup"),
+	restoreDataBackup: (file: File) => {
+		const form = new FormData();
+		form.append("file", file);
+		return request<JsonObject>("/data/restore", { method: "POST", body: form });
+	},
 	getSessionHealth: (sessionId: string) => request<JsonObject>(`/sessions/${encodeURIComponent(sessionId)}/health`),
 	getSessionWorkflows: (sessionId: string, limit = 50) => request<JsonObject>(`/sessions/${encodeURIComponent(sessionId)}/related-workflows?limit=${limit}`),
 	createSession: (workspace_id = "default", project_id?: string) =>
@@ -80,6 +109,7 @@ export const api = {
 	deleteSession: (sessionId: string) => request<JsonObject>(`/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" }),
 	command: (input: string, session_id?: string) =>
 		request<JsonObject>("/command", json("POST", { input, session_id, workspace_id: "default" })),
+	cancelBrainExecution: (sessionId: string) => request<JsonObject>(`/brain/cancel/${encodeURIComponent(sessionId)}`, { method: "POST" }),
 	listProjects: () => request<JsonObject>("/projects"),
 	projectSummary: () => request<JsonObject>("/projects/summary"),
 	searchProjects: (query: string, limit = 30) => request<JsonObject>(`/projects/search?q=${encodeURIComponent(query)}&limit=${limit}`),
@@ -259,4 +289,30 @@ export const api = {
 	getWakeWordStatus: () => request<JsonObject>("/voice/wake-word/status"),
 	startWakeWord: () => request<JsonObject>("/voice/wake-word/start", { method: "POST" }),
 	stopWakeWord: () => request<JsonObject>("/voice/wake-word/stop", { method: "POST" }),
+	marketWatchlist: () => request<JsonObject>("/market/watchlist"),
+	marketAddWatchlist: (input: {symbol:string;exchange:string}) => request<JsonObject>("/market/watchlist", json("POST", input)),
+	marketRemoveWatchlist: (symbol:string, exchange="NSE") => request<JsonObject>(`/market/watchlist/${encodeURIComponent(symbol)}?exchange=${encodeURIComponent(exchange)}`, {method:"DELETE"}),
+	marketPortfolio: () => request<JsonObject>("/market/portfolio"),
+	marketAddHolding: (input: {symbol:string;exchange:string;quantity:number;average_price:number}) => request<JsonObject>("/market/portfolio/holdings", json("POST", input)),
+	marketImport: (input: {symbol:string;exchange:string;candles:unknown[]}) => request<JsonObject>("/market/history/import", json("POST", input)),
+	marketFetchHistory: (symbol:string, exchange="NSE", period="1y", interval="1d") => request<JsonObject>(`/market/history/fetch/${encodeURIComponent(symbol)}?exchange=${encodeURIComponent(exchange)}&period=${period}&interval=${interval}`, {method:"POST"}),
+	marketAnalyze: (symbol:string, exchange="NSE") => request<JsonObject>(`/market/analysis/${encodeURIComponent(symbol)}?exchange=${encodeURIComponent(exchange)}`),
+	marketPatterns: (symbol:string, exchange="NSE") => request<JsonObject>(`/market/patterns/${encodeURIComponent(symbol)}?exchange=${encodeURIComponent(exchange)}`),
+	marketBacktest: (input: JsonObject) => request<JsonObject>("/market/backtest/sma-crossover", json("POST", input)),
+	marketScan: () => request<JsonObject>("/market/scanner/watchlist"),
+	marketSaveFundamentals: (input: JsonObject) => request<JsonObject>("/market/fundamentals/import", json("POST", input)),
+	marketFundamentals: (symbol:string, exchange="NSE") => request<JsonObject>(`/market/fundamentals/${encodeURIComponent(symbol)}?exchange=${encodeURIComponent(exchange)}`),
+	marketComparePeers: (input: JsonObject) => request<JsonObject>("/market/fundamentals/peers", json("POST", input)),
+	marketPositionRisk: (input: JsonObject) => request<JsonObject>("/market/risk/position-size", json("POST", input)),
+	marketPaperPortfolio: () => request<JsonObject>("/market/paper/portfolio"),
+	marketPaperTrades: () => request<JsonObject>("/market/paper/trades"),
+	marketPaperTrade: (input: JsonObject) => request<JsonObject>("/market/paper/trades", json("POST", input)),
+	creatorCreate: (input: JsonObject) => request<JsonObject>("/creator/create", json("POST", input)),
+	creatorAudio: (input: JsonObject) => request<JsonObject>("/creator/audio", json("POST", input)),
+	creatorVideo: (input: JsonObject) => request<JsonObject>("/creator/video", json("POST", input)),
+	generateImage: (prompt:string, image_type:"image"|"diagram"|"blueprint"|"schematic"="image") => request<JsonObject>("/images/generate", json("POST", {prompt,image_type})),
+	deviceEcosystemOverview: () => request<JsonObject>("/devices/ecosystem/overview"),
+	deviceEcosystemPlan: (deviceId:string, capability:string) => request<JsonObject>(`/devices/ecosystem/plan/${encodeURIComponent(deviceId)}?capability=${encodeURIComponent(capability)}`),
+	registerDeviceProfile: (input: JsonObject) => request<JsonObject>("/device-profiles", json("POST", input)),
+	sendDeviceCommand: (deviceId:string, input: JsonObject) => request<JsonObject>(`/devices/${encodeURIComponent(deviceId)}/commands`, json("POST", input)),
 };

@@ -21,14 +21,17 @@ def test_local_knowledge_retrieval_uses_unified_search_results():
 
 def test_research_provider_exceptions_and_unsubstantiated_success_are_rejected():
     class RaisingProvider:
+        provider_scope = "local"
         def research(self, request, research_type):
             raise RuntimeError("secret provider details")
 
     class EmptyProvider:
+        provider_scope = "local"
         def research(self, request, research_type):
             return {"success": True, "sources": [{"url": "https://example.test"}]}
 
     class NoSourcesProvider:
+        provider_scope = "local"
         def research(self, request, research_type):
             return {"success": True, "findings": "A finding without evidence."}
 
@@ -48,6 +51,7 @@ def test_research_provider_exceptions_and_unsubstantiated_success_are_rejected()
 
 def test_research_provider_success_is_normalized_to_bounded_findings_and_sources():
     class Provider:
+        provider_scope = "local"
         def research(self, request, research_type):
             return {
                 "success": True,
@@ -135,6 +139,7 @@ def test_research_agent_rejects_empty_task_and_invalid_capability_result():
 
 def test_external_research_rejects_empty_and_oversized_requests_before_provider_call():
     class MustNotRunProvider:
+        provider_scope = "local"
         def research(self, request, research_type):
             raise AssertionError("provider should not receive invalid requests")
 
@@ -145,6 +150,7 @@ def test_external_research_rejects_empty_and_oversized_requests_before_provider_
 
 def test_validated_external_research_is_bridged_into_research_library():
     class Provider:
+        provider_scope = "local"
         def research(self, request, research_type):
             return {
                 "success": True,
@@ -168,8 +174,29 @@ def test_validated_external_research_is_bridged_into_research_library():
     assert library.calls[0]["tags"] == ["web_research"]
 
 
+def test_validated_research_creates_searchable_artifact_with_source_metadata(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    class Provider:
+        provider_scope = "local"
+
+        def research(self, request, research_type):
+            return {
+                "success": True,
+                "findings": ["A bounded finding."],
+                "sources": [{"url": "https://example.test/source", "title": "Evidence"}],
+            }
+
+    result = ResearchCapabilityService(Provider()).web_research("bounded research")
+
+    assert result["success"] is True
+    assert result["artifact_storage"] == "stored"
+    assert isinstance(result["artifact_id"], str)
+
+
 def test_research_storage_failure_does_not_fake_a_saved_record():
     class Provider:
+        provider_scope = "local"
         def research(self, request, research_type):
             return {
                 "success": True,

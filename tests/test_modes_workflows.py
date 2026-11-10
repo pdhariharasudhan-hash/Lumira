@@ -101,6 +101,8 @@ def test_creator_payload_is_saved_as_a_searchable_artifact(tmp_path, monkeypatch
     assert result["artifact"]["type"] == "exports"
     indexed = UnifiedSearchService().search_all("PCB design services")
     assert any("artifact_id" in item for item in indexed["artifacts"])
+    assert result["creator_output"]["status"] == "artifact_created"
+    assert result["creator_artifact"]["type"] == "exports"
 
 
 def test_generator_command_creates_a_searchable_architecture_artifact(tmp_path, monkeypatch):

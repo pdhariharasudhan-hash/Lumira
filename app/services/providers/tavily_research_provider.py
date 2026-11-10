@@ -8,8 +8,10 @@ import requests
 
 
 class TavilyResearchProvider:
+
     """Opt-in, source-backed web research using the Tavily search API."""
 
+    provider_scope = "external"
     ENDPOINT = "https://api.tavily.com/search"
     MAX_QUERY_CHARS = 4_000
     MAX_RESPONSE_BYTES = 5_000_000

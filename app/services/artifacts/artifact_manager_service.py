@@ -4,6 +4,7 @@ from typing import Dict, Any
 import os
 import re
 import uuid
+import hashlib
 
 from app.services.memory.memory_service import (
     MemoryService
@@ -141,6 +142,18 @@ class ArtifactManagerService:
                 raise PersistenceIntegrityError("Artifact owner identifier is invalid")
             if "archived" in record and not isinstance(record["archived"], bool):
                 raise PersistenceIntegrityError("Artifact archive state must be a boolean")
+            if "content_sha256" in record and (
+                not isinstance(record["content_sha256"], str)
+                or not re.fullmatch(r"[0-9a-f]{64}", record["content_sha256"])
+            ):
+                raise PersistenceIntegrityError("Artifact content checksum is invalid")
+            if "content_bytes" in record and (
+                isinstance(record["content_bytes"], bool)
+                or not isinstance(record["content_bytes"], int)
+                or record["content_bytes"] < 0
+                or record["content_bytes"] > self.MAX_BINARY_CONTENT_BYTES
+            ):
+                raise PersistenceIntegrityError("Artifact content size is invalid")
             for timestamp_field in ("archived_at", "restored_at"):
                 if timestamp_field in record and (
                     not isinstance(record[timestamp_field], str)
@@ -220,7 +233,9 @@ class ArtifactManagerService:
             ),
 
             "timestamp":
-            timestamp
+            timestamp,
+            "content_sha256": hashlib.sha256(content.encode("utf-8")).hexdigest(),
+            "content_bytes": len(content.encode("utf-8")),
         }
 
         try:
@@ -287,6 +302,8 @@ class ArtifactManagerService:
             "source": source,
             "file": str(artifact_path),
             "timestamp": datetime.now(timezone.utc).isoformat(),
+            "content_sha256": hashlib.sha256(content).hexdigest(),
+            "content_bytes": len(content),
         }
         try:
             self.register_artifact(record)
@@ -334,6 +351,29 @@ class ArtifactManagerService:
         if path == base or base not in path.parents:
             raise ValueError("Artifact path is outside the artifact store")
         return path
+
+    def verify_artifact_content(self, artifact_id: str) -> dict:
+        artifact = self.get_artifact(artifact_id)
+        if artifact is None:
+            return {"success": False, "code": "artifact_not_found"}
+        path = self.get_artifact_path(artifact_id)
+        if path is None or not path.is_file():
+            return {"success": False, "code": "artifact_content_missing"}
+        expected = artifact.get("content_sha256")
+        if not isinstance(expected, str):
+            return {"success": False, "code": "artifact_checksum_unavailable"}
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        if digest != expected:
+            return {
+                "success": False,
+                "code": "artifact_content_corrupt",
+                "artifact_id": artifact_id,
+            }
+        return {
+            "success": True,
+            "artifact_id": artifact_id,
+            "content_bytes": path.stat().st_size,
+        }
 
     def archive_artifact(self, artifact_id: str) -> bool:
         """Mark an indexed artifact archived without deleting its file or index record."""

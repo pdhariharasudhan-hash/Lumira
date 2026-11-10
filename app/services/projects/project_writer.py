@@ -103,16 +103,19 @@ class ProjectWriter:
             }
         )
 
+        history_event = "project_continued" if isinstance(project_metadata.get("continued_from"), str) else "version_created"
+        history_details = {"version": project_version}
+        if history_event == "project_continued":
+            history_details.update({
+                "previous_version": project_metadata.get("continued_from"),
+                "instruction": project_metadata.get("continuation_instruction", ""),
+                "summary": project_metadata.get("continuation_summary", ""),
+                "changed_files": project_metadata.get("changed_files", []),
+            })
         ProjectHistoryService().log_event(
-
             project_name,
-
-            "version_created",
-
-            {
-                "version":
-                project_version
-            }
+            history_event,
+            history_details,
         )
 
         return str(

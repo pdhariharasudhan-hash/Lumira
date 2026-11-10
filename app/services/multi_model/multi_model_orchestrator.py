@@ -1,4 +1,5 @@
 from __future__ import annotations
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import Any
@@ -22,6 +23,49 @@ class MultiModelIntelligenceOrchestrator:
     TASK_TYPES={"reply","coding","research","planning"}
     MAX_PROMPT=20000
     MAX_CONTEXT_KEYS=50
+    TOOL_CATALOG = (
+        ("research", (
+            "research", "compare", "comparison", "versus", "vs", "investigate",
+            "analyze", "analyse", "analysis", "evidence", "summarize", "summarise",
+            "extract knowledge", "market research", "technical research",
+            "document research", "knowledge retrieval", "find sources",
+            "gather sources", "fact check", "fact-check",
+        ), "research_agent"),
+        ("planning", (
+            "plan", "planning", "steps", "roadmap", "prioritize", "prioritise",
+            "break down", "decompose", "milestone", "schedule", "sequence tasks", "goal",
+        ), "planner_agent"),
+        ("coding", (
+            "debug", "fix", "repair", "refactor", "implement", "code", "api", "app",
+            "website", "software", "program", "script", "compile", "syntax error",
+            "bug", "patch", "generate files",
+        ), "code_agent"),
+    )
+
+    @staticmethod
+    def _matches_tool_keyword(normalized: str, keyword: str) -> bool:
+        return re.search(rf"(?<!\w){re.escape(keyword.casefold())}(?!\w)", normalized) is not None
+
+    @classmethod
+    def select_tool(cls, task: str) -> dict[str, Any]:
+        if not isinstance(task, str) or not task.strip() or len(task.strip()) > cls.MAX_PROMPT:
+            return {"success": False, "code": "invalid_task", "selected_tool": None}
+        normalized = " ".join(task.casefold().split())
+        for tool, keywords, agent in cls.TOOL_CATALOG:
+            if any(cls._matches_tool_keyword(normalized, keyword) for keyword in keywords):
+                return {
+                    "success": True,
+                    "selected_tool": tool,
+                    "agent": agent,
+                    "reason": "deterministic_task_capability_match",
+                    "available_tools": [item[0] for item in cls.TOOL_CATALOG],
+                }
+        return {
+            "success": False,
+            "code": "no_matching_tool",
+            "selected_tool": None,
+            "available_tools": [item[0] for item in cls.TOOL_CATALOG],
+        }
 
     def available_models(self):
         return [{"model_id":p.model_id,"provider":p.provider,"capabilities":sorted(p.capabilities),"enabled":p.enabled,"priority":p.priority} for p in MultiModelRegistry.list()]

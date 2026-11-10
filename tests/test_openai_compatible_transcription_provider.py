@@ -6,6 +6,16 @@ import requests
 from app.services.providers.openai_compatible_transcription_provider import (
     OpenAICompatibleTranscriptionProvider,
 )
+from app.services.resources.resource_budget_service import ResourceBudgetService
+
+
+@pytest.fixture(autouse=True)
+def normal_resource_budget(monkeypatch):
+    monkeypatch.setattr(
+        ResourceBudgetService,
+        "execution_guidance",
+        lambda self: {"defer_optional_heavy_media_work": False, "resource_pressure": "normal"},
+    )
 
 
 class FakeResponse:
@@ -47,6 +57,11 @@ def test_provider_sends_bounded_authenticated_multipart_request(tmp_path, monkey
     assert captured["files"]["file"][0] == "voice.wav"
     assert captured["files"]["file"][2] == "audio/wav"
     captured["files"]["file"][1].close()
+
+
+def test_provider_accepts_webm_and_uses_webm_content_type():
+    assert "webm" in OpenAICompatibleTranscriptionProvider.SUPPORTED_EXTENSIONS
+    assert OpenAICompatibleTranscriptionProvider._content_type("webm") == "video/webm"
 
 
 def test_provider_requires_key_and_rejects_unsafe_url():

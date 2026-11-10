@@ -110,3 +110,13 @@ def test_workspace_search_ignores_hidden_runtime_folders(tmp_path, monkeypatch):
     results = UnifiedSearchService().search_all("lumira unique-private-marker")
 
     assert results["source_files"] == []
+
+
+def test_empty_unified_search_keeps_research_category_shape():
+    from app.services.search.unified_search_service import UnifiedSearchService
+
+    results = UnifiedSearchService.__new__(UnifiedSearchService).search_all("   ")
+
+    assert "research" in results
+    assert results["research"] == []
+    assert all(isinstance(value, list) for value in results.values())

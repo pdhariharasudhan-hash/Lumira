@@ -28,4 +28,17 @@ class PipelineGuard:
         }:
             return False
         state.verification_result = cls.verification_result(state)
-        return not state.verification_result["ready_for_execution"]
+        # A normal Brain request may legitimately produce a plan that needs
+        # clarification; reflection and learning should still complete. Only
+        # an explicitly requested side-effecting capability is stopped here.
+        metadata = getattr(
+            getattr(state, "execution_context", None),
+            "metadata",
+            None,
+        )
+        if not isinstance(metadata, dict):
+            return not state.verification_result["ready_for_execution"]
+        return (
+            metadata.get("execute_capability") is not None
+            and not state.verification_result["ready_for_execution"]
+        )

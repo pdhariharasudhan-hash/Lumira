@@ -74,6 +74,10 @@ from app.services.objective.objective_models import ObjectiveState
 from app.services.history.event_logger_service import EventLoggerService
 from app.services.language.intent_classifier_service import IntentClassifierService
 from app.services.resources.resource_budget_service import ResourceBudgetService
+from app.services.brain.execution_control import BrainExecutionControlRegistry
+from app.services.system.core_event_log_service import CoreEventLogService
+from app.services.notifications.notification_service import NotificationService
+from app.services.brain.brain_execution_coordinator import BrainExecutionCoordinator
 
 
 class BrainService:
@@ -112,6 +116,9 @@ class BrainService:
         self.sessions = SessionManagerService()
         self.memory = MemoryService()
         self.intent_classifier = IntentClassifierService()
+        self.core_events = CoreEventLogService()
+        self.notifications = NotificationService()
+        self.execution_coordinator = BrainExecutionCoordinator()
 
     def _create_pipeline(self):
         """
@@ -478,6 +485,7 @@ class BrainService:
             )
 
             self._persist_run(state, session, success=False, error=error)
+            self._publish_execution_outcome(state, session, success=False)
 
             return BrainResponse(
                 success=False,
@@ -490,12 +498,17 @@ class BrainService:
         # ----------------------------------
 
         trace = []
+        control = BrainExecutionControlRegistry.register(
+            execution_id=state.execution_context.execution_id,
+            session_id=session["session_id"],
+        )
 
         try:
 
             result = (
                 self.pipeline.execute_with_trace(
-                    state
+                    state,
+                    control=control,
                 )
             )
 
@@ -505,6 +518,7 @@ class BrainService:
 
         except Exception as exc:
 
+            BrainExecutionControlRegistry.release(state.execution_context.execution_id)
             error = redact_sensitive_text(f"{type(exc).__name__}: {exc}")
             trace = redact_sensitive_value(trace)
 
@@ -516,6 +530,7 @@ class BrainService:
             )
 
             self._persist_run(state, session, success=False, error=error)
+            self._publish_execution_outcome(state, session, success=False)
 
             return BrainResponse(
                 success=False,
@@ -524,7 +539,31 @@ class BrainService:
                 error=error,
             )
 
-        # A verification rejection is terminal and must not be converted into success.
+        # A verification rejection or interrupted/failed run is terminal.
+        BrainExecutionControlRegistry.release(state.execution_context.execution_id)
+
+        if final_state.status in {"cancelled", "timed_out", "failed"}:
+            status_errors = {
+                "cancelled": "Brain execution was cancelled",
+                "timed_out": "Brain execution exceeded its time budget",
+                "failed": "Brain execution failed before completion",
+            }
+            error = redact_sensitive_text(status_errors[final_state.status])
+            self._record_pipeline(
+                state=final_state,
+                success=False,
+                trace=trace,
+                error=error,
+            )
+            self._persist_run(final_state, session, success=False, error=error)
+            self._publish_execution_outcome(final_state, session, success=False)
+            return BrainResponse(
+                success=False,
+                state=final_state,
+                trace=trace,
+                error=error,
+            )
+
         if final_state.status == "rejected":
             error = redact_sensitive_text("Verification rejected execution")
             self._record_pipeline(
@@ -534,6 +573,7 @@ class BrainService:
                 error=error,
             )
             self._persist_run(final_state, session, success=False, error=error)
+            self._publish_execution_outcome(final_state, session, success=False)
             return BrainResponse(
                 success=False,
                 state=final_state,
@@ -563,6 +603,7 @@ class BrainService:
             )
 
             self._persist_run(final_state, session, success=False, error=error)
+            self._publish_execution_outcome(final_state, session, success=False)
 
             return BrainResponse(
                 success=False,
@@ -570,6 +611,51 @@ class BrainService:
                 trace=trace,
                 error=error,
             )
+
+        requested_capability = final_state.execution_context.metadata.get(
+            "execute_capability"
+        )
+        if requested_capability is not None:
+            execution_result = self.execution_coordinator.execute(
+                capability=requested_capability,
+                payload=final_state.execution_context.metadata.get(
+                    "capability_payload", {}
+                ),
+                ready_for_execution=final_state.verification_result.get(
+                    "ready_for_execution", False
+                ),
+                autonomous=final_state.execution_context.metadata.get(
+                    "autonomous", False
+                ),
+                instruction=final_state.user_input,
+            )
+            final_state.selected_capability = (
+                requested_capability
+                if isinstance(requested_capability, str)
+                else ""
+            )
+            final_state.execution_result = execution_result
+            if execution_result.get("success") is not True:
+                final_state.status = "failed"
+                error = redact_sensitive_text(
+                    execution_result.get("message")
+                    or execution_result.get("code")
+                    or "Requested capability execution failed"
+                )
+                self._record_pipeline(
+                    state=final_state,
+                    success=False,
+                    trace=trace,
+                    error=error,
+                )
+                self._persist_run(final_state, session, success=False, error=error)
+                self._publish_execution_outcome(final_state, session, success=False)
+                return BrainResponse(
+                    success=False,
+                    state=final_state,
+                    trace=trace,
+                    error=error,
+                )
 
         # ----------------------------------
         # Successful pipeline history
@@ -583,6 +669,7 @@ class BrainService:
         )
 
         self._persist_run(final_state, session, success=True)
+        self._publish_execution_outcome(final_state, session, success=True)
 
         return BrainResponse(
             success=True,
@@ -592,11 +679,13 @@ class BrainService:
 
     def _publish_execution_outcome(self, state, session: dict, success: bool) -> None:
         """Publish a compact execution outcome when event integrations are available."""
-        if self.core_events is None or self.notifications is None:
+        core_events = getattr(self, "core_events", None)
+        notifications = getattr(self, "notifications", None)
+        if core_events is None or notifications is None:
             return
         event_name = "brain_execution_completed" if success else "brain_execution_failed"
         try:
-            recorded = self.core_events.record(
+            recorded = core_events.record(
                 event_name,
                 "brain",
                 session_id=session.get("session_id"),
@@ -605,7 +694,7 @@ class BrainService:
                 execution_id=getattr(state.execution_context, "execution_id", None),
             )
             event = recorded.get("event_record", recorded) if isinstance(recorded, dict) else recorded
-            self.notifications.create_from_core_event(event)
+            notifications.create_from_core_event(event)
         except Exception:
             # Event delivery is secondary and must not break the brain result.
             return

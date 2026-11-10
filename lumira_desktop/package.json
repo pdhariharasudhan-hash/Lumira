@@ -11,6 +11,7 @@
                     "lint":  "oxlint",
                     "preview":  "vite preview",
                     "test":  "vitest run",
+                    "test:runtime":  "node --test tests/backend-runtime.test.cjs",
                     "electron":  "electron .",
                     "dist":  "npm run build \u0026\u0026 electron-builder --win nsis"
                 },
@@ -46,6 +47,7 @@
                   "files":  [
                                 "dist/**/*",
                                 "electron-main.cjs",
+                                "electron-api-proxy.cjs",
                                 "backend-runtime.cjs",
                                 "package.json"
                             ],
@@ -54,36 +56,18 @@
                                   },
                   "extraResources": [
                       {
-                          "from": "..",
-                          "to": "backend",
+                          "from": "../run.py",
+                          "to": "backend/run.py"
+                      },
+                      {
+                          "from": "../app",
+                          "to": "backend/app",
                           "filter": [
                               "**/*",
-                              "!lumira_desktop{,/**}",
-                              "!.git{,/**}",
-                              "!.env{,/**}",
-                              "!.env.*{,/**}",
-                              "!**/.env",
-                              "!**/.env.*",
-                              "!*.pem",
-                              "!*.key",
-                              "!**/*.pem",
-                              "!**/*.key",
-                              "!generated{,/**}",
-                              "!memory{,/**}",
-                              "!artifacts{,/**}",
-                              "!data{,/**}",
-                              "!.lumira_data{,/**}",
-                              "!tests{,/**}",
-                              "!autodev_review{,/**}",
-                              "!.agents{,/**}",
-                              "!.pytest_cache{,/**}",
-                              "!.pytest-work{,/**}",
-                              "!.venv{,/**}",
-                              "!venv{,/**}",
-                              "!__pycache__{,/**}",
-                              "!*.db",
-                              "!project_memory.json",
-                              "!final-audit-result.json"
+                              "!**/__pycache__{,/**}",
+                              "!**/*.pyc",
+                              "!**/.pytest_cache{,/**}",
+                              "!**/.pytest-work{,/**}"
                           ]
                       },
                       {

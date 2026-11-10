@@ -12,6 +12,16 @@ class GenericInput(BaseModel):
     project_id: Optional[str] = Field(default=None, max_length=100)
 
 
+class BrainCapabilityRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=100000)
+    capability: str = Field(min_length=1, max_length=100)
+    payload: Dict[str, Any] = Field(default_factory=dict)
+    session_id: Optional[str] = Field(default=None, max_length=128)
+    workspace_id: str = Field(default="default", min_length=1, max_length=100)
+    project_id: Optional[str] = Field(default=None, max_length=100)
+    autonomous: bool = False
+
+
 # -------------------------
 # VALIDATE
 # -------------------------

@@ -6,6 +6,7 @@ from typing import Any
 from fastapi import APIRouter
 
 from app.services.providers.provider_registry import ProviderRegistry, PROVIDER_STATUS_NAMES
+from app.services.providers.provider_access_policy_service import ProviderAccessPolicyService
 
 router = APIRouter()
 
@@ -13,7 +14,7 @@ router = APIRouter()
 _PROVIDER_ENABLE_FLAGS = {
     "summarization": ("LUMIRA_OLLAMA_SUMMARY_ENABLED",),
     "transcription": ("LUMIRA_TRANSCRIPTION_ENABLED", "LUMIRA_LOCAL_TRANSCRIPTION_ENABLED"),
-    "speech_synthesis": ("LUMIRA_SPEECH_SYNTHESIS_ENABLED",),
+    "speech_synthesis": ("LUMIRA_SPEECH_SYNTHESIS_ENABLED", "LUMIRA_WINDOWS_SAPI_TTS_ENABLED"),
     "image_generation": ("LUMIRA_IMAGE_GENERATION_ENABLED",),
     "video_generation": ("LUMIRA_VIDEO_GENERATION_ENABLED",),
     "image_understanding": ("LUMIRA_VISION_ENABLED", "LUMIRA_OLLAMA_VISION_ENABLED"),
@@ -36,6 +37,14 @@ def _provider_state(name: str) -> dict[str, Any]:
         "registered": provider is not None,
         "configured": configured,
         "availability": "registered" if provider is not None else "not_registered",
+        "provider_scope": (
+            ProviderAccessPolicyService.provider_scope(provider)
+            if provider is not None
+            else None
+        ),
+        # This endpoint deliberately does not perform provider calls.
+        "reachable": None,
+        "last_success": None,
     }
     if provider is not None:
         implementation = type(provider).__name__
@@ -44,6 +53,7 @@ def _provider_state(name: str) -> dict[str, Any]:
             "FasterWhisperTranscriptionProvider",
             "OllamaVisionProvider",
             "OllamaSummaryProvider",
+            "WindowsSapiSpeechProvider",
         } else "remote_or_external"
         # Model identifiers are useful diagnostics; endpoint URLs, API keys, and paths are omitted.
         model = getattr(provider, "model_name", None) or getattr(provider, "model", None)

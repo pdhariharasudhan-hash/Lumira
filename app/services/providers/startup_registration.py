@@ -9,10 +9,13 @@ from app.services.providers.ollama_vision_provider import OllamaVisionProvider
 from app.services.providers.openai_compatible_transcription_provider import OpenAICompatibleTranscriptionProvider
 from app.services.providers.faster_whisper_transcription_provider import FasterWhisperTranscriptionProvider
 from app.services.providers.openai_compatible_speech_provider import OpenAICompatibleSpeechProvider
+from app.services.providers.windows_sapi_speech_provider import WindowsSapiSpeechProvider
 from app.services.providers.openai_compatible_image_provider import OpenAICompatibleImageProvider
 from app.services.providers.openai_compatible_vision_provider import OpenAICompatibleVisionProvider
 from app.services.providers.tavily_research_provider import TavilyResearchProvider
 from app.services.providers.picovoice_wake_word_provider import PicovoiceWakeWordProvider
+from app.services.providers.yahoo_market_data_provider import YahooMarketDataProvider
+from app.services.providers.local_http_device_transport import LocalHttpDeviceTransport
 from app.services.providers.provider_registry import ProviderRegistry
 
 
@@ -51,6 +54,10 @@ def register_configured_providers() -> None:
     if _enabled("LUMIRA_SPEECH_SYNTHESIS_ENABLED") and os.getenv("LUMIRA_SPEECH_API_KEY", "").strip():
         _register_optional_provider("speech_synthesis", OpenAICompatibleSpeechProvider)
 
+    # The built-in Windows voice engine is local and requires no API credentials.
+    if os.name == "nt" and _enabled("LUMIRA_WINDOWS_SAPI_TTS_ENABLED"):
+        _register_optional_provider("speech_synthesis", WindowsSapiSpeechProvider)
+
     if _enabled("LUMIRA_IMAGE_GENERATION_ENABLED") and os.getenv("LUMIRA_IMAGE_API_KEY", "").strip():
         _register_optional_provider("image_generation", OpenAICompatibleImageProvider)
 
@@ -63,6 +70,13 @@ def register_configured_providers() -> None:
 
     if _enabled("LUMIRA_RESEARCH_ENABLED") and os.getenv("LUMIRA_RESEARCH_API_KEY", "").strip():
         _register_optional_provider("research", TavilyResearchProvider)
+
+    if _enabled("LUMIRA_MARKET_DATA_ENABLED"):
+        _register_optional_provider("market_data", YahooMarketDataProvider)
+
+    # Explicit opt-in; endpoints are stored per device and must be private IPs.
+    if _enabled("LUMIRA_LOCAL_HTTP_DEVICE_TRANSPORT_ENABLED"):
+        _register_optional_provider("device_transport", LocalHttpDeviceTransport)
 
     model_path = os.getenv("LUMIRA_WAKE_WORD_MODEL_PATH", "").strip()
     if (

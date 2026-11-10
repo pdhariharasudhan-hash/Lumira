@@ -33,6 +33,14 @@
 | 27 | `security` | Local auth boundary, strict local/generated bearer-token claim validation, bearer-header size bounds, secret redaction, feature lifecycle guards | Token claim shape and timestamp types plus oversized generated bearer headers are rejected at source level; deployment still needs deliberate key provisioning, shared transactional user storage, shared rate limiting, and app-specific authorization. New auth regression tests remain unrun. |
 | 28 | `observability` | Pipeline history and `/intelligence/status`, `/intelligence/history` | Status/history surfaces exist; runtime verification remains. |
 
+## Current acceptance reconciliation — 2026-11-08
+
+- The detailed Phase A/B/C inventory is maintained in [phase_abc_completion_matrix.md](phase_abc_completion_matrix.md).
+- Fresh backend evidence is **747 passed, 23 failed, 1 skipped** with a writable isolated temp root; desktop evidence is **38 passed**, with build and lint passing.
+- Focused core, Phase A policy/context, and Phase C agent/recovery suites passed **107**, **58**, and **47** tests respectively.
+- The 23 full-suite failures are concentrated in resource-pressure deferrals while approximately 0.65 GiB RAM was free. A healthy-memory rerun is required before treating those paths as product failures.
+- Ollama inventory is available, but live model inference remains blocked for safety under current memory pressure.
+
 ## Latest verification — 2026-11-03
 
 - Commit `6a51c3d` (source hardening in `73a4818`, followed by the documentation-only audit commit) records the user-output adapter against unsolicited JSON embedded after ordinary prose, including punctuation after the JSON value. Deeply nested JSON strings fail closed rather than being displayed as raw structures.
@@ -109,3 +117,24 @@ See `docs/operational_completion_checklist.md` for the evidence required to clos
 - Provider startup registration was extracted into a small function so configuration can be verified without launching a nested Python process or importing the entire FastAPI app twice. Existing opt-in flags and required keys/model-path checks are preserved.
 - The core state contract now checks the types of `current_stage`, `last_completed_stage`, `intent`, and `selected_capability`, rather than only checking that keys exist and `status` is recognized.
 - Latest read-only audit: 902 files inventoried, zero active integration findings, but `completion_ready=false` because fresh isolated behavioral/build/lint verification and the project's own OS-sandboxed terminal remain incomplete. Static verification is not a substitute for those gates.
+
+
+## 2026-11-10 — Continued cross-phase verification
+
+- Desktop UI: fresh Vitest run **40/40 passed** across 6 files (single-worker cap). Electron backend-runtime tests **2/2 passed**. Oxlint **0 warnings / 0 errors**. TypeScript + Vite production build passed; generated bundle: 448.53 kB JS (118.05 kB gzip), 36.33 kB CSS (8.68 kB gzip).
+- Backend cross-phase regression batch: **81 passed** across Phase A pipeline/validation/memory, Phase B voice/artifact/sandbox, Phase C autonomy/agent collaboration, and Phase D backup/security tests.
+- Voice idempotency follow-up: **7 passed** across idempotency, recovery, and pipeline tests. The pipeline now fails closed before retranscription if the production memory lookup fails, preventing a duplicate write when it cannot establish whether the audio artifact was already processed. Lightweight injected test adapters without `get_all()` remain supported.
+- Python compilation and whitespace checks were run after the source edits; no compile or diff-check failure was observed.
+- Fresh capability inventory: **37/99 VERIFIED (37.37%)**, 19 TESTED, 16 IN_PROGRESS, 1 NOT_STARTED, 26 BLOCKED. Do not infer phase completion from the green tests; hardware, live-provider, OS-isolation, and packaging gates remain.
+- Fresh terminal sandbox status: `docker_not_installed`; Docker CLI not found. `ProjectTerminalService` remains fail-closed unless an explicit provider passes its availability check. The prior Windows Sandbox guest smoke test does not supply the missing per-run terminal integration.
+- Host memory at the end of verification: approximately **1.63 GiB free / 7.70 GiB total**. No full backend suite, live model inference, microphone/speaker acceptance, installer build, or generated-project execution was attempted in this constrained session.
+- Phase aggregate status remains A **11/12 (92%)**, B **6/10 (60%)**, C **9/10 (90%)**, D **7/9 (78%)**. No phase is certified 100%; external acceptance gates remain open.
+
+
+## 2026-11-10 — Phase B voice-summary recovery integration
+
+- Continued implementation in `VoiceIdeaPipelineService.retry_summary()`: after a successful summary retry, it now locates an existing cognitive-memory experience containing the transcript artifact and idempotently attaches the recovered summary artifact through `MemoryService.attach_artifacts_to_experience()`.
+- If the summary artifact is missing or the memory link cannot be confirmed, the retry reports a recoverable failure and explicitly preserves the transcript/summary artifact IDs rather than claiming completion.
+- Added `tests/test_voice_summary_retry_link.py` for successful memory linkage and memory-store failure preservation.
+- Fresh focused voice acceptance: **18 passed** across summary retry linkage, idempotency, recovery, pipeline, and voice interaction tests.
+- This is a real Phase B implementation increment; it does not close live transcription/speech providers, microphone/speaker acceptance, or other external gates. Phase B remains below 100%.

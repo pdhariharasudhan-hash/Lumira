@@ -4,9 +4,11 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 const { installBackendRuntime, prepareWorkspace } = require('./backend-runtime.cjs');
+const { createApiProxyHandler } = require('./electron-api-proxy.cjs');
 
 const API_PORT = Number(process.env.LUMIRA_API_PORT || 8000);
 const APP_PORT = Number(process.env.LUMIRA_APP_PORT || 5000);
+const proxyApiRequest = createApiProxyHandler(API_PORT);
 let backend = null;
 let ownsBackend = false;
 let server = null;
@@ -127,6 +129,7 @@ async function ensureBackend() {
     backendEnv.LUMIRA_OLLAMA_SUMMARY_ENABLED ||= 'true';
     backendEnv.LUMIRA_OLLAMA_VISION_ENABLED ||= 'true';
     backendEnv.LUMIRA_OLLAMA_VISION_MODEL ||= 'moondream';
+    backendEnv.LUMIRA_WINDOWS_SAPI_TTS_ENABLED ||= 'true';
     backendEnv.LUMIRA_LOCAL_TRANSCRIPTION_ENABLED ||= 'true';
     backendEnv.LUMIRA_LOCAL_TRANSCRIPTION_MODEL ||= 'base';
     backendEnv.LUMIRA_LOCAL_TRANSCRIPTION_COMPUTE_TYPE ||= 'int8';
@@ -172,8 +175,6 @@ function scheduleBackendRecovery() {
   }, delay);
 }
 
-const apiRoots = new Set(['brain','command','health','intelligence','images','modes','features','notepad','sessions','memory','projects','artifacts','goals','workflows','search','runs','voice','devices','providers','resources','openapi.json']);
-
 function mime(file) {
   const ext = path.extname(file).toLowerCase();
   return ({'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.ico':'image/x-icon','.woff2':'font/woff2'})[ext] || 'application/octet-stream';
@@ -185,24 +186,7 @@ function startServer() {
 
   server = http.createServer((req, res) => {
     const url = new URL(req.url || '/', 'http://127.0.0.1');
-    const first = url.pathname.split('/').filter(Boolean)[0] || '';
-
-    if (apiRoots.has(first)) {
-      const upstream = http.request({
-        host: '127.0.0.1', port: API_PORT, method: req.method,
-        path: url.pathname + url.search,
-        headers: { ...req.headers, host: '127.0.0.1:' + API_PORT }
-      }, response => {
-        res.writeHead(response.statusCode || 502, response.headers);
-        response.pipe(res);
-      });
-      upstream.on('error', () => {
-        if (!res.headersSent) res.writeHead(502, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ detail: 'Lumira service unavailable.' }));
-      });
-      req.pipe(upstream);
-      return;
-    }
+    if (proxyApiRequest(req, res)) return;
 
     let requested = '/index.html';
     try { if (url.pathname !== '/') requested = decodeURIComponent(url.pathname); } catch {}

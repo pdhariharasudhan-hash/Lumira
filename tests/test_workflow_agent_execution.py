@@ -83,8 +83,11 @@ class FakeAgentManager:
 def agent_route(monkeypatch):
     service = FakeWorkItemService()
     manager = FakeAgentManager()
+    class FakeBrainAgentOrchestrator:
+        def execute(self, task, agent_name=None, project_id=None, goal_id=None):
+            return manager.dispatch(task) if agent_name is None else manager.run(agent_name, task)
     monkeypatch.setattr(route, "WorkItemService", lambda: service)
-    monkeypatch.setattr(route, "AgentManager", lambda timeout_seconds=20.0: manager)
+    monkeypatch.setattr(route, "BrainAgentOrchestrator", FakeBrainAgentOrchestrator)
     monkeypatch.setattr(route, "ArtifactManagerService", FakeArtifactManager)
     return service, manager
 
@@ -100,6 +103,27 @@ def test_run_ready_executes_dependency_chain_and_persists_results(agent_route):
     assert all("Overall request:" in prompt and "Step:" in prompt for prompt in manager.prompts)
     assert json.loads(service.workflow["tasks"][0]["result"])["agent_outcome"]["success"] is True
     assert json.loads(service.workflow["tasks"][0]["result"])["artifact_storage"] == "recorded"
+
+
+def test_workflow_outcome_bridge_does_not_change_task_success(monkeypatch):
+    events = []
+    notifications = []
+
+    class Events:
+        def record(self, **kwargs):
+            events.append(kwargs)
+            return {"success": True, "event_record": {"event": kwargs["event"]}}
+
+    class Notifications:
+        def create_from_core_event(self, event):
+            notifications.append(event)
+
+    monkeypatch.setattr("app.services.system.core_event_log_service.CoreEventLogService", Events)
+    monkeypatch.setattr("app.services.notifications.notification_service.NotificationService", Notifications)
+    route._publish_workflow_outcome("wf", "task", {"success": True}, "completed")
+
+    assert events[0]["event"] == "workflow_task_completed"
+    assert notifications
 
 
 def test_run_ready_stops_after_failure_and_leaves_dependents_pending(agent_route):

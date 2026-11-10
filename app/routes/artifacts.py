@@ -151,6 +151,7 @@ def get_artifact(artifact_id: str):
     public_artifact = _public_artifact(artifact)
     # Expose availability, never the local filesystem path itself.
     public_artifact["content_available"] = content_path is not None and content_path.is_file()
+    public_artifact["content_integrity"] = manager.verify_artifact_content(artifact_id)
     return {"success": True, "artifact": public_artifact}
 
 

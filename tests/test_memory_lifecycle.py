@@ -43,6 +43,24 @@ def test_memory_lifecycle_search_link_summarize_archive(tmp_path):
     assert "archived_at" in archived
 
 
+def test_memory_evolution_preserves_original_and_supports_controlled_forgetting(tmp_path):
+    service = MemoryService(str(tmp_path / "memory.json"))
+    experience = service.record_experience(
+        "success", "Original verified memory", "Original outcome",
+        lessons=["A sufficiently long lesson is retained for audited evolution"],
+        verified=True,
+    )
+    corrected = service.evolve(
+        "experiences", experience["experience_id"],
+        correction={"outcome": "Corrected outcome"}, reason="user correction",
+    )
+    assert corrected["outcome"] == "Corrected outcome"
+    assert corrected["superseded_record"]["outcome"] == "Original outcome"
+    forgotten = service.evolve("experiences", experience["experience_id"], forget=True)
+    assert forgotten["archived"] is True
+    assert forgotten["evolution_reason"] == "controlled_forgetting"
+
+
 def test_memory_pipeline_history_corruption_is_rejected_without_rewriting(tmp_path):
     import json
     import pytest

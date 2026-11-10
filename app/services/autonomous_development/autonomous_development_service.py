@@ -9,6 +9,8 @@ from app.agents.workflow_engine import WorkflowEngine
 from app.services.workflow_recovery.run_recovery_service import RunRecoveryService
 from app.services.work_items.work_item_service import WorkItemService
 from app.services.sessions.session_manager_service import redact_sensitive_text
+from app.services.autonomy.autonomy_permission_service import AutonomyPermissionService
+from app.services.persistence.atomic_json_store import PersistenceIntegrityError
 
 from app.services.autonomous_development.autonomous_development_loop import (
     AutonomousDevelopmentLoop,
@@ -50,6 +52,7 @@ class AutonomousDevelopmentService:
         work_items: WorkItemService | None = None,
         recovery: RunRecoveryService | None = None,
         backlog: DevelopmentBacklogService | None = None,
+        autonomy_service: AutonomyPermissionService | None = None,
     ) -> None:
         self.workspace = Path(workspace).resolve()
 
@@ -83,6 +86,7 @@ class AutonomousDevelopmentService:
         )
         self.task_planner = DevelopmentTaskPlanner(self.backlog)
         self.progress = DevelopmentProgressService(self.backlog)
+        self.autonomy = autonomy_service or AutonomyPermissionService()
 
     def create_development_workflow(
         self,
@@ -129,6 +133,7 @@ class AutonomousDevelopmentService:
         goal: str,
         *,
         session_id: str | None = None,
+        autonomous: bool = False,
         _workflow_id: str | None = None,
         _recovery_run_id: str | None = None,
         _backlog_program_id: str | None = None,
@@ -142,6 +147,25 @@ class AutonomousDevelopmentService:
         apply -> validate -> fix/retest -> verify execution.
         """
         goal = self._validate_goal(goal)
+        if autonomous:
+            try:
+                authorization = self.autonomy.authorize("code.execute", autonomous=True)
+            except PersistenceIntegrityError:
+                return {
+                    "success": False,
+                    "state": "blocked",
+                    "code": "autonomous_permission_state_unavailable",
+                    "message": "Autonomous development is blocked because permission state is unavailable.",
+                }
+            if not authorization["allowed"]:
+                return {
+                    "success": False,
+                    "state": "blocked",
+                    "code": authorization["code"],
+                    "message": authorization["message"],
+                    "authorization": authorization,
+                }
+            self.autonomy.record_state("code.execute", "started", detail="autonomous development requested")
         self._recover_stale_workflows()
 
         if self._is_continuation_request(goal):

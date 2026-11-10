@@ -87,6 +87,49 @@ class ResearchLibraryService:
         tags = {tag.casefold() for item in records for tag in item.get("tags", [])}
         return {"total": len(records), "linked_projects": len(projects), "unique_tags": len(tags)}
 
+    def trend_analysis(self, limit: int = 1000):
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 0 <= limit <= 1000:
+            raise ValueError("limit must be between 0 and 1000")
+        records = self.store.read({"schema_version": 1, "items": []}).get("items", [])[-limit:]
+        buckets = {}
+        for item in records:
+            created = item.get("created_at")
+            bucket = created[:7] if isinstance(created, str) and len(created) >= 7 else "unknown"
+            buckets[bucket] = buckets.get(bucket, 0) + 1
+        return {
+            "basis": "persisted research records only",
+            "total_records": len(records),
+            "periods": [
+                {"period": period, "record_count": count}
+                for period, count in sorted(buckets.items())
+            ],
+        }
+
+    def knowledge_graph(self, limit: int = 1000):
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 0 <= limit <= 1000:
+            raise ValueError("limit must be between 0 and 1000")
+        records = self.store.read({"schema_version": 1, "items": []}).get("items", [])[-limit:]
+        nodes = {}
+        edges = set()
+        for item in records:
+            research_id = item.get("research_id")
+            if not isinstance(research_id, str):
+                continue
+            nodes[research_id] = {"id": research_id, "type": "research", "title": item.get("title", "")}
+            tags = sorted({str(tag).strip().casefold() for tag in item.get("tags", []) if str(tag).strip()})
+            for tag in tags:
+                tag_id = f"tag:{tag}"
+                nodes[tag_id] = {"id": tag_id, "type": "tag", "label": tag}
+                edges.add((research_id, tag_id, "tagged_with"))
+        return {
+            "basis": "persisted research records and tags only",
+            "nodes": list(nodes.values()),
+            "edges": [
+                {"from": source, "to": target, "relation": relation}
+                for source, target, relation in sorted(edges)
+            ],
+        }
+
     def export(self, limit=1000):
         if isinstance(limit, bool) or not isinstance(limit, int) or not 0 <= limit <= 1000:
             raise ValueError("limit must be between 0 and 1000")

@@ -9,20 +9,6 @@ from app.services.workspace.workspace_service import (
     WorkspaceService
 )
 
-from app.services.projects.project_writer import (
-    ProjectWriter
-)
-
-from app.services.code.code_service import (
-    CodeService
-)
-
-from app.services.features.feature_detector import (
-    FeatureDetector
-)
-from app.services.builder.builder_service import BuilderService
-from app.services.execution.execute_service import ExecuteService
-from app.services.validation.code_validation_service import CodeValidationService
 from app.services.projects.project_paths import resolve_project_path
 
 
@@ -204,125 +190,86 @@ class ProjectLifecycleService:
             result
         }
 
-    def continue_project(
+    def continue_latest_project(
         self,
-        metadata: dict,
-        instruction: str
+        project_name: str,
+        instruction: str,
     ):
+        project = self.discovery.get_project(project_name)
+        if not isinstance(project, dict):
+            return {
+                "success": False,
+                "status": "reject",
+                "code": "project_not_found",
+                "error": "Project not found.",
+            }
+        latest = project.get("latest")
+        version = latest.get("version") if isinstance(latest, dict) else None
+        if not isinstance(version, str):
+            return {
+                "success": False,
+                "status": "reject",
+                "code": "latest_project_version_missing",
+                "error": "The project has no valid saved version to continue.",
+            }
+        return self.continue_project_version(project_name, version, instruction)
 
-        if not isinstance(metadata, dict) or not isinstance(instruction, str) or not instruction.strip() or len(instruction) > 10000:
-            return {"success": False, "status": "reject", "error": "A project and a non-empty instruction under 10000 characters are required."}
+    def continue_project_version(
+        self,
+        project_name: str,
+        version: str,
+        instruction: str,
+    ):
+        existing = self.get_project_version(project_name, version)
+        if not existing.get("success"):
+            return {
+                "success": False,
+                "status": "reject",
+                "code": "project_version_not_found",
+                "error": existing.get("message", "Project version not found."),
+            }
 
-        old_idea = (
-            metadata.get(
-                "idea",
-                ""
-            )
-        )
-        if not isinstance(old_idea, str):
-            return {"success": False, "status": "reject", "error": "Stored project idea is invalid."}
+        data = existing.get("data")
+        if not isinstance(data, dict):
+            return {
+                "success": False,
+                "status": "reject",
+                "code": "project_version_invalid",
+                "error": "Project version data is invalid.",
+            }
 
-        stored_features = metadata.get("features", [])
-        stored_instructions = metadata.get("instructions", [])
-        if not isinstance(stored_features, list) or not all(isinstance(item, str) for item in stored_features):
-            return {"success": False, "status": "reject", "error": "Stored project features are invalid."}
-        if not isinstance(stored_instructions, list) or not all(isinstance(item, str) for item in stored_instructions):
-            return {"success": False, "status": "reject", "error": "Stored project instructions are invalid."}
-        features = list(stored_features)
-        instructions = list(stored_instructions)
+        from app.services.projects.project_continuation_service import ProjectContinuationService
 
-        instruction = instruction.strip().lower()
-
-        instructions.append(
-            instruction
-        )
-
-        new_features = (
-
-            FeatureDetector()
-            .detect(
-                instruction
-            )
-        )
-
-        for feature in new_features:
-
-            if feature not in features:
-
-                features.append(
-                    feature
-                )
-
-        new_idea = (
-            old_idea
-            + " "
-            + instruction
-        ).strip()
-
-        builder_result = BuilderService().build(new_idea)
-        if builder_result.get("status") != "accept":
-            return {"success": False, "status": builder_result.get("status", "refine"), "builder": builder_result}
-
-        execution_result = ExecuteService().execute(new_idea, builder_result)
-        if execution_result.get("status") != "accept":
-            return {"success": False, "status": execution_result.get("status", "refine"), "builder": builder_result, "execution": execution_result}
-
-        generated = (
-
-            CodeService()
-            .generate(
-                new_idea,
-                execution_result
-            )
+        return ProjectContinuationService().continue_version(
+            project_name=project_name,
+            version=version,
+            metadata=data.get("metadata"),
+            files=data.get("files"),
+            instruction=instruction,
         )
 
-        validation = CodeValidationService().validate(generated.get("files", {}))
-        if not validation["valid"]:
-            return {"success": False, "status": "reject", "validation": validation, "builder": builder_result, "execution": execution_result, "code": generated}
-
-        project_name = metadata.get("project") or generated.get("code_target")
-        if not isinstance(project_name, str) or not project_name.strip():
-            return {"success": False, "status": "reject", "error": "Stored project name is invalid."}
-
-        try:
-            save_location = ProjectWriter().save(
-                project_name,
-                generated["files"],
-                {
-                    "idea": new_idea,
-                    "instructions": instructions,
-                    "features": features,
-                    "project_type": "api",
-                    "entity": project_name,
-                    "project": project_name,
-                    "builder": builder_result,
-                    "execution": execution_result,
-                    "validation": validation,
-                },
-            )
-        except (OSError, ValueError) as error:
-            return {"success": False, "status": "reject", "error": f"Project save failed: {error}", "builder": builder_result, "execution": execution_result, "validation": validation}
-
-        return {
-
-            "success":
-            True,
-
-            "saved_to":
-            save_location,
-
-            "new_idea":
-            new_idea,
-
-            "instructions":
-            instructions,
-
-            "features":
-            features,
-
-            "builder": builder_result,
-
-            "execution": execution_result,
-
-            "validation": validation
-        }
+    def continue_project(self, metadata: dict, instruction: str, files: dict | None = None):
+        if not isinstance(metadata, dict) or not isinstance(files, dict):
+            return {
+                "success": False,
+                "status": "reject",
+                "code": "source_files_required",
+                "error": "Project continuation requires the saved source files, not metadata alone.",
+            }
+        project_name = metadata.get("project")
+        version = metadata.get("version")
+        if not isinstance(project_name, str) or not isinstance(version, str):
+            return {
+                "success": False,
+                "status": "reject",
+                "code": "project_version_required",
+                "error": "Project metadata must identify its project and saved version.",
+            }
+        from app.services.projects.project_continuation_service import ProjectContinuationService
+        return ProjectContinuationService().continue_version(
+            project_name=project_name,
+            version=version,
+            metadata=metadata,
+            files=files,
+            instruction=instruction,
+        )

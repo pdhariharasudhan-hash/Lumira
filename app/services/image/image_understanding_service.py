@@ -8,15 +8,19 @@ from app.services.providers.provider_registry import ProviderRegistry
 from app.services.resources.resource_budget_service import ResourceBudgetService
 
 
+
+from app.services.providers.provider_access_policy_service import ProviderAccessDenied, ProviderAccessPolicyService
+
 class ImageUnderstandingService:
     """Validates image bytes and delegates analysis to an explicitly configured provider."""
 
     MAX_IMAGE_BYTES = 10_000_000
     MAX_PROMPT_CHARS = 4_000
 
-    def __init__(self, provider=None, artifacts: ArtifactManagerService | None = None) -> None:
+    def __init__(self, provider=None, artifacts: ArtifactManagerService | None = None, *, provider_policy=None) -> None:
         self.provider = provider if provider is not None else ProviderRegistry.get("image_understanding")
         self.artifacts = artifacts
+        self.provider_policy = provider_policy or ProviderAccessPolicyService()
 
     def _save_analysis_artifact(self, image_bytes: bytes, prompt: str, result: dict) -> dict:
         """Persist a compact analysis report without storing the original image implicitly."""
@@ -63,6 +67,8 @@ class ImageUnderstandingService:
             return {"success": False, "code": "invalid_image", "message": "Only PNG, JPEG, and WebP images are supported."}
         if not isinstance(prompt, str) or not prompt.strip() or len(prompt) > self.MAX_PROMPT_CHARS:
             return {"success": False, "code": "invalid_prompt", "message": "Prompt is empty or exceeds the 4,000-character limit."}
+        if self.provider is None:
+            return {"success": False, "code": "provider_unavailable", "message": "No image-understanding provider is configured; no analysis was produced."}
         try:
             guidance = ResourceBudgetService().execution_guidance()
         except Exception:
@@ -75,10 +81,11 @@ class ImageUnderstandingService:
                 "resource_pressure": guidance.get("resource_pressure", "unknown"),
                 "message": "Image analysis was deferred because available system memory is constrained.",
             }
-        if self.provider is None:
-            return {"success": False, "code": "provider_unavailable", "message": "No image-understanding provider is configured; no analysis was produced."}
         try:
+            self.provider_policy.authorize(self.provider, "image understanding")
             result = self.provider.analyze(image_bytes, prompt.strip())
+        except ProviderAccessDenied as error:
+            return {"success": False, "code": error.code, "message": error.user_message}
         except Exception:
             return {"success": False, "code": "provider_error", "message": "The image-understanding provider failed; no analysis was produced."}
         if not isinstance(result, dict) or result.get("success") is not True:

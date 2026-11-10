@@ -51,6 +51,35 @@ class WorkflowEngine:
         self.worker_target = worker_target or _workflow_stage_worker
 
     @classmethod
+    def optimize_plan(cls, steps):
+        """Return a bounded, deterministic plan with prerequisite stages first."""
+        if not isinstance(steps, list) or not 1 <= len(steps) <= cls.MAX_STEPS:
+            return {"success": False, "code": "invalid_plan"}
+        if any(not isinstance(step, str) or step not in cls.ALLOWED_STEPS for step in steps):
+            return {"success": False, "code": "capability_unavailable"}
+        if len(set(steps)) != len(steps):
+            return {"success": False, "code": "duplicate_stage"}
+        prerequisites = {
+            "builder": ("validate",),
+            "execute": ("builder",),
+            "code": ("builder",),
+            "save_project": ("code",),
+            "save_artifact": ("generate_image",),
+        }
+        ordered = []
+        remaining = list(steps)
+        while remaining:
+            ready = next(
+                (step for step in remaining if all(dep in ordered or dep not in steps for dep in prerequisites.get(step, ()))),
+                None,
+            )
+            if ready is None:
+                return {"success": False, "code": "unresolvable_dependencies"}
+            ordered.append(ready)
+            remaining.remove(ready)
+        return {"success": True, "steps": ordered, "max_steps": cls.MAX_STEPS}
+
+    @classmethod
     def cancel(cls, run_id: str) -> bool:
         with cls._process_lock:
             process = cls._active_processes.get(run_id)

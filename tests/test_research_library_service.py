@@ -20,3 +20,25 @@ def test_get_and_remove_research(tmp_path):
     assert service.get(item["research_id"])["title"] == "Test"
     assert service.remove(item["research_id"]) is True
     assert service.get(item["research_id"]) is None
+
+
+def test_trends_and_graph_use_only_persisted_records_and_tags(tmp_path):
+    service = ResearchLibraryService(tmp_path / "research.json")
+    first = service.add("ESP32 guide", "https://example.com/esp32", tags=["ESP32", "iot"])
+    second = service.add("Pi guide", "https://example.com/pi", tags=["iot", "linux"])
+
+    trends = service.trend_analysis()
+    graph = service.knowledge_graph()
+
+    assert trends["total_records"] == 2
+    assert sum(item["record_count"] for item in trends["periods"]) == 2
+    assert {node["id"] for node in graph["nodes"]} >= {
+        first["research_id"], second["research_id"], "tag:iot"
+    }
+    assert {
+        (edge["from"], edge["to"], edge["relation"])
+        for edge in graph["edges"]
+    } >= {
+        (first["research_id"], "tag:esp32", "tagged_with"),
+        (second["research_id"], "tag:iot", "tagged_with"),
+    }

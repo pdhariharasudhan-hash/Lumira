@@ -13,7 +13,7 @@ def test_registry_contains_master_feature_groups():
             "intent", "goals", "planner", "agents", "learning", "sessions",
             "projects", "code", "workflows", "autonomous_development",
             "recovery", "artifact_manager", "unified_search", "voice_idea_capture",
-            "image_understanding", "image_generation", "web_access", "research",
+            "audio_playback", "image_understanding", "image_generation", "web_access", "research",
             "device_management", "mode_management", "terminal", "project_preview",
             "notepad", "capability_system", "security", "observability",
         }

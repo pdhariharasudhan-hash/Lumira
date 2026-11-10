@@ -89,3 +89,7 @@ def test_terminal_os_error_does_not_disclose_machine_paths(tmp_path, monkeypatch
     assert "private" not in str(result)
     assert result["error_type"] == "OSError"
     assert not (tmp_path / "terminal_runs.json").exists()
+
+
+def test_project_terminal_is_hard_disabled_by_default():
+    assert ProjectTerminalService.OS_SANDBOX_ENABLED is False

@@ -42,14 +42,45 @@ def test_device_commands_report_unavailable_until_transport_confirms_delivery(tm
     assert unavailable.json()["detail"]["code"] == "provider_unavailable"
 
     class Transport:
+        provider_scope = "local"
+
         def send_command(self, device_id, device_type, action, payload):
             assert (device_id, device_type, action, payload) == ("lamp-1", "esp32", "set_led", {"enabled": True})
             return {"success": True, "command_id": "cmd-123"}
 
     ProviderRegistry.register("device_transport", Transport())
     try:
+        missing = client.post("/devices/lamp-1/commands", json=request)
+        assert missing.status_code == 404
+        registered = client.post("/devices/register", json={
+            "device_id": "lamp-1", "device_type": "esp32",
+            "capabilities": ["set_led"], "permissions": ["commands.receive"],
+            "connection": "local",
+        })
+        assert registered.status_code == 200
+        heartbeat = client.post("/devices/messages", json={
+            "message_id": "lamp-heartbeat-1", "device_id": "lamp-1",
+            "device_type": "esp32", "message_type": "heartbeat", "payload": {},
+        })
+        assert heartbeat.status_code == 202
         sent = client.post("/devices/lamp-1/commands", json=request)
     finally:
         ProviderRegistry.clear()
     assert sent.status_code == 200
     assert sent.json() == {"success": True, "status": "sent", "command_id": "cmd-123", "device_id": "lamp-1", "device_type": "esp32"}
+
+
+def test_unknown_device_transport_is_blocked_without_explicit_external_consent(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    calls = []
+
+    class UnknownTransport:
+        def send_command(self, *args):
+            calls.append(args)
+            return {"success": True, "command_id": "should-not-run"}
+
+    service = DeviceGatewayService(transport=UnknownTransport())
+    result = service.send_command("lamp-1", "esp32", "set_led", {"enabled": True})
+    assert result["success"] is False
+    assert result["code"] == "external_provider_consent_required"
+    assert calls == []

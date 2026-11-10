@@ -40,6 +40,18 @@ class ContainerSandboxProvider:
             return SandboxStatus(False, None, "docker_unavailable")
         if result.returncode != 0 or not result.stdout.strip():
             return SandboxStatus(False, None, "docker_daemon_unavailable")
+        try:
+            image_result = subprocess.run(
+                [docker, "image", "inspect", self.DEFAULT_IMAGE],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                shell=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return SandboxStatus(False, "docker", "sandbox_image_check_failed")
+        if image_result.returncode != 0:
+            return SandboxStatus(False, "docker", "sandbox_image_unavailable")
         return SandboxStatus(True, "docker", "verified")
 
     def run(
@@ -58,11 +70,15 @@ class ContainerSandboxProvider:
         # No shell is used. The project is read-only, networking is disabled,
         # privileges/capabilities are dropped, and temporary writes use tmpfs.
         argv = [
-            docker, "run", "--rm", "--network", "none",
-            "--read-only", "--cap-drop", "ALL",
+            docker, "run", "--rm", "--init",
+            "--network", "none", "--ipc", "none",
+            "--read-only", "--user", "65534:65534",
+            "--cap-drop", "ALL",
             "--pids-limit", "128", "--memory", "1g",
             "--cpus", "1.0", "--security-opt", "no-new-privileges",
-            "--tmpfs", "/tmp:rw,noexec,nosuid,size=128m",
+            "--ulimit", "nofile=256:256", "--ulimit", "nproc=128:128",
+            "--env", "HOME=/tmp", "--env", "PYTHONDONTWRITEBYTECODE=1",
+            "--tmpfs", "/tmp:rw,noexec,nosuid,size=128m,uid=65534,gid=65534,mode=1777",
             "-v", f"{project_path.resolve()}:/workspace:ro",
             "-w", "/workspace", image, *command,
         ]
