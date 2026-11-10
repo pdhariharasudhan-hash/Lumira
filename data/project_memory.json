@@ -6721,7 +6721,1402 @@
       "source": "industrial_design",
       "file": "artifacts\\blueprints\\ce7391bf-14f8-443b-94ce-188472107213.json",
       "timestamp": "2026-09-23 19:54:25"
+    },
+    {
+      "artifact_id": "73363dc2-c7d8-4cb3-b1ed-1305928e4143",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\pytest-of-Administrator\\pytest-66\\test_recent_artifacts_returns_0\\artifacts\\summaries\\73363dc2-c7d8-4cb3-b1ed-1305928e4143.txt",
+      "timestamp": "2026-11-03T12:37:27.438656+00:00"
+    },
+    {
+      "artifact_id": "ffd96d96-3fe2-4a84-8e97-3b830f49d702",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\pytest-of-Administrator\\pytest-66\\test_recent_artifacts_returns_0\\artifacts\\summaries\\ffd96d96-3fe2-4a84-8e97-3b830f49d702.txt",
+      "timestamp": "2026-11-03T12:37:27.524925+00:00"
+    },
+    {
+      "artifact_id": "57cc142f-b02f-4271-bd81-014905dc161d",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\pytest-of-Administrator\\pytest-77\\test_recent_artifacts_returns_0\\artifacts\\summaries\\57cc142f-b02f-4271-bd81-014905dc161d.txt",
+      "timestamp": "2026-11-04T13:44:51.690786+00:00"
+    },
+    {
+      "artifact_id": "612bcb5f-41a0-446c-a6ef-908718014dee",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\pytest-of-Administrator\\pytest-77\\test_recent_artifacts_returns_0\\artifacts\\summaries\\612bcb5f-41a0-446c-a6ef-908718014dee.txt",
+      "timestamp": "2026-11-04T13:44:51.774191+00:00"
+    },
+    {
+      "artifact_id": "841da56e-9489-4954-b81c-62ad18a31620",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\pytest-of-Administrator\\pytest-82\\test_recent_artifacts_returns_0\\artifacts\\summaries\\841da56e-9489-4954-b81c-62ad18a31620.txt",
+      "timestamp": "2026-11-04T13:54:13.930093+00:00"
+    },
+    {
+      "artifact_id": "8acc4e4a-3460-4233-bf7a-305f374719da",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\pytest-of-Administrator\\pytest-82\\test_recent_artifacts_returns_0\\artifacts\\summaries\\8acc4e4a-3460-4233-bf7a-305f374719da.txt",
+      "timestamp": "2026-11-04T13:54:14.020099+00:00"
+    },
+    {
+      "artifact_id": "a772d6a9-1fd2-4409-b262-3511560a2e25",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\pytest-of-Administrator\\pytest-93\\test_recent_artifacts_returns_0\\artifacts\\summaries\\a772d6a9-1fd2-4409-b262-3511560a2e25.txt",
+      "timestamp": "2026-11-05T11:55:35.554611+00:00"
+    },
+    {
+      "artifact_id": "56d2774a-ba49-4df7-ad08-4a13581d0054",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\pytest-of-Administrator\\pytest-93\\test_recent_artifacts_returns_0\\artifacts\\summaries\\56d2774a-ba49-4df7-ad08-4a13581d0054.txt",
+      "timestamp": "2026-11-05T11:55:35.658861+00:00"
+    },
+    {
+      "artifact_id": "170efd03-9a3f-4d4c-9e68-ddfbe9aceef4",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\pytest-of-Administrator\\pytest-94\\test_recent_artifacts_returns_0\\artifacts\\summaries\\170efd03-9a3f-4d4c-9e68-ddfbe9aceef4.txt",
+      "timestamp": "2026-11-05T12:00:14.929002+00:00"
+    },
+    {
+      "artifact_id": "79913f4c-7de9-4b11-8660-2b0a8e51df59",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\pytest-of-Administrator\\pytest-94\\test_recent_artifacts_returns_0\\artifacts\\summaries\\79913f4c-7de9-4b11-8660-2b0a8e51df59.txt",
+      "timestamp": "2026-11-05T12:00:15.050545+00:00"
+    },
+    {
+      "artifact_id": "acce33b8-5ab7-4291-8362-8627f14f91b1",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\Lumira_pytest_full\\test_recent_artifacts_returns_0\\artifacts\\summaries\\acce33b8-5ab7-4291-8362-8627f14f91b1.txt",
+      "timestamp": "2026-11-06T13:15:22.753964+00:00"
+    },
+    {
+      "artifact_id": "f0e344d5-3dd7-47a7-94b1-4103b0fd39b6",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\Lumira_pytest_full\\test_recent_artifacts_returns_0\\artifacts\\summaries\\f0e344d5-3dd7-47a7-94b1-4103b0fd39b6.txt",
+      "timestamp": "2026-11-06T13:15:23.244780+00:00"
+    },
+    {
+      "artifact_id": "9660b3b1-7c40-4a66-b77f-3ad9dd31436d",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\lumira_pytest_baseline_20261108\\pytest-of-Administrator\\pytest-0\\test_recent_artifacts_returns_0\\artifacts\\summaries\\9660b3b1-7c40-4a66-b77f-3ad9dd31436d.txt",
+      "timestamp": "2026-11-08T01:21:13.377139+00:00"
+    },
+    {
+      "artifact_id": "6819a29b-80f5-465f-8360-7f1c03a12382",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\lumira_pytest_baseline_20261108\\pytest-of-Administrator\\pytest-0\\test_recent_artifacts_returns_0\\artifacts\\summaries\\6819a29b-80f5-465f-8360-7f1c03a12382.txt",
+      "timestamp": "2026-11-08T01:21:13.421799+00:00"
+    },
+    {
+      "artifact_id": "82494b56-66ad-49fb-b7a5-6d31b1e30b18",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\lumira_pytest_phase_b_providers_20261108_b\\pytest-of-Administrator\\pytest-0\\test_recent_artifacts_returns_0\\artifacts\\summaries\\82494b56-66ad-49fb-b7a5-6d31b1e30b18.txt",
+      "timestamp": "2026-11-08T01:42:38.880568+00:00"
+    },
+    {
+      "artifact_id": "420b485d-f3dc-4a81-bdd6-cfa68b916c4a",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\lumira_pytest_phase_b_providers_20261108_b\\pytest-of-Administrator\\pytest-0\\test_recent_artifacts_returns_0\\artifacts\\summaries\\420b485d-f3dc-4a81-bdd6-cfa68b916c4a.txt",
+      "timestamp": "2026-11-08T01:42:38.923669+00:00"
+    },
+    {
+      "artifact_id": "b54a1bf9-153b-4cac-a13e-29b85aaf140c",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\lumira_pytest_phase_b_providers_fix_20261108\\pytest-of-Administrator\\pytest-0\\test_recent_artifacts_returns_0\\artifacts\\summaries\\b54a1bf9-153b-4cac-a13e-29b85aaf140c.txt",
+      "timestamp": "2026-11-08T01:44:45.633742+00:00"
+    },
+    {
+      "artifact_id": "f22a5da1-a4d2-4178-a2be-17d891dee692",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\lumira_pytest_phase_b_providers_fix_20261108\\pytest-of-Administrator\\pytest-0\\test_recent_artifacts_returns_0\\artifacts\\summaries\\f22a5da1-a4d2-4178-a2be-17d891dee692.txt",
+      "timestamp": "2026-11-08T01:44:45.678305+00:00"
+    },
+    {
+      "artifact_id": "0a6307c3-812e-4de2-8a34-3a5161b8efdc",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\lumira_pytest_final_phase_b_20261108\\pytest-of-Administrator\\pytest-0\\test_recent_artifacts_returns_0\\artifacts\\summaries\\0a6307c3-812e-4de2-8a34-3a5161b8efdc.txt",
+      "timestamp": "2026-11-08T01:45:24.065605+00:00"
+    },
+    {
+      "artifact_id": "d1f8e7b2-cb85-492f-98fe-8c155397e03b",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\lumira_pytest_final_phase_b_20261108\\pytest-of-Administrator\\pytest-0\\test_recent_artifacts_returns_0\\artifacts\\summaries\\d1f8e7b2-cb85-492f-98fe-8c155397e03b.txt",
+      "timestamp": "2026-11-08T01:45:24.098133+00:00"
+    },
+    {
+      "artifact_id": "8b24bb6d-ac62-44a1-ac6e-0d41388eb8a3",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\8b24bb6d-ac62-44a1-ac6e-0d41388eb8a3.json",
+      "timestamp": "2026-11-08T02:12:23.036677+00:00"
+    },
+    {
+      "artifact_id": "3f2d42af-2b54-4504-ab94-a7060b13c736",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\3f2d42af-2b54-4504-ab94-a7060b13c736.json",
+      "timestamp": "2026-11-08T02:12:23.203069+00:00"
+    },
+    {
+      "artifact_id": "86b7874a-93e8-46c8-8ac9-cb4bb73da889",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\86b7874a-93e8-46c8-8ac9-cb4bb73da889.json",
+      "timestamp": "2026-11-08T02:12:23.494398+00:00"
+    },
+    {
+      "artifact_id": "9c551c2a-a56e-4d56-9490-18e8314976bc",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\9c551c2a-a56e-4d56-9490-18e8314976bc.json",
+      "timestamp": "2026-11-08T02:14:02.822931+00:00"
+    },
+    {
+      "artifact_id": "4132fe52-55e3-4c03-8dff-d68ba687810b",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\4132fe52-55e3-4c03-8dff-d68ba687810b.json",
+      "timestamp": "2026-11-08T02:14:02.926995+00:00"
+    },
+    {
+      "artifact_id": "8835db35-43d6-456b-b9d0-522e2a0811af",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\8835db35-43d6-456b-b9d0-522e2a0811af.json",
+      "timestamp": "2026-11-08T02:14:03.190839+00:00"
+    },
+    {
+      "artifact_id": "80652560-fd1f-4fcf-9109-d35abade534e",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\80652560-fd1f-4fcf-9109-d35abade534e.json",
+      "timestamp": "2026-11-08T02:18:41.842162+00:00"
+    },
+    {
+      "artifact_id": "b39d6a53-66c4-4991-a75f-b78214d1e343",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\b39d6a53-66c4-4991-a75f-b78214d1e343.json",
+      "timestamp": "2026-11-08T02:18:41.995328+00:00"
+    },
+    {
+      "artifact_id": "e9baba52-d24b-48f4-9b79-e4b8ef8d0860",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\e9baba52-d24b-48f4-9b79-e4b8ef8d0860.json",
+      "timestamp": "2026-11-08T02:18:42.317046+00:00"
+    },
+    {
+      "artifact_id": "827de51f-464a-4996-a2b3-d704a118043b",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\827de51f-464a-4996-a2b3-d704a118043b.json",
+      "timestamp": "2026-11-08T02:20:40.793982+00:00"
+    },
+    {
+      "artifact_id": "5f753c5b-a84f-437a-a2d0-1d23680473ae",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\5f753c5b-a84f-437a-a2d0-1d23680473ae.json",
+      "timestamp": "2026-11-08T02:20:42.182914+00:00"
+    },
+    {
+      "artifact_id": "a857420d-1397-43a3-9c8b-b99bc6e64a33",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\a857420d-1397-43a3-9c8b-b99bc6e64a33.json",
+      "timestamp": "2026-11-08T02:20:43.699544+00:00"
+    },
+    {
+      "artifact_id": "49462ce4-33ed-40f8-a9fc-65f813225970",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\49462ce4-33ed-40f8-a9fc-65f813225970.json",
+      "timestamp": "2026-11-08T02:22:52.327614+00:00"
+    },
+    {
+      "artifact_id": "b8e539ca-fbb2-4eaf-bccf-926fb29ea56b",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\b8e539ca-fbb2-4eaf-bccf-926fb29ea56b.json",
+      "timestamp": "2026-11-08T02:22:52.447148+00:00"
+    },
+    {
+      "artifact_id": "e53f2196-c319-4046-81cf-18fc8aac7c9d",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\e53f2196-c319-4046-81cf-18fc8aac7c9d.json",
+      "timestamp": "2026-11-08T02:22:52.819055+00:00"
+    },
+    {
+      "artifact_id": "31fa1ca7-3ae8-474f-a24d-126f40987bf2",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\31fa1ca7-3ae8-474f-a24d-126f40987bf2.json",
+      "timestamp": "2026-11-08T02:42:06.592648+00:00"
+    },
+    {
+      "artifact_id": "28cf8542-be19-481a-a9da-4904d2a0ccc0",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\28cf8542-be19-481a-a9da-4904d2a0ccc0.json",
+      "timestamp": "2026-11-08T02:42:06.726509+00:00"
+    },
+    {
+      "artifact_id": "ef40dea2-d207-4d88-8413-30d780a370fd",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\ef40dea2-d207-4d88-8413-30d780a370fd.json",
+      "timestamp": "2026-11-08T02:42:07.045221+00:00"
+    },
+    {
+      "artifact_id": "3492e8b1-c79e-4ca5-8386-f1734d6082b3",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\3492e8b1-c79e-4ca5-8386-f1734d6082b3.json",
+      "timestamp": "2026-11-08T02:50:24.308777+00:00"
+    },
+    {
+      "artifact_id": "e90dce0e-c37d-4066-b54b-5a3c42c021c1",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\e90dce0e-c37d-4066-b54b-5a3c42c021c1.json",
+      "timestamp": "2026-11-08T02:50:24.492750+00:00"
+    },
+    {
+      "artifact_id": "6e130b45-5bf5-422d-b17f-8cfc052a0671",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\6e130b45-5bf5-422d-b17f-8cfc052a0671.json",
+      "timestamp": "2026-11-08T02:50:24.765789+00:00"
+    },
+    {
+      "artifact_id": "7aa1fc71-259f-46dd-83e6-66592a2655a7",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\lumira-bd-integrity\\test_artifact_content_integrit0\\artifacts\\summaries\\7aa1fc71-259f-46dd-83e6-66592a2655a7.txt",
+      "timestamp": "2026-11-08T03:01:41.236396+00:00",
+      "content_sha256": "034311adcf7e54dc9c9d35f583590b4c865b4b7ffa132b2acf9812c5a509f779",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "64c48858-5f82-4efa-b9d7-b8f1b0dddc60",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\lumira-bd-integrity\\test_artifact_integrity_metada0\\artifacts\\audio\\64c48858-5f82-4efa-b9d7-b8f1b0dddc60.wav",
+      "timestamp": "2026-11-08T03:01:41.403468+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "761a3013-5be4-4d33-84eb-88f2f3c2d99f",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\lumira-bd-final\\test_artifact_content_integrit0\\artifacts\\summaries\\761a3013-5be4-4d33-84eb-88f2f3c2d99f.txt",
+      "timestamp": "2026-11-08T03:02:25.240065+00:00",
+      "content_sha256": "034311adcf7e54dc9c9d35f583590b4c865b4b7ffa132b2acf9812c5a509f779",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "4b3c4a27-dd27-4370-a0d4-7b594826164b",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\lumira-bd-final\\test_artifact_integrity_metada0\\artifacts\\audio\\4b3c4a27-dd27-4370-a0d4-7b594826164b.wav",
+      "timestamp": "2026-11-08T03:02:25.367109+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "997fd337-a114-4e39-b0cd-27ef74ce8f51",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\lumira-bd-final-contracts\\test_artifact_content_integrit0\\artifacts\\summaries\\997fd337-a114-4e39-b0cd-27ef74ce8f51.txt",
+      "timestamp": "2026-11-08T03:22:08.168069+00:00",
+      "content_sha256": "034311adcf7e54dc9c9d35f583590b4c865b4b7ffa132b2acf9812c5a509f779",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "d2561ef3-0d23-45fe-b9e5-bef680584fa2",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\lumira-bd-final-contracts\\test_artifact_integrity_metada0\\artifacts\\audio\\d2561ef3-0d23-45fe-b9e5-bef680584fa2.wav",
+      "timestamp": "2026-11-08T03:22:08.764190+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "5f586ecd-2b9d-41a6-8fb7-1b9fa44ba49f",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\lumira-bd-retry\\test_artifact_content_integrit0\\artifacts\\summaries\\5f586ecd-2b9d-41a6-8fb7-1b9fa44ba49f.txt",
+      "timestamp": "2026-11-08T03:31:19.893383+00:00",
+      "content_sha256": "034311adcf7e54dc9c9d35f583590b4c865b4b7ffa132b2acf9812c5a509f779",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "b865cc43-d635-4f76-b640-d53f90c8a649",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\lumira-bd-retry\\test_artifact_integrity_metada0\\artifacts\\audio\\b865cc43-d635-4f76-b640-d53f90c8a649.wav",
+      "timestamp": "2026-11-08T03:31:20.526769+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "c5595e71-106c-4399-bd95-efd57407337f",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\lumira-bd-final\\test_artifact_content_integrit0\\artifacts\\summaries\\c5595e71-106c-4399-bd95-efd57407337f.txt",
+      "timestamp": "2026-11-08T03:31:48.380644+00:00",
+      "content_sha256": "034311adcf7e54dc9c9d35f583590b4c865b4b7ffa132b2acf9812c5a509f779",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "f1021fc9-edad-409f-accf-d8f44c4e8449",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\lumira-bd-final\\test_artifact_integrity_metada0\\artifacts\\audio\\f1021fc9-edad-409f-accf-d8f44c4e8449.wav",
+      "timestamp": "2026-11-08T03:31:48.555259+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "495f9ab7-e754-4eb8-96d9-a0ffbba80768",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\495f9ab7-e754-4eb8-96d9-a0ffbba80768.json",
+      "timestamp": "2026-11-08T03:55:10.621774+00:00",
+      "content_sha256": "8b27fcd081e65d15e2e45c5b586e9ae5154d2aec34558fb8edffeb0f522c7e90",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "b6d3662a-e20f-4aa8-9051-6d80f1652330",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\b6d3662a-e20f-4aa8-9051-6d80f1652330.json",
+      "timestamp": "2026-11-08T03:55:10.703036+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "78ea43d0-431f-447c-a62f-05713d31a5cf",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\78ea43d0-431f-447c-a62f-05713d31a5cf.json",
+      "timestamp": "2026-11-08T03:55:10.894405+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "14e92250-0081-484f-938c-2dda55a1c9bc",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\14e92250-0081-484f-938c-2dda55a1c9bc.json",
+      "timestamp": "2026-11-08T03:57:20.125371+00:00",
+      "content_sha256": "03709dbb6ae289faf0a6aedaf24426f235938bbeb0b8749ed74a58a82b074a07",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "00ce9b81-1936-4ea6-9e60-01fe37c34752",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\00ce9b81-1936-4ea6-9e60-01fe37c34752.json",
+      "timestamp": "2026-11-08T03:57:20.235402+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "5d17c600-6508-4c28-8aba-d88279a6c084",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\5d17c600-6508-4c28-8aba-d88279a6c084.json",
+      "timestamp": "2026-11-08T03:57:20.499863+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "1a5b669e-05e2-4cc5-9dd5-de8fe04a919f",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Temp\\lumira-audit-pytest\\test_artifact_content_integrit0\\artifacts\\summaries\\1a5b669e-05e2-4cc5-9dd5-de8fe04a919f.txt",
+      "timestamp": "2026-11-08T04:11:21.680698+00:00",
+      "content_sha256": "034311adcf7e54dc9c9d35f583590b4c865b4b7ffa132b2acf9812c5a509f779",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "81de8227-d1c6-4bd7-96a9-03f509936b9a",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "test",
+      "file": "C:\\Temp\\lumira-audit-pytest\\test_artifact_integrity_metada0\\artifacts\\audio\\81de8227-d1c6-4bd7-96a9-03f509936b9a.wav",
+      "timestamp": "2026-11-08T04:11:21.792302+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "2859810e-bcd2-4380-8ba4-7cac6c282526",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Temp\\lumira-audit-pytest\\test_recent_artifacts_returns_0\\artifacts\\summaries\\2859810e-bcd2-4380-8ba4-7cac6c282526.txt",
+      "timestamp": "2026-11-08T04:11:21.923195+00:00",
+      "content_sha256": "a7937b64b8caa58f03721bb6bacf5c78cb235febe0e70b1b84cd99541461a08e",
+      "content_bytes": 5
+    },
+    {
+      "artifact_id": "7f7c5199-4d27-438c-90e6-26bb874ea650",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Temp\\lumira-audit-pytest\\test_recent_artifacts_returns_0\\artifacts\\summaries\\7f7c5199-4d27-438c-90e6-26bb874ea650.txt",
+      "timestamp": "2026-11-08T04:11:21.993429+00:00",
+      "content_sha256": "16367aacb67a4a017c8da8ab95682ccb390863780f7114dda0a0e0c55644c7c4",
+      "content_bytes": 6
+    },
+    {
+      "artifact_id": "0c7769e4-4569-47ca-8283-3b7a7b672be2",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\0c7769e4-4569-47ca-8283-3b7a7b672be2.json",
+      "timestamp": "2026-11-08T04:13:08.754612+00:00",
+      "content_sha256": "f417193cd8ee5bd0e63edf78056ca0f49ada895548962787943ddc11dc20087a",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "b29b26b7-2ebb-4f5a-8735-216676a7fa1f",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\b29b26b7-2ebb-4f5a-8735-216676a7fa1f.json",
+      "timestamp": "2026-11-08T04:13:08.876456+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "510bd71f-ffce-42c9-83b8-b635ddc34c72",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\510bd71f-ffce-42c9-83b8-b635ddc34c72.json",
+      "timestamp": "2026-11-08T04:13:09.111465+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "5549dbbe-31ec-4003-9b4c-4cdac4d34fdb",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Temp\\lumira-phase-b-direct-20261110\\test_artifact_content_integrit0\\artifacts\\summaries\\5549dbbe-31ec-4003-9b4c-4cdac4d34fdb.txt",
+      "timestamp": "2026-11-10T04:09:59.750105+00:00",
+      "content_sha256": "034311adcf7e54dc9c9d35f583590b4c865b4b7ffa132b2acf9812c5a509f779",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "59177aaa-7625-4778-9dc7-21dc41073210",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "test",
+      "file": "C:\\Temp\\lumira-phase-b-direct-20261110\\test_artifact_integrity_metada0\\artifacts\\audio\\59177aaa-7625-4778-9dc7-21dc41073210.wav",
+      "timestamp": "2026-11-10T04:10:00.037582+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "27da48dc-763c-461b-bef2-cf5c24f78f41",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\27da48dc-763c-461b-bef2-cf5c24f78f41.json",
+      "timestamp": "2026-11-10T04:12:00.037315+00:00",
+      "content_sha256": "04fdf0c7a4e41d8aefb4bbddaa6da79c906183699b76975564db8d600c9706d8",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "1f679d3b-3055-4519-a82d-77bca2d3f931",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\1f679d3b-3055-4519-a82d-77bca2d3f931.json",
+      "timestamp": "2026-11-10T04:12:00.320808+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "da486501-3b9e-4aa6-8291-66c00d9be62e",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\da486501-3b9e-4aa6-8291-66c00d9be62e.json",
+      "timestamp": "2026-11-10T04:12:00.882102+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "58d87939-bf66-4470-93df-73de3f3e1057",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Temp\\lumira-phase-d-direct-20261110\\test_artifact_content_integrit0\\artifacts\\summaries\\58d87939-bf66-4470-93df-73de3f3e1057.txt",
+      "timestamp": "2026-11-10T04:12:35.597269+00:00",
+      "content_sha256": "034311adcf7e54dc9c9d35f583590b4c865b4b7ffa132b2acf9812c5a509f779",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "429746b6-d5a5-4e77-8483-8207fc207489",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "test",
+      "file": "C:\\Temp\\lumira-phase-d-direct-20261110\\test_artifact_integrity_metada0\\artifacts\\audio\\429746b6-d5a5-4e77-8483-8207fc207489.wav",
+      "timestamp": "2026-11-10T04:12:35.823539+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "08325747-6647-4062-9d7f-0c0cf0ff4076",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Temp\\lumira-full-backend\\test_artifact_content_integrit0\\artifacts\\summaries\\08325747-6647-4062-9d7f-0c0cf0ff4076.txt",
+      "timestamp": "2026-11-10T04:39:51.479124+00:00",
+      "content_sha256": "034311adcf7e54dc9c9d35f583590b4c865b4b7ffa132b2acf9812c5a509f779",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "6956bf88-0e95-491e-8c41-8b9421efe482",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "test",
+      "file": "C:\\Temp\\lumira-full-backend\\test_artifact_integrity_metada0\\artifacts\\audio\\6956bf88-0e95-491e-8c41-8b9421efe482.wav",
+      "timestamp": "2026-11-10T04:39:51.681761+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "61069f1a-0d78-4a69-8901-b1248117f223",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Temp\\lumira-full-backend\\test_recent_artifacts_returns_0\\artifacts\\summaries\\61069f1a-0d78-4a69-8901-b1248117f223.txt",
+      "timestamp": "2026-11-10T04:39:51.916580+00:00",
+      "content_sha256": "a7937b64b8caa58f03721bb6bacf5c78cb235febe0e70b1b84cd99541461a08e",
+      "content_bytes": 5
+    },
+    {
+      "artifact_id": "fab044b8-9f8b-4bcc-a9ea-7ed8da9caf62",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Temp\\lumira-full-backend\\test_recent_artifacts_returns_0\\artifacts\\summaries\\fab044b8-9f8b-4bcc-a9ea-7ed8da9caf62.txt",
+      "timestamp": "2026-11-10T04:39:52.055115+00:00",
+      "content_sha256": "16367aacb67a4a017c8da8ab95682ccb390863780f7114dda0a0e0c55644c7c4",
+      "content_bytes": 6
+    },
+    {
+      "artifact_id": "9c742329-5ab8-4d5f-92ed-b34688edae87",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\9c742329-5ab8-4d5f-92ed-b34688edae87.json",
+      "timestamp": "2026-11-10T04:43:33.510463+00:00",
+      "content_sha256": "9c6f252dd0dca371f9c30c5e06b547592e92b768c88f76c79da28a65d685fd17",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "5ac1c152-f592-4a2d-92f2-8bc06ae35b73",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\5ac1c152-f592-4a2d-92f2-8bc06ae35b73.json",
+      "timestamp": "2026-11-10T04:43:33.798006+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "509814bd-1572-4bf6-8c39-cb45b86859e9",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\509814bd-1572-4bf6-8c39-cb45b86859e9.json",
+      "timestamp": "2026-11-10T04:43:34.391436+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "913f72b3-c7ce-4a61-ba29-16479cfc1576",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Temp\\lumira-full-backend-retest\\test_artifact_content_integrit0\\artifacts\\summaries\\913f72b3-c7ce-4a61-ba29-16479cfc1576.txt",
+      "timestamp": "2026-11-10T04:48:36.871770+00:00",
+      "content_sha256": "034311adcf7e54dc9c9d35f583590b4c865b4b7ffa132b2acf9812c5a509f779",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "3a6d0cb3-d1fb-43d4-8ddc-2219e20bde56",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "test",
+      "file": "C:\\Temp\\lumira-full-backend-retest\\test_artifact_integrity_metada0\\artifacts\\audio\\3a6d0cb3-d1fb-43d4-8ddc-2219e20bde56.wav",
+      "timestamp": "2026-11-10T04:48:37.128432+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "7a589975-d638-410a-a3e5-945bfd87a70d",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Temp\\lumira-full-backend-retest\\test_recent_artifacts_returns_0\\artifacts\\summaries\\7a589975-d638-410a-a3e5-945bfd87a70d.txt",
+      "timestamp": "2026-11-10T04:48:37.439307+00:00",
+      "content_sha256": "a7937b64b8caa58f03721bb6bacf5c78cb235febe0e70b1b84cd99541461a08e",
+      "content_bytes": 5
+    },
+    {
+      "artifact_id": "aad3f24a-281a-4ec4-ab47-2db09dce80e0",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Temp\\lumira-full-backend-retest\\test_recent_artifacts_returns_0\\artifacts\\summaries\\aad3f24a-281a-4ec4-ab47-2db09dce80e0.txt",
+      "timestamp": "2026-11-10T04:48:37.549770+00:00",
+      "content_sha256": "16367aacb67a4a017c8da8ab95682ccb390863780f7114dda0a0e0c55644c7c4",
+      "content_bytes": 6
+    },
+    {
+      "artifact_id": "97c644a7-ffea-4fd0-a645-529e69d62275",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\97c644a7-ffea-4fd0-a645-529e69d62275.json",
+      "timestamp": "2026-11-10T04:52:25.736403+00:00",
+      "content_sha256": "69bc13ff475e43940ced04c9682e3d43ec351f0bbd336e41f184b199a7bf4899",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "c1fede7a-8cfe-4ce0-aa2e-44b5b6626e86",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\c1fede7a-8cfe-4ce0-aa2e-44b5b6626e86.json",
+      "timestamp": "2026-11-10T04:52:26.022933+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "1eb18d44-112f-4bc7-811d-3a5e275d057c",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\1eb18d44-112f-4bc7-811d-3a5e275d057c.json",
+      "timestamp": "2026-11-10T04:52:26.670069+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "ff56c953-beaa-48d6-9874-e034405d6ec6",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\pytest-of-Administrator\\pytest-108\\test_artifact_content_integrit0\\artifacts\\summaries\\ff56c953-beaa-48d6-9874-e034405d6ec6.txt",
+      "timestamp": "2026-11-10T05:51:49.568137+00:00",
+      "content_sha256": "034311adcf7e54dc9c9d35f583590b4c865b4b7ffa132b2acf9812c5a509f779",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "18bbb6b0-b45b-4795-93eb-80f5491a6073",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "test",
+      "file": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\pytest-of-Administrator\\pytest-108\\test_artifact_integrity_metada0\\artifacts\\audio\\18bbb6b0-b45b-4795-93eb-80f5491a6073.wav",
+      "timestamp": "2026-11-10T05:51:49.873644+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "a07e8769-f274-480c-b271-83d3dba27071",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_phase_cert_20261110b\\test_artifact_content_integrit0\\artifacts\\summaries\\a07e8769-f274-480c-b271-83d3dba27071.txt",
+      "timestamp": "2026-11-10T06:12:54.119637+00:00",
+      "content_sha256": "034311adcf7e54dc9c9d35f583590b4c865b4b7ffa132b2acf9812c5a509f779",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "428e7b74-e1c6-471f-842a-d502d1a5a583",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_phase_cert_20261110b\\test_artifact_integrity_metada0\\artifacts\\audio\\428e7b74-e1c6-471f-842a-d502d1a5a583.wav",
+      "timestamp": "2026-11-10T06:12:54.334616+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "486538e7-b665-4fbe-ab76-dcd14b0f37da",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_phase_cert_20261110b\\test_recent_artifacts_returns_0\\artifacts\\summaries\\486538e7-b665-4fbe-ab76-dcd14b0f37da.txt",
+      "timestamp": "2026-11-10T06:12:54.530586+00:00",
+      "content_sha256": "a7937b64b8caa58f03721bb6bacf5c78cb235febe0e70b1b84cd99541461a08e",
+      "content_bytes": 5
+    },
+    {
+      "artifact_id": "1db84c43-ad07-4054-8e3e-94cef1c49e18",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_phase_cert_20261110b\\test_recent_artifacts_returns_0\\artifacts\\summaries\\1db84c43-ad07-4054-8e3e-94cef1c49e18.txt",
+      "timestamp": "2026-11-10T06:12:54.630315+00:00",
+      "content_sha256": "16367aacb67a4a017c8da8ab95682ccb390863780f7114dda0a0e0c55644c7c4",
+      "content_bytes": 6
+    },
+    {
+      "artifact_id": "1c6b824b-98c6-42fb-9c2b-2d22fa3a96e6",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\1c6b824b-98c6-42fb-9c2b-2d22fa3a96e6.json",
+      "timestamp": "2026-11-10T06:16:41.306837+00:00",
+      "content_sha256": "ce30fa02349b9b7fc74d0052a5594e5a47dd3c11a46bf933e0ded5da4a5ec4c8",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "7c336ec2-b1ca-4529-9bb6-b98981fc3a4a",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\7c336ec2-b1ca-4529-9bb6-b98981fc3a4a.json",
+      "timestamp": "2026-11-10T06:16:41.615879+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "4ac2bf83-31ae-44fe-8d53-75efb3b60864",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\4ac2bf83-31ae-44fe-8d53-75efb3b60864.json",
+      "timestamp": "2026-11-10T06:16:42.019376+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "1f986ebd-b573-4906-948b-1d42e77105d7",
+      "owner_id": "local",
+      "type": "transcripts",
+      "source": "live_acceptance",
+      "file": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\lumira_live_summary_v6hsdehb\\artifacts\\transcripts\\1f986ebd-b573-4906-948b-1d42e77105d7.txt",
+      "timestamp": "2026-11-10T06:22:08.365758+00:00",
+      "content_sha256": "f1b93ce10487c4caaaa322175d662465a3bc812db9555244a92001ed3a51e197",
+      "content_bytes": 200
+    },
+    {
+      "artifact_id": "6495e52d-4d39-4301-9ffd-0f418c0b1046",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "1f986ebd-b573-4906-948b-1d42e77105d7",
+      "file": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\lumira_live_summary_v6hsdehb\\artifacts\\summaries\\6495e52d-4d39-4301-9ffd-0f418c0b1046.txt",
+      "timestamp": "2026-11-10T06:22:21.568804+00:00",
+      "content_sha256": "2025fecbd61e1ba1c62839b0013a1beb2c0330bf926829bd2aabe5fbf75309de",
+      "content_bytes": 202
+    },
+    {
+      "artifact_id": "eb7d69b7-de4e-4722-8071-4abbfb8241dc",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "image_understanding",
+      "file": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\lumira_live_vision_fixed_9bimi9q4\\artifacts\\reports\\eb7d69b7-de4e-4722-8071-4abbfb8241dc.json",
+      "timestamp": "2026-11-10T06:25:50.092439+00:00",
+      "content_sha256": "0560b957f458225f0e6f432e96f8b4d9efe2b46a627b6061afc4ad10502bf724",
+      "content_bytes": 336
+    },
+    {
+      "artifact_id": "355ff219-cbb0-485f-b7e8-c88eca688cbc",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_phase_cert_final_20261110\\test_artifact_content_integrit0\\artifacts\\summaries\\355ff219-cbb0-485f-b7e8-c88eca688cbc.txt",
+      "timestamp": "2026-11-10T06:35:52.808274+00:00",
+      "content_sha256": "034311adcf7e54dc9c9d35f583590b4c865b4b7ffa132b2acf9812c5a509f779",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "45582689-dd41-415b-98b8-22b310bb60f4",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_phase_cert_final_20261110\\test_artifact_integrity_metada0\\artifacts\\audio\\45582689-dd41-415b-98b8-22b310bb60f4.wav",
+      "timestamp": "2026-11-10T06:35:53.002057+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "af54ccb4-d92c-496f-b273-772cac6bc7fa",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_phase_cert_final_20261110\\test_recent_artifacts_returns_0\\artifacts\\summaries\\af54ccb4-d92c-496f-b273-772cac6bc7fa.txt",
+      "timestamp": "2026-11-10T06:35:53.151664+00:00",
+      "content_sha256": "a7937b64b8caa58f03721bb6bacf5c78cb235febe0e70b1b84cd99541461a08e",
+      "content_bytes": 5
+    },
+    {
+      "artifact_id": "25b74004-f5a9-4b09-8e1a-53c366e9014b",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_phase_cert_final_20261110\\test_recent_artifacts_returns_0\\artifacts\\summaries\\25b74004-f5a9-4b09-8e1a-53c366e9014b.txt",
+      "timestamp": "2026-11-10T06:35:53.232523+00:00",
+      "content_sha256": "16367aacb67a4a017c8da8ab95682ccb390863780f7114dda0a0e0c55644c7c4",
+      "content_bytes": 6
+    },
+    {
+      "artifact_id": "207dec2b-f445-40a8-9b1b-5c97ee16db88",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\207dec2b-f445-40a8-9b1b-5c97ee16db88.json",
+      "timestamp": "2026-11-10T06:38:22.862577+00:00",
+      "content_sha256": "1dec51347fdeb54335c6796044351ebaa34bb8ef7c021c63e5e5a26303931f51",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "dad68e2b-e856-4a01-8aaf-1f0ed4a12cee",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\dad68e2b-e856-4a01-8aaf-1f0ed4a12cee.json",
+      "timestamp": "2026-11-10T06:38:23.029972+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "15fa6ef7-3b74-4f46-bdc4-b2043e0b094f",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\15fa6ef7-3b74-4f46-bdc4-b2043e0b094f.json",
+      "timestamp": "2026-11-10T06:38:23.318407+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "72bcd2d2-ab80-444e-9501-939c81d5d224",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_phase_cert_release_20261110\\test_artifact_content_integrit0\\artifacts\\summaries\\72bcd2d2-ab80-444e-9501-939c81d5d224.txt",
+      "timestamp": "2026-11-10T06:41:20.501612+00:00",
+      "content_sha256": "034311adcf7e54dc9c9d35f583590b4c865b4b7ffa132b2acf9812c5a509f779",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "e0197596-127c-40cf-9ba4-f94b6e362f87",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_phase_cert_release_20261110\\test_artifact_integrity_metada0\\artifacts\\audio\\e0197596-127c-40cf-9ba4-f94b6e362f87.wav",
+      "timestamp": "2026-11-10T06:41:20.630064+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "31209715-5d83-4f5e-b448-47c5bef812f4",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_phase_cert_release_20261110\\test_recent_artifacts_returns_0\\artifacts\\summaries\\31209715-5d83-4f5e-b448-47c5bef812f4.txt",
+      "timestamp": "2026-11-10T06:41:20.777895+00:00",
+      "content_sha256": "a7937b64b8caa58f03721bb6bacf5c78cb235febe0e70b1b84cd99541461a08e",
+      "content_bytes": 5
+    },
+    {
+      "artifact_id": "1760f1d2-9e6f-4f7c-8f38-63cd692ab8ef",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_phase_cert_release_20261110\\test_recent_artifacts_returns_0\\artifacts\\summaries\\1760f1d2-9e6f-4f7c-8f38-63cd692ab8ef.txt",
+      "timestamp": "2026-11-10T06:41:20.850172+00:00",
+      "content_sha256": "16367aacb67a4a017c8da8ab95682ccb390863780f7114dda0a0e0c55644c7c4",
+      "content_bytes": 6
+    },
+    {
+      "artifact_id": "e1dae267-9769-4728-96b2-40b867378ac6",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\e1dae267-9769-4728-96b2-40b867378ac6.json",
+      "timestamp": "2026-11-10T06:43:51.725272+00:00",
+      "content_sha256": "4950e5ecdc16b88c8725aa743b57258374ba5e76499b1a2ac268fa4a44effc75",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "8daa6b18-b910-4eec-b2da-a33a5c11cbfd",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\8daa6b18-b910-4eec-b2da-a33a5c11cbfd.json",
+      "timestamp": "2026-11-10T06:43:51.955489+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "2c097aa7-9f56-430d-8fbb-9cb1b8ecf249",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\2c097aa7-9f56-430d-8fbb-9cb1b8ecf249.json",
+      "timestamp": "2026-11-10T06:43:52.270791+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "ac440277-7ea1-4eb4-b09f-103a1780b788",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "creator_os_speech_synthesis",
+      "file": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\lumira_sapi_live_acceptance_final_h_puj2hq\\artifacts\\audio\\ac440277-7ea1-4eb4-b09f-103a1780b788.wav",
+      "timestamp": "2026-11-10T07:29:58.821316+00:00",
+      "content_sha256": "720cdaddfebdcd9d42394cfa305c00896a05ae38e526d856d8e04678544a2bc5",
+      "content_bytes": 295006
+    },
+    {
+      "artifact_id": "0fd13eaf-c66a-4a9d-8ade-9112eaf17875",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "creator_os_speech_synthesis",
+      "file": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\lumira_sapi_live_acceptance_verified_6lfz1gx6\\artifacts\\audio\\0fd13eaf-c66a-4a9d-8ade-9112eaf17875.wav",
+      "timestamp": "2026-11-10T07:31:07.725518+00:00",
+      "content_sha256": "720cdaddfebdcd9d42394cfa305c00896a05ae38e526d856d8e04678544a2bc5",
+      "content_bytes": 295006
+    },
+    {
+      "artifact_id": "2f6bb3c7-70d9-42ea-bce7-e6d910b53c92",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_final_sapi_acceptance_20261110\\test_artifact_content_integrit0\\artifacts\\summaries\\2f6bb3c7-70d9-42ea-bce7-e6d910b53c92.txt",
+      "timestamp": "2026-11-10T07:32:19.539652+00:00",
+      "content_sha256": "034311adcf7e54dc9c9d35f583590b4c865b4b7ffa132b2acf9812c5a509f779",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "13c9d73b-0468-46ab-98bb-7cc931d0feae",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_final_sapi_acceptance_20261110\\test_artifact_integrity_metada0\\artifacts\\audio\\13c9d73b-0468-46ab-98bb-7cc931d0feae.wav",
+      "timestamp": "2026-11-10T07:32:19.818090+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "0d053ef3-7295-41ab-8d1b-4d25b5d22afd",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_final_sapi_acceptance_20261110\\test_recent_artifacts_returns_0\\artifacts\\summaries\\0d053ef3-7295-41ab-8d1b-4d25b5d22afd.txt",
+      "timestamp": "2026-11-10T07:32:19.979253+00:00",
+      "content_sha256": "a7937b64b8caa58f03721bb6bacf5c78cb235febe0e70b1b84cd99541461a08e",
+      "content_bytes": 5
+    },
+    {
+      "artifact_id": "f91cf8a8-3013-46ab-b9d6-ae4246a71ecb",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_final_sapi_acceptance_20261110\\test_recent_artifacts_returns_0\\artifacts\\summaries\\f91cf8a8-3013-46ab-b9d6-ae4246a71ecb.txt",
+      "timestamp": "2026-11-10T07:32:20.058678+00:00",
+      "content_sha256": "16367aacb67a4a017c8da8ab95682ccb390863780f7114dda0a0e0c55644c7c4",
+      "content_bytes": 6
+    },
+    {
+      "artifact_id": "cda6e420-70e0-4eba-acd8-c1bee7653259",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\cda6e420-70e0-4eba-acd8-c1bee7653259.json",
+      "timestamp": "2026-11-10T07:36:50.792817+00:00",
+      "content_sha256": "e145d5ad58c0ca9dd471efa0fa5752cc6d53e94594ebc5643953a0b826fdc3b7",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "5b1aad85-e76d-4809-b777-ddba29a93743",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\5b1aad85-e76d-4809-b777-ddba29a93743.json",
+      "timestamp": "2026-11-10T07:36:51.146044+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "22b103b1-860c-426f-b3d4-0673a40a4840",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\22b103b1-860c-426f-b3d4-0673a40a4840.json",
+      "timestamp": "2026-11-10T07:36:52.285818+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "57dc59a3-8ee9-465e-8001-8cb45b7c97d6",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_final_suite_retry_20261110\\test_artifact_content_integrit0\\artifacts\\summaries\\57dc59a3-8ee9-465e-8001-8cb45b7c97d6.txt",
+      "timestamp": "2026-11-10T07:50:49.710661+00:00",
+      "content_sha256": "034311adcf7e54dc9c9d35f583590b4c865b4b7ffa132b2acf9812c5a509f779",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "2f5ecc0f-e399-4826-8653-ede133acbb88",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_final_suite_retry_20261110\\test_artifact_integrity_metada0\\artifacts\\audio\\2f5ecc0f-e399-4826-8653-ede133acbb88.wav",
+      "timestamp": "2026-11-10T07:50:49.959720+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "c98efbad-573a-4c28-9885-c8e79c2b33c4",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_final_suite_retry_20261110\\test_recent_artifacts_returns_0\\artifacts\\summaries\\c98efbad-573a-4c28-9885-c8e79c2b33c4.txt",
+      "timestamp": "2026-11-10T07:50:50.311193+00:00",
+      "content_sha256": "a7937b64b8caa58f03721bb6bacf5c78cb235febe0e70b1b84cd99541461a08e",
+      "content_bytes": 5
+    },
+    {
+      "artifact_id": "2b35db38-fc63-48b9-a67c-b6aa8d63afbf",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_final_suite_retry_20261110\\test_recent_artifacts_returns_0\\artifacts\\summaries\\2b35db38-fc63-48b9-a67c-b6aa8d63afbf.txt",
+      "timestamp": "2026-11-10T07:50:50.421139+00:00",
+      "content_sha256": "16367aacb67a4a017c8da8ab95682ccb390863780f7114dda0a0e0c55644c7c4",
+      "content_bytes": 6
+    },
+    {
+      "artifact_id": "433f60c8-9e9f-4d44-827b-657d2346fc97",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\433f60c8-9e9f-4d44-827b-657d2346fc97.json",
+      "timestamp": "2026-11-10T07:55:18.314236+00:00",
+      "content_sha256": "1cb9d87c639239370734a103d4d78f38dc5ec824961435d4225803666348ed61",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "52760ebe-1e23-4836-89d2-870172249299",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\52760ebe-1e23-4836-89d2-870172249299.json",
+      "timestamp": "2026-11-10T07:55:18.583976+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "88eb7893-2f99-4b1d-9938-399a0caa2dc6",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\88eb7893-2f99-4b1d-9938-399a0caa2dc6.json",
+      "timestamp": "2026-11-10T07:55:18.980473+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "f1841ade-29e8-4ad6-81f5-10fc8c6f297c",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "voice-capture",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_transcript_idempotency_20261110\\test_existing_transcript_is_re0\\artifacts\\audio\\f1841ade-29e8-4ad6-81f5-10fc8c6f297c.wav",
+      "timestamp": "2026-11-10T08:07:18.051451+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "2aa3aef1-340d-4b41-880b-ab74a5641dfe",
+      "owner_id": "local",
+      "type": "transcripts",
+      "source": "f1841ade-29e8-4ad6-81f5-10fc8c6f297c",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_transcript_idempotency_20261110\\test_existing_transcript_is_re0\\artifacts\\transcripts\\2aa3aef1-340d-4b41-880b-ab74a5641dfe.txt",
+      "timestamp": "2026-11-10T08:07:18.168781+00:00",
+      "content_sha256": "942580f8b4e41be3b66f51d5bbd98885da41f611b0c9f67b4687e158b9078b32",
+      "content_bytes": 29
+    },
+    {
+      "artifact_id": "659fd5c1-5f2a-47d8-a3dd-df1d3358e33d",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "voice-capture",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_transcript_idempotency_20261110\\test_corrupt_existing_transcri0\\artifacts\\audio\\659fd5c1-5f2a-47d8-a3dd-df1d3358e33d.wav",
+      "timestamp": "2026-11-10T08:07:18.457521+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "2b9b04cd-2194-495e-9336-7d9b7abb45ac",
+      "owner_id": "local",
+      "type": "transcripts",
+      "source": "659fd5c1-5f2a-47d8-a3dd-df1d3358e33d",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_transcript_idempotency_20261110\\test_corrupt_existing_transcri0\\artifacts\\transcripts\\2b9b04cd-2194-495e-9336-7d9b7abb45ac.txt",
+      "timestamp": "2026-11-10T08:07:18.598063+00:00",
+      "content_sha256": "1c14bff3ec00cf27a50b0dd5611603a9aa97dd5111dd50d45a9496f88e7b070d",
+      "content_bytes": 20
+    },
+    {
+      "artifact_id": "a4b21e96-2e0e-436f-bbdd-de8e18ebd7be",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "voice-capture",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_transcript_idempotency_20261110\\test_archived_transcript_is_no0\\artifacts\\audio\\a4b21e96-2e0e-436f-bbdd-de8e18ebd7be.wav",
+      "timestamp": "2026-11-10T08:07:18.934864+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "6d46ac48-7f6f-4d38-bfe9-f273916b9f6a",
+      "owner_id": "local",
+      "type": "transcripts",
+      "source": "a4b21e96-2e0e-436f-bbdd-de8e18ebd7be",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_transcript_idempotency_20261110\\test_archived_transcript_is_no0\\artifacts\\transcripts\\6d46ac48-7f6f-4d38-bfe9-f273916b9f6a.txt",
+      "timestamp": "2026-11-10T08:07:19.076416+00:00",
+      "content_sha256": "29e7e531510d607c5bfd74a004b6b753332dde858f9ff01b46220fc91ef2ace7",
+      "content_bytes": 20,
+      "archived": true,
+      "archived_at": "2026-11-10T08:07:19.211757+00:00"
+    },
+    {
+      "artifact_id": "6ad746df-1e35-4538-a98e-974b1c1f32f6",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "voice-capture",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_transcript_idempotency_retry_20261110\\test_existing_transcript_is_re0\\artifacts\\audio\\6ad746df-1e35-4538-a98e-974b1c1f32f6.wav",
+      "timestamp": "2026-11-10T08:08:09.038094+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "0285e0ac-67cc-4a4a-9b41-721c208ea531",
+      "owner_id": "local",
+      "type": "transcripts",
+      "source": "6ad746df-1e35-4538-a98e-974b1c1f32f6",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_transcript_idempotency_retry_20261110\\test_existing_transcript_is_re0\\artifacts\\transcripts\\0285e0ac-67cc-4a4a-9b41-721c208ea531.txt",
+      "timestamp": "2026-11-10T08:08:09.169294+00:00",
+      "content_sha256": "942580f8b4e41be3b66f51d5bbd98885da41f611b0c9f67b4687e158b9078b32",
+      "content_bytes": 29
+    },
+    {
+      "artifact_id": "01e29b90-595c-4615-a2c4-44bcf9ff1970",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "voice-capture",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_transcript_idempotency_retry_20261110\\test_corrupt_existing_transcri0\\artifacts\\audio\\01e29b90-595c-4615-a2c4-44bcf9ff1970.wav",
+      "timestamp": "2026-11-10T08:08:09.453100+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "57bfd7f9-1ac8-49fe-847b-b0743860a022",
+      "owner_id": "local",
+      "type": "transcripts",
+      "source": "01e29b90-595c-4615-a2c4-44bcf9ff1970",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_transcript_idempotency_retry_20261110\\test_corrupt_existing_transcri0\\artifacts\\transcripts\\57bfd7f9-1ac8-49fe-847b-b0743860a022.txt",
+      "timestamp": "2026-11-10T08:08:09.636382+00:00",
+      "content_sha256": "1c14bff3ec00cf27a50b0dd5611603a9aa97dd5111dd50d45a9496f88e7b070d",
+      "content_bytes": 20
+    },
+    {
+      "artifact_id": "2beb91a4-0db5-497c-ab61-d9599f3073b9",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "voice-capture",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_transcript_idempotency_retry_20261110\\test_archived_transcript_is_no0\\artifacts\\audio\\2beb91a4-0db5-497c-ab61-d9599f3073b9.wav",
+      "timestamp": "2026-11-10T08:08:09.974743+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "703a2f48-d941-4f4d-a3d8-0fe6cc3e5173",
+      "owner_id": "local",
+      "type": "transcripts",
+      "source": "2beb91a4-0db5-497c-ab61-d9599f3073b9",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_transcript_idempotency_retry_20261110\\test_archived_transcript_is_no0\\artifacts\\transcripts\\703a2f48-d941-4f4d-a3d8-0fe6cc3e5173.txt",
+      "timestamp": "2026-11-10T08:08:10.117534+00:00",
+      "content_sha256": "29e7e531510d607c5bfd74a004b6b753332dde858f9ff01b46220fc91ef2ace7",
+      "content_bytes": 20,
+      "archived": true,
+      "archived_at": "2026-11-10T08:08:10.260904+00:00"
+    },
+    {
+      "artifact_id": "892a75b0-bd38-424a-99a1-2881bbab11d8",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "voice-capture",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_voice_provider_final_20261110\\test_existing_transcript_is_re0\\artifacts\\audio\\892a75b0-bd38-424a-99a1-2881bbab11d8.wav",
+      "timestamp": "2026-11-10T08:09:41.762100+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "a1d9d862-697c-48fd-bf35-5638a05d36bf",
+      "owner_id": "local",
+      "type": "transcripts",
+      "source": "892a75b0-bd38-424a-99a1-2881bbab11d8",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_voice_provider_final_20261110\\test_existing_transcript_is_re0\\artifacts\\transcripts\\a1d9d862-697c-48fd-bf35-5638a05d36bf.txt",
+      "timestamp": "2026-11-10T08:09:41.882683+00:00",
+      "content_sha256": "942580f8b4e41be3b66f51d5bbd98885da41f611b0c9f67b4687e158b9078b32",
+      "content_bytes": 29
+    },
+    {
+      "artifact_id": "d1885004-d626-4223-b784-bce9797c71a5",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "voice-capture",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_voice_provider_final_20261110\\test_corrupt_existing_transcri0\\artifacts\\audio\\d1885004-d626-4223-b784-bce9797c71a5.wav",
+      "timestamp": "2026-11-10T08:09:42.214090+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "43d09df9-2160-453a-b645-36028b12c7c8",
+      "owner_id": "local",
+      "type": "transcripts",
+      "source": "d1885004-d626-4223-b784-bce9797c71a5",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_voice_provider_final_20261110\\test_corrupt_existing_transcri0\\artifacts\\transcripts\\43d09df9-2160-453a-b645-36028b12c7c8.txt",
+      "timestamp": "2026-11-10T08:09:42.349511+00:00",
+      "content_sha256": "1c14bff3ec00cf27a50b0dd5611603a9aa97dd5111dd50d45a9496f88e7b070d",
+      "content_bytes": 20
+    },
+    {
+      "artifact_id": "86a74e7a-0057-4545-838e-8ff63eef1c6d",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "voice-capture",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_voice_provider_final_20261110\\test_archived_transcript_is_no0\\artifacts\\audio\\86a74e7a-0057-4545-838e-8ff63eef1c6d.wav",
+      "timestamp": "2026-11-10T08:09:42.585430+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "da51f761-3235-444c-baaf-a397c5b0fec5",
+      "owner_id": "local",
+      "type": "transcripts",
+      "source": "86a74e7a-0057-4545-838e-8ff63eef1c6d",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_voice_provider_final_20261110\\test_archived_transcript_is_no0\\artifacts\\transcripts\\da51f761-3235-444c-baaf-a397c5b0fec5.txt",
+      "timestamp": "2026-11-10T08:09:42.714355+00:00",
+      "content_sha256": "29e7e531510d607c5bfd74a004b6b753332dde858f9ff01b46220fc91ef2ace7",
+      "content_bytes": 20,
+      "archived": true,
+      "archived_at": "2026-11-10T08:09:42.843037+00:00"
+    },
+    {
+      "artifact_id": "8c6b3644-49b9-4ae2-b0df-72335fff8319",
+      "owner_id": "local",
+      "type": "summaries",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_voice_provider_final_20261110\\test_artifact_content_integrit0\\artifacts\\summaries\\8c6b3644-49b9-4ae2-b0df-72335fff8319.txt",
+      "timestamp": "2026-11-10T08:09:44.154682+00:00",
+      "content_sha256": "034311adcf7e54dc9c9d35f583590b4c865b4b7ffa132b2acf9812c5a509f779",
+      "content_bytes": 16
+    },
+    {
+      "artifact_id": "b060a747-97d7-4df3-9b21-04050bf9cbf5",
+      "owner_id": "local",
+      "type": "audio",
+      "source": "test",
+      "file": "E:\\Hari\\personal_ai_core\\pytest_voice_provider_final_20261110\\test_artifact_integrity_metada0\\artifacts\\audio\\b060a747-97d7-4df3-9b21-04050bf9cbf5.wav",
+      "timestamp": "2026-11-10T08:09:44.386885+00:00",
+      "content_sha256": "fb1d6e798f71fd0d050399fa64ab7b2c99fb992f280a7650fba00de3a7566ea0",
+      "content_bytes": 16
     }
   ],
-  "feature_history": []
+  "feature_history": [],
+  "schema_version": 1
 }

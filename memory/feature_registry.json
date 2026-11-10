@@ -2,31 +2,658 @@
   "memory": {
     "enabled": true,
     "version": "1.0",
-    "category": "core"
+    "category": "core",
+    "status": "ENABLED",
+    "dependencies": [],
+    "capabilities": [
+      "memory.get",
+      "memory.store",
+      "memory.search"
+    ],
+    "configuration": {},
+    "permissions": [
+      "memory.read",
+      "memory.write"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "memory"
   },
   "voice_input": {
     "enabled": true,
     "version": "1.0",
-    "category": "core"
+    "category": "core",
+    "status": "ENABLED",
+    "dependencies": [],
+    "capabilities": [
+      "voice.capture"
+    ],
+    "configuration": {},
+    "permissions": [
+      "microphone"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "voice_input"
   },
   "voice_idea_capture": {
     "enabled": false,
     "version": "1.0",
-    "category": "capture"
+    "category": "capture",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "voice_input",
+      "artifact_manager",
+      "memory"
+    ],
+    "capabilities": [
+      "voice.record",
+      "voice.transcribe",
+      "voice.idea"
+    ],
+    "configuration": {},
+    "permissions": [
+      "microphone",
+      "filesystem.artifacts"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "voice_idea_capture"
   },
   "artifact_manager": {
     "enabled": false,
     "version": "1.0",
-    "category": "artifact"
+    "category": "artifact",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "memory"
+    ],
+    "capabilities": [
+      "artifact.create",
+      "artifact.search",
+      "artifact.retrieve"
+    ],
+    "configuration": {},
+    "permissions": [
+      "filesystem.artifacts"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "artifact_manager"
   },
   "image_generation": {
     "enabled": false,
     "version": "1.0",
-    "category": "artifact"
+    "category": "artifact",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "artifact_manager"
+    ],
+    "capabilities": [
+      "image.generate"
+    ],
+    "configuration": {},
+    "permissions": [
+      "filesystem.artifacts"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "image_generation"
   },
   "unified_search": {
     "enabled": false,
     "version": "1.0",
-    "category": "search"
+    "category": "search",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "memory",
+      "artifact_manager",
+      "projects"
+    ],
+    "capabilities": [
+      "search.unified"
+    ],
+    "configuration": {},
+    "permissions": [
+      "memory.read",
+      "filesystem.project",
+      "filesystem.artifacts"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "unified_search"
+  },
+  "intent": {
+    "version": "1.0",
+    "category": "core_intelligence",
+    "status": "AVAILABLE",
+    "dependencies": [],
+    "capabilities": [
+      "intent.classify"
+    ],
+    "configuration": {},
+    "permissions": [],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "intent",
+    "enabled": false
+  },
+  "goals": {
+    "version": "1.0",
+    "category": "core_intelligence",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "memory"
+    ],
+    "capabilities": [
+      "goals.create",
+      "goals.update",
+      "goals.list"
+    ],
+    "configuration": {},
+    "permissions": [
+      "memory.read",
+      "memory.write"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "goals",
+    "enabled": false
+  },
+  "planner": {
+    "version": "1.0",
+    "category": "core_intelligence",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "goals"
+    ],
+    "capabilities": [
+      "planner.create",
+      "planner.validate"
+    ],
+    "configuration": {
+      "max_tasks": 12
+    },
+    "permissions": [],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "planner",
+    "enabled": false
+  },
+  "agents": {
+    "version": "1.0",
+    "category": "core_intelligence",
+    "status": "EXPERIMENTAL",
+    "dependencies": [
+      "planner"
+    ],
+    "capabilities": [
+      "agents.discover",
+      "agents.select",
+      "agents.execute"
+    ],
+    "configuration": {
+      "max_retries": 2
+    },
+    "permissions": [],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "agents",
+    "enabled": false
+  },
+  "learning": {
+    "version": "1.0",
+    "category": "memory",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "memory"
+    ],
+    "capabilities": [
+      "learning.analyze",
+      "learning.lessons"
+    ],
+    "configuration": {},
+    "permissions": [
+      "memory.read",
+      "memory.write"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "learning",
+    "enabled": false
+  },
+  "sessions": {
+    "version": "1.0",
+    "category": "memory",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "memory"
+    ],
+    "capabilities": [
+      "sessions.create",
+      "sessions.resume",
+      "sessions.recover"
+    ],
+    "configuration": {},
+    "permissions": [
+      "memory.read",
+      "memory.write"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "sessions",
+    "enabled": false
+  },
+  "projects": {
+    "version": "1.0",
+    "category": "execution",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "memory"
+    ],
+    "capabilities": [
+      "projects.create",
+      "projects.inspect",
+      "projects.versions"
+    ],
+    "configuration": {},
+    "permissions": [
+      "filesystem.project"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "projects",
+    "enabled": false
+  },
+  "code": {
+    "version": "1.0",
+    "category": "execution",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "projects"
+    ],
+    "capabilities": [
+      "code.generate",
+      "code.modify",
+      "code.test"
+    ],
+    "configuration": {},
+    "permissions": [
+      "filesystem.project"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "code",
+    "enabled": false
+  },
+  "workflows": {
+    "version": "1.0",
+    "category": "execution",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "memory"
+    ],
+    "capabilities": [
+      "workflow.run",
+      "workflow.recover"
+    ],
+    "configuration": {
+      "max_steps": 12
+    },
+    "permissions": [],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "workflows",
+    "enabled": false
+  },
+  "autonomous_development": {
+    "version": "1.0",
+    "category": "execution",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "projects",
+      "code",
+      "workflows"
+    ],
+    "capabilities": [
+      "development.inspect",
+      "development.change",
+      "development.verify"
+    ],
+    "configuration": {
+      "max_iterations": 5
+    },
+    "permissions": [
+      "filesystem.project",
+      "process.bounded"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "autonomous_development",
+    "enabled": false
+  },
+  "recovery": {
+    "version": "1.0",
+    "category": "execution",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "workflows"
+    ],
+    "capabilities": [
+      "recovery.resume",
+      "recovery.inspect"
+    ],
+    "configuration": {
+      "max_resumes": 3
+    },
+    "permissions": [],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "recovery",
+    "enabled": false
+  },
+  "wake_word_handoff": {
+    "version": "1.0",
+    "category": "voice",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "voice_input"
+    ],
+    "capabilities": [
+      "voice.wake.start",
+      "voice.wake.consume"
+    ],
+    "configuration": {
+      "max_pending_events": 20
+    },
+    "permissions": [
+      "microphone"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "wake_word_handoff",
+    "enabled": false
+  },
+  "voice_transcript": {
+    "version": "1.0",
+    "category": "voice",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "voice_input",
+      "artifact_manager"
+    ],
+    "capabilities": [
+      "voice.transcribe",
+      "voice.language"
+    ],
+    "configuration": {},
+    "permissions": [
+      "microphone",
+      "filesystem.artifacts"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "voice_transcript",
+    "enabled": false
+  },
+  "idea_summarization": {
+    "version": "1.0",
+    "category": "voice",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "memory",
+      "artifact_manager"
+    ],
+    "capabilities": [
+      "idea.summarize",
+      "idea.store"
+    ],
+    "configuration": {},
+    "permissions": [
+      "memory.read",
+      "memory.write",
+      "filesystem.artifacts"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "idea_summarization",
+    "enabled": false
+  },
+  "image_understanding": {
+    "version": "1.0",
+    "category": "multimodal",
+    "status": "EXPERIMENTAL",
+    "dependencies": [
+      "artifact_manager"
+    ],
+    "capabilities": [
+      "image.analyze",
+      "image.ocr"
+    ],
+    "configuration": {},
+    "permissions": [
+      "filesystem.artifacts"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "image_understanding",
+    "enabled": false
+  },
+  "web_access": {
+    "version": "1.0",
+    "category": "research",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "artifact_manager"
+    ],
+    "capabilities": [
+      "web.fetch",
+      "web.process"
+    ],
+    "configuration": {
+      "max_response_bytes": 5000000,
+      "max_redirects": 3
+    },
+    "permissions": [
+      "network.public_https"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "web_access",
+    "enabled": false
+  },
+  "research": {
+    "version": "1.0",
+    "category": "research",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "web_access",
+      "memory",
+      "artifact_manager"
+    ],
+    "capabilities": [
+      "research.collect",
+      "research.compare",
+      "research.summarize"
+    ],
+    "configuration": {},
+    "permissions": [
+      "network.public_https",
+      "memory.write"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "research",
+    "enabled": false
+  },
+  "device_management": {
+    "version": "1.0",
+    "category": "devices",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "memory"
+    ],
+    "capabilities": [
+      "device.register",
+      "device.status"
+    ],
+    "configuration": {},
+    "permissions": [],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "device_management",
+    "enabled": false
+  },
+  "mode_management": {
+    "version": "1.0",
+    "category": "devices",
+    "status": "AVAILABLE",
+    "dependencies": [],
+    "capabilities": [
+      "mode.select",
+      "mode.status"
+    ],
+    "configuration": {},
+    "permissions": [],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "mode_management",
+    "enabled": false
+  },
+  "terminal": {
+    "version": "1.0",
+    "category": "interface",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "projects"
+    ],
+    "capabilities": [
+      "terminal.test",
+      "terminal.build"
+    ],
+    "configuration": {
+      "max_runs": 20,
+      "timeout_seconds": 120
+    },
+    "permissions": [
+      "process.bounded"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "terminal",
+    "enabled": false
+  },
+  "project_preview": {
+    "version": "1.0",
+    "category": "interface",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "projects"
+    ],
+    "capabilities": [
+      "preview.register",
+      "preview.start",
+      "preview.stop"
+    ],
+    "configuration": {},
+    "permissions": [
+      "network.localhost"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "project_preview",
+    "enabled": false
+  },
+  "notepad": {
+    "version": "1.0",
+    "category": "interface",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "memory"
+    ],
+    "capabilities": [
+      "notes.create",
+      "notes.update",
+      "notes.retrieve"
+    ],
+    "configuration": {},
+    "permissions": [
+      "memory.read",
+      "memory.write"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "notepad",
+    "enabled": false
+  },
+  "capability_system": {
+    "version": "1.0",
+    "category": "core",
+    "status": "AVAILABLE",
+    "dependencies": [],
+    "capabilities": [
+      "capability.discover",
+      "capability.route"
+    ],
+    "configuration": {},
+    "permissions": [],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "capability_system",
+    "enabled": false
+  },
+  "security": {
+    "version": "1.0",
+    "category": "core",
+    "status": "ENABLED",
+    "dependencies": [],
+    "capabilities": [
+      "security.validate"
+    ],
+    "configuration": {},
+    "permissions": [],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "security",
+    "enabled": true
+  },
+  "observability": {
+    "version": "1.0",
+    "category": "core",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "memory"
+    ],
+    "capabilities": [
+      "observability.status",
+      "observability.history"
+    ],
+    "configuration": {},
+    "permissions": [],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "observability",
+    "enabled": false
+  },
+  "audio_playback": {
+    "version": "1.0",
+    "category": "voice",
+    "status": "AVAILABLE",
+    "dependencies": [
+      "voice_input",
+      "artifact_manager"
+    ],
+    "capabilities": [
+      "audio.playback"
+    ],
+    "configuration": {},
+    "permissions": [
+      "filesystem.artifacts",
+      "audio.output"
+    ],
+    "health": "healthy",
+    "tests": true,
+    "feature_id": "audio_playback",
+    "enabled": false
   }
 }

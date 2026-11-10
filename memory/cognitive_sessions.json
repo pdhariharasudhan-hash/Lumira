@@ -241,6 +241,2178 @@
       "cognitive_state": null,
       "context_snapshots": [],
       "schema_version": 1
+    },
+    {
+      "session_id": "ea290c1c-d661-464e-9171-57a6a750a77b",
+      "owner_id": "local",
+      "conversation_id": "9500a734-60f4-4020-93cb-978920b5568d",
+      "created_at": "2026-11-03T12:43:27.738356+00:00",
+      "updated_at": "2026-11-03T12:43:27.874197+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "086e01ac-a275-43bb-9320-4a07e10239e9",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true,
+            "response": {
+              "success": true,
+              "message": "Hello. I am Lumira and I am ready.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": false,
+              "capability": "greeting"
+            }
+          },
+          "created_at": "2026-11-03T12:43:27.806230+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "41d37c3e-0f7f-40b8-80b0-3ca6be807fd7",
+      "owner_id": "local",
+      "conversation_id": "be42250f-0039-463a-8a61-65cc3c51b7fa",
+      "created_at": "2026-11-03T12:43:27.908566+00:00",
+      "updated_at": "2026-11-03T12:43:28.140224+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": "Build an app",
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "3ccccb94-2fea-4a5b-a18b-bfbb2e624d75",
+          "role": "user",
+          "content": "Build an app",
+          "metadata": {},
+          "created_at": "2026-11-03T12:43:28.018608+00:00"
+        },
+        {
+          "message_id": "aa4c4d65-74f8-4133-b64a-e5e6632c4560",
+          "role": "assistant",
+          "content": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+          "metadata": {
+            "capability": "clarify_project",
+            "clarification_required": true,
+            "response": {
+              "success": true,
+              "message": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": true
+            }
+          },
+          "created_at": "2026-11-03T12:43:28.066440+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "1d50edd2-8c99-44d1-8cd0-e2f0d977f73f",
+      "owner_id": "local",
+      "conversation_id": "3d4c0d45-0372-45aa-a21d-815549c72953",
+      "created_at": "2026-11-04T13:46:30.802742+00:00",
+      "updated_at": "2026-11-04T13:46:30.947363+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "3d2de12a-9762-4ffe-b02b-dced95bb0a2d",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true,
+            "response": {
+              "success": true,
+              "message": "Hello. I am Lumira and I am ready.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": false,
+              "capability": "greeting"
+            }
+          },
+          "created_at": "2026-11-04T13:46:30.880129+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "fde3b946-8eb8-439f-8155-32e6c9a5a6b7",
+      "owner_id": "local",
+      "conversation_id": "f8648545-b69d-40c9-8e40-3b8ecaf15f58",
+      "created_at": "2026-11-04T13:55:58.617348+00:00",
+      "updated_at": "2026-11-04T13:55:58.824006+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "0915acb6-b661-4012-9615-0e3f9db94360",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true,
+            "response": {
+              "success": true,
+              "message": "Hello. I am Lumira and I am ready.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": false,
+              "capability": "greeting"
+            }
+          },
+          "created_at": "2026-11-04T13:55:58.742951+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "0d5da099-39e9-40a5-9103-fa89f4371d33",
+      "owner_id": "local",
+      "conversation_id": "4e040540-5cc6-449e-853a-083a77b7758c",
+      "created_at": "2026-11-04T23:15:41.380760+00:00",
+      "updated_at": "2026-11-04T23:15:41.380760+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "47fdfda8-c43a-47cb-a683-e4379703b9de",
+      "owner_id": "local",
+      "conversation_id": "bce2c986-4b50-4cf4-b94d-8ba8601c16d6",
+      "created_at": "2026-11-04T23:15:44.430608+00:00",
+      "updated_at": "2026-11-04T23:15:44.430608+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "10d7eb13-1201-4285-bd2f-78fe686bd73c",
+      "owner_id": "local",
+      "conversation_id": "4245adcf-83f9-4c08-868b-dca3912d2b71",
+      "created_at": "2026-11-04T23:15:45.927688+00:00",
+      "updated_at": "2026-11-04T23:15:45.927688+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "e1b33b8d-e018-4a51-a5c0-05b6ba4afad6",
+      "owner_id": "local",
+      "conversation_id": "3f1574aa-bc8d-4488-baf7-c55a7932e076",
+      "created_at": "2026-11-04T23:15:46.487180+00:00",
+      "updated_at": "2026-11-04T23:15:46.487180+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "d8821489-0ba6-4c8c-a9cc-1e27f1c1d182",
+      "owner_id": "local",
+      "conversation_id": "f925cead-0166-44e2-b96b-3c6919ca229d",
+      "created_at": "2026-11-05T11:56:03.916308+00:00",
+      "updated_at": "2026-11-05T11:56:04.079031+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "adb642b5-7856-4ce0-a3a7-49814f33ee99",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true,
+            "response": {
+              "success": true,
+              "message": "Hello. I am Lumira and I am ready.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": false,
+              "capability": "greeting"
+            }
+          },
+          "created_at": "2026-11-05T11:56:04.004038+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "12093dd1-5d5b-4631-9131-1b2c3785bd43",
+      "owner_id": "local",
+      "conversation_id": "40303cb2-58ca-4259-ba4c-ba2076abda25",
+      "created_at": "2026-11-05T11:56:04.115377+00:00",
+      "updated_at": "2026-11-05T11:56:04.369077+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": "Build an app",
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "c6963223-d9b3-49cb-9d6e-38b41960c084",
+          "role": "user",
+          "content": "Build an app",
+          "metadata": {},
+          "created_at": "2026-11-05T11:56:04.252748+00:00"
+        },
+        {
+          "message_id": "cffb216d-91af-4de4-993e-cb5369d4248d",
+          "role": "assistant",
+          "content": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+          "metadata": {
+            "capability": "clarify_project",
+            "clarification_required": true,
+            "response": {
+              "success": true,
+              "message": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": true
+            }
+          },
+          "created_at": "2026-11-05T11:56:04.294946+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "b3210864-e2f3-4498-afab-b070006585b0",
+      "owner_id": "local",
+      "conversation_id": "101f96af-e2eb-4a83-b2f2-64fabb6eed8f",
+      "created_at": "2026-11-05T12:00:42.925292+00:00",
+      "updated_at": "2026-11-05T12:00:43.139375+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "1277e33f-a387-45e7-bedc-dbdb5d72b0b1",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true,
+            "response": {
+              "success": true,
+              "message": "Hello. I am Lumira and I am ready.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": false,
+              "capability": "greeting"
+            }
+          },
+          "created_at": "2026-11-05T12:00:43.063847+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "d0f66393-43e4-4e5e-a718-a74e1c24367f",
+      "owner_id": "local",
+      "conversation_id": "1a8c1035-6fdf-4fc7-95ba-6b2136d81514",
+      "created_at": "2026-11-05T12:00:43.176632+00:00",
+      "updated_at": "2026-11-05T12:00:43.452767+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": "Build an app",
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "3c7d7dbd-8622-418b-ae90-2125409a9ba6",
+          "role": "user",
+          "content": "Build an app",
+          "metadata": {},
+          "created_at": "2026-11-05T12:00:43.318040+00:00"
+        },
+        {
+          "message_id": "2d22ca68-f4aa-4fa5-8e80-863d14602f54",
+          "role": "assistant",
+          "content": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+          "metadata": {
+            "capability": "clarify_project",
+            "clarification_required": true,
+            "response": {
+              "success": true,
+              "message": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": true
+            }
+          },
+          "created_at": "2026-11-05T12:00:43.360777+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "6edc1216-f37b-4572-8591-842fdd66e311",
+      "owner_id": "local",
+      "conversation_id": "982c5e88-406a-44b3-aab8-2658d23651fe",
+      "created_at": "2026-11-06T13:17:03.202326+00:00",
+      "updated_at": "2026-11-06T13:17:03.404240+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "480838c2-dbea-402d-b7eb-d8936c4f9e95",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true,
+            "response": {
+              "success": true,
+              "message": "Hello. I am Lumira and I am ready.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": false,
+              "capability": "greeting"
+            }
+          },
+          "created_at": "2026-11-06T13:17:03.328051+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "99f2c623-2f99-4446-bff6-bac112757cb4",
+      "owner_id": "local",
+      "conversation_id": "37aebe0d-5248-493f-b601-7b8bb11309ca",
+      "created_at": "2026-11-06T13:17:03.439581+00:00",
+      "updated_at": "2026-11-06T13:17:03.706382+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": "Build an app",
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "d2f05793-9fde-4550-9955-a50e931d08d7",
+          "role": "user",
+          "content": "Build an app",
+          "metadata": {},
+          "created_at": "2026-11-06T13:17:03.580875+00:00"
+        },
+        {
+          "message_id": "a3f14c3a-7ea7-4ef9-bde8-6c77d708bf7b",
+          "role": "assistant",
+          "content": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+          "metadata": {
+            "capability": "clarify_project",
+            "clarification_required": true,
+            "response": {
+              "success": true,
+              "message": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": true
+            }
+          },
+          "created_at": "2026-11-06T13:17:03.627051+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "8d4b4ce5-c8a6-4f63-b24e-6a855096f038",
+      "owner_id": "local",
+      "conversation_id": "f1e79aa4-0070-44db-8cb6-d2e0f5c05737",
+      "created_at": "2026-11-06T13:17:15.992767+00:00",
+      "updated_at": "2026-11-06T13:17:16.207095+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "81053c6b-27ee-4605-aa5d-49c8e97f2815",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true,
+            "response": {
+              "success": true,
+              "message": "Hello. I am Lumira and I am ready.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": false,
+              "capability": "greeting"
+            }
+          },
+          "created_at": "2026-11-06T13:17:16.140321+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "7e4c7a3d-98c8-46a2-a0dc-a4cbd00c24c4",
+      "owner_id": "local",
+      "conversation_id": "e89ae008-28b7-4491-b187-21eba93122d5",
+      "created_at": "2026-11-06T13:17:16.248971+00:00",
+      "updated_at": "2026-11-06T13:17:16.583856+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": "Build an app",
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "17122d3a-6993-48d1-91ec-05025a7f7b58",
+          "role": "user",
+          "content": "Build an app",
+          "metadata": {},
+          "created_at": "2026-11-06T13:17:16.424142+00:00"
+        },
+        {
+          "message_id": "bfe77ce0-64b3-428b-aecb-9d47eb5bf277",
+          "role": "assistant",
+          "content": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+          "metadata": {
+            "capability": "clarify_project",
+            "clarification_required": true,
+            "response": {
+              "success": true,
+              "message": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": true
+            }
+          },
+          "created_at": "2026-11-06T13:17:16.475410+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "9352cc89-e394-4565-aa85-456c07d68429",
+      "owner_id": "local",
+      "conversation_id": "bb43ec82-bd12-4f26-9cd8-eb0b13030c6c",
+      "created_at": "2026-11-06T13:22:01.863670+00:00",
+      "updated_at": "2026-11-06T13:22:02.045197+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "f82ab35b-cbac-4598-9f5d-8de3cd0c8138",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true,
+            "response": {
+              "success": true,
+              "message": "Hello. I am Lumira and I am ready.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": false,
+              "capability": "greeting"
+            }
+          },
+          "created_at": "2026-11-06T13:22:01.963788+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "67917736-6d10-4cf0-8009-43bc122d3455",
+      "owner_id": "local",
+      "conversation_id": "f9c3130a-fbda-40ca-8269-0a54df39f02e",
+      "created_at": "2026-11-06T13:22:02.080733+00:00",
+      "updated_at": "2026-11-06T13:22:03.115173+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": "Build an app",
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "c714a797-8f05-48cc-bf60-4849ad23a58b",
+          "role": "user",
+          "content": "Build an app",
+          "metadata": {},
+          "created_at": "2026-11-06T13:22:02.280341+00:00"
+        },
+        {
+          "message_id": "1e7c428c-1dd0-4031-b01c-f5959f2a685b",
+          "role": "assistant",
+          "content": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+          "metadata": {
+            "capability": "clarify_project",
+            "clarification_required": true,
+            "response": {
+              "success": true,
+              "message": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": true
+            }
+          },
+          "created_at": "2026-11-06T13:22:02.672621+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "2ab60d70-5cbd-4331-9518-af2b5818c302",
+      "owner_id": "local",
+      "conversation_id": "29687a3b-adb9-468e-b732-7621bf111741",
+      "created_at": "2026-11-06T13:23:05.177493+00:00",
+      "updated_at": "2026-11-06T13:23:05.347904+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "5f6e04b3-244c-4d2f-96a3-fbe4aa2e8dc6",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true,
+            "response": {
+              "success": true,
+              "message": "Hello. I am Lumira and I am ready.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": false,
+              "capability": "greeting"
+            }
+          },
+          "created_at": "2026-11-06T13:23:05.291418+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "45b1b7dc-dc37-416d-bdc5-e6f33e888641",
+      "owner_id": "local",
+      "conversation_id": "228e5875-91cb-4a7b-860f-e5726ad0a56b",
+      "created_at": "2026-11-06T13:23:05.376993+00:00",
+      "updated_at": "2026-11-06T13:23:05.572272+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": "Build an app",
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "08b1cfbf-1f21-48a3-9da7-5ff2050a9577",
+          "role": "user",
+          "content": "Build an app",
+          "metadata": {},
+          "created_at": "2026-11-06T13:23:05.484774+00:00"
+        },
+        {
+          "message_id": "c64a3b0b-db69-4e52-94f9-1dbe61d70118",
+          "role": "assistant",
+          "content": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+          "metadata": {
+            "capability": "clarify_project",
+            "clarification_required": true,
+            "response": {
+              "success": true,
+              "message": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": true
+            }
+          },
+          "created_at": "2026-11-06T13:23:05.516835+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "646e13e6-ae81-4a7d-bda0-cda0db855ef8",
+      "owner_id": "local",
+      "conversation_id": "2f4e083c-7daf-4bd9-9fc7-cc8a614325ae",
+      "created_at": "2026-11-08T01:15:49.376055+00:00",
+      "updated_at": "2026-11-08T01:15:49.542655+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "383081d8-e195-459e-8451-54936ca5e415",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true,
+            "response": {
+              "success": true,
+              "message": "Hello. I am Lumira and I am ready.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": false,
+              "capability": "greeting"
+            }
+          },
+          "created_at": "2026-11-08T01:15:49.497248+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "7f012289-797c-434d-840e-0b9539103e1d",
+      "owner_id": "local",
+      "conversation_id": "63060995-3f03-4627-afc8-9a1d0295cfb4",
+      "created_at": "2026-11-08T01:15:49.566300+00:00",
+      "updated_at": "2026-11-08T01:15:49.757542+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": "Build an app",
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "7cccd8e4-7ff9-448f-bad6-915ea5bb398d",
+          "role": "user",
+          "content": "Build an app",
+          "metadata": {},
+          "created_at": "2026-11-08T01:15:49.668493+00:00"
+        },
+        {
+          "message_id": "ba7333a1-891f-4b2a-9de5-bec74ce758da",
+          "role": "assistant",
+          "content": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+          "metadata": {
+            "capability": "clarify_project",
+            "clarification_required": true,
+            "response": {
+              "success": true,
+              "message": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": true
+            }
+          },
+          "created_at": "2026-11-08T01:15:49.703149+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "8fc360a0-10e8-42c2-b669-a55c9639c87b",
+      "owner_id": "local",
+      "conversation_id": "2e958685-c43e-43e6-a076-1a10df88ee0e",
+      "created_at": "2026-11-08T01:19:44.710878+00:00",
+      "updated_at": "2026-11-08T01:19:44.839738+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "5eebc833-edea-48da-8bbd-db85417d5f20",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true,
+            "response": {
+              "success": true,
+              "message": "Hello. I am Lumira and I am ready.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": false,
+              "capability": "greeting"
+            }
+          },
+          "created_at": "2026-11-08T01:19:44.779781+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "19fdcb6c-8944-40be-8260-e6dc037e8dac",
+      "owner_id": "local",
+      "conversation_id": "cd43ced9-2c10-4ea8-b9b5-8cdbf18215a4",
+      "created_at": "2026-11-08T01:19:44.864152+00:00",
+      "updated_at": "2026-11-08T01:19:45.059193+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": "Build an app",
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "9c1e56bc-8deb-4b67-b38a-7c8311cad6d8",
+          "role": "user",
+          "content": "Build an app",
+          "metadata": {},
+          "created_at": "2026-11-08T01:19:44.964687+00:00"
+        },
+        {
+          "message_id": "0c9faa3a-5a46-4847-9eb0-40944189fa81",
+          "role": "assistant",
+          "content": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+          "metadata": {
+            "capability": "clarify_project",
+            "clarification_required": true,
+            "response": {
+              "success": true,
+              "message": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": true
+            }
+          },
+          "created_at": "2026-11-08T01:19:44.998899+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "91ab7deb-63e8-41a5-9327-b22de942ad3e",
+      "owner_id": "local",
+      "conversation_id": "e01f5ade-f5f5-4457-8445-312810109a14",
+      "created_at": "2026-11-08T01:22:25.519893+00:00",
+      "updated_at": "2026-11-08T01:22:25.734030+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "bcf8b7d8-f6b8-488c-a612-151605886861",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true,
+            "response": {
+              "success": true,
+              "message": "Hello. I am Lumira and I am ready.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": false,
+              "capability": "greeting"
+            }
+          },
+          "created_at": "2026-11-08T01:22:25.673669+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "3da2cdca-a870-4392-85a0-9fe43826ac2a",
+      "owner_id": "local",
+      "conversation_id": "0d9f3fd3-dd1b-472e-bcab-1b2469b9daf4",
+      "created_at": "2026-11-08T01:22:25.764107+00:00",
+      "updated_at": "2026-11-08T01:22:25.962633+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": "Build an app",
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "10ceff9e-f322-454b-bbeb-b4b8fe0ae771",
+          "role": "user",
+          "content": "Build an app",
+          "metadata": {},
+          "created_at": "2026-11-08T01:22:25.865153+00:00"
+        },
+        {
+          "message_id": "e1844f9a-4963-42dd-aefc-49fc94d609b4",
+          "role": "assistant",
+          "content": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+          "metadata": {
+            "capability": "clarify_project",
+            "clarification_required": true,
+            "response": {
+              "success": true,
+              "message": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": true
+            }
+          },
+          "created_at": "2026-11-08T01:22:25.900620+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "ddf2f74b-5824-4c7d-a7fb-4ae7917716b7",
+      "owner_id": "local",
+      "conversation_id": "bb7a6488-1fbc-4577-8b42-17dc88349cc7",
+      "created_at": "2026-11-08T03:40:11.598078+00:00",
+      "updated_at": "2026-11-08T03:40:12.782438+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": "builder",
+      "current_goal": "Build a FastAPI expense API with authentication",
+      "goal_id": "01e718e3-8649-4b55-95a1-d3a4f9f63883",
+      "last_command": "Build a FastAPI expense API with authentication",
+      "conversation": {
+        "summary": "Current discussion: Build a FastAPI expense API with authentication",
+        "current_topic": "Build a FastAPI expense API with authentication",
+        "active_objective": "Build a FastAPI expense API with authentication",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "a8769684-0303-40e2-b347-2c97ef248521",
+          "role": "user",
+          "content": "Build a FastAPI expense API with authentication",
+          "metadata": {},
+          "created_at": "2026-11-08T03:40:12.133787+00:00"
+        },
+        {
+          "message_id": "26ecbb33-3407-4152-9c95-d06e309ebbe4",
+          "role": "assistant",
+          "content": "Cognitive pipeline failed.",
+          "metadata": {
+            "execution_id": "ebe95193-f162-4d9c-bb93-326073adee6a",
+            "success": false
+          },
+          "created_at": "2026-11-08T03:40:12.763827+00:00"
+        }
+      ],
+      "cognitive_state": {
+        "state_id": "6745ff79-2175-4103-8832-bf8d7466ba07",
+        "session_id": "ddf2f74b-5824-4c7d-a7fb-4ae7917716b7",
+        "objective": "Build a FastAPI expense API with authentication",
+        "goal_id": "01e718e3-8649-4b55-95a1-d3a4f9f63883",
+        "goal": "Build a FastAPI expense API with authentication",
+        "selected_action": "Project identified as api.",
+        "decision_confidence": 0.8500000000000001,
+        "mode": "builder",
+        "execution_status": "failed",
+        "verification_status": "not_ready",
+        "reflection_status": "",
+        "confidence": 1.0,
+        "blockers": [
+          "Programming language not specified."
+        ],
+        "updated_at": "2026-11-08T03:40:12.331578+00:00",
+        "source_execution_id": "ebe95193-f162-4d9c-bb93-326073adee6a",
+        "schema_version": 1
+      },
+      "context_snapshots": [
+        {
+          "snapshot_id": "2c9f3637-68e6-498f-92f1-ac7c8483aa63",
+          "session_id": "ddf2f74b-5824-4c7d-a7fb-4ae7917716b7",
+          "active_project": null,
+          "active_version": null,
+          "active_mode": "builder",
+          "goal_id": "01e718e3-8649-4b55-95a1-d3a4f9f63883",
+          "recent_artifacts": [],
+          "recent_decisions": [],
+          "recent_memory_ids": [],
+          "pending_tasks": [],
+          "blockers": [
+            "Programming language not specified."
+          ],
+          "created_at": "2026-11-08T03:40:12.359229+00:00",
+          "schema_version": 1
+        }
+      ],
+      "schema_version": 1,
+      "cognitive_state_id": "6745ff79-2175-4103-8832-bf8d7466ba07",
+      "recent_experience_ids": [
+        "aad4311e-c63d-4c38-8c38-777b1f83c93d"
+      ]
+    },
+    {
+      "session_id": "5b306b68-2fa8-476a-af3d-2fccf013dce8",
+      "owner_id": "local",
+      "conversation_id": "9de697d0-1aa3-46b1-9a4c-015c63d469bb",
+      "created_at": "2026-11-08T03:44:00.823579+00:00",
+      "updated_at": "2026-11-08T03:44:01.942691+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": "generator",
+      "current_goal": "create a project",
+      "goal_id": "394e1358-bef4-422e-b5d3-70602260d8ce",
+      "last_command": "create a project",
+      "conversation": {
+        "summary": "Current discussion: create a project",
+        "current_topic": "create a project",
+        "active_objective": "create a project",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "6c6c48eb-8a2d-4e12-a6c0-4cdec909b1be",
+          "role": "user",
+          "content": "create a project",
+          "metadata": {},
+          "created_at": "2026-11-08T03:44:01.319156+00:00"
+        }
+      ],
+      "cognitive_state": {
+        "state_id": "73da313d-4e1c-47e8-980c-1e526adf07a4",
+        "session_id": "5b306b68-2fa8-476a-af3d-2fccf013dce8",
+        "objective": "create a project",
+        "goal_id": "394e1358-bef4-422e-b5d3-70602260d8ce",
+        "goal": "create a project",
+        "selected_action": "Project identified as general.",
+        "decision_confidence": 0.8500000000000001,
+        "mode": "generator",
+        "execution_status": "failed",
+        "verification_status": "not_ready",
+        "reflection_status": "",
+        "confidence": 1.0,
+        "blockers": [
+          "Programming language not specified.",
+          "Framework not specified."
+        ],
+        "updated_at": "2026-11-08T03:44:01.525748+00:00",
+        "source_execution_id": "390f7c3f-2234-4ab6-b745-898b8ff8d210",
+        "schema_version": 1
+      },
+      "context_snapshots": [
+        {
+          "snapshot_id": "dcf2c1ff-a040-4624-8a65-e98134611ead",
+          "session_id": "5b306b68-2fa8-476a-af3d-2fccf013dce8",
+          "active_project": null,
+          "active_version": null,
+          "active_mode": "generator",
+          "goal_id": "394e1358-bef4-422e-b5d3-70602260d8ce",
+          "recent_artifacts": [],
+          "recent_decisions": [],
+          "recent_memory_ids": [],
+          "pending_tasks": [],
+          "blockers": [
+            "Programming language not specified.",
+            "Framework not specified."
+          ],
+          "created_at": "2026-11-08T03:44:01.552335+00:00",
+          "schema_version": 1
+        }
+      ],
+      "schema_version": 1,
+      "cognitive_state_id": "73da313d-4e1c-47e8-980c-1e526adf07a4",
+      "recent_experience_ids": [
+        "c0337c59-389b-44f1-bfde-8041babf5d89"
+      ]
+    },
+    {
+      "session_id": "758d35f7-7b09-41b4-a183-86c13695ae09",
+      "owner_id": "local",
+      "conversation_id": "c8e98533-ec3e-4e7d-b6cb-de1c6a261597",
+      "created_at": "2026-11-08T04:12:33.160848+00:00",
+      "updated_at": "2026-11-08T04:12:33.278456+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "5e257f20-8647-450a-8334-def81079d434",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true,
+            "response": {
+              "success": true,
+              "message": "Hello. I am Lumira and I am ready.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": false,
+              "capability": "greeting"
+            }
+          },
+          "created_at": "2026-11-08T04:12:33.234862+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "8bb21337-53fc-4712-b0e6-5a2ba55fedf7",
+      "owner_id": "local",
+      "conversation_id": "bc5e357f-a81f-4875-964c-a599412e6cd8",
+      "created_at": "2026-11-08T04:12:33.307982+00:00",
+      "updated_at": "2026-11-08T04:12:33.457045+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": "Build an app",
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "66c9c6ca-887e-4f61-8615-13988068e8fb",
+          "role": "user",
+          "content": "Build an app",
+          "metadata": {},
+          "created_at": "2026-11-08T04:12:33.387928+00:00"
+        },
+        {
+          "message_id": "6950d195-85dc-4ad6-9b95-93c9dde2bf47",
+          "role": "assistant",
+          "content": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+          "metadata": {
+            "capability": "clarify_project",
+            "clarification_required": true,
+            "response": {
+              "success": true,
+              "message": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": true
+            }
+          },
+          "created_at": "2026-11-08T04:12:33.411376+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "a55952be-01c4-44e5-b320-caf4d9a0414a",
+      "owner_id": "local",
+      "conversation_id": "97ffc1e5-abb8-4de8-bcbe-37c66b0bfdb7",
+      "created_at": "2026-11-10T04:42:22.978175+00:00",
+      "updated_at": "2026-11-10T04:42:23.213487+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "2fb52446-8ac1-46c2-bc55-d6941db79197",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true,
+            "response": {
+              "success": true,
+              "message": "Hello. I am Lumira and I am ready.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": false,
+              "capability": "greeting"
+            }
+          },
+          "created_at": "2026-11-10T04:42:23.127003+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "eade0bb0-dde5-476e-b8bb-e0f9b116ed3c",
+      "owner_id": "local",
+      "conversation_id": "6777a370-4632-463b-a48e-5e9b522ea395",
+      "created_at": "2026-11-10T04:42:23.252322+00:00",
+      "updated_at": "2026-11-10T04:42:23.543204+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": "Build an app",
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "d4e80b94-f2ce-401a-8191-e846f1609d47",
+          "role": "user",
+          "content": "Build an app",
+          "metadata": {},
+          "created_at": "2026-11-10T04:42:23.414033+00:00"
+        },
+        {
+          "message_id": "ae1795b8-eb53-498e-9c01-06b293e21f3d",
+          "role": "assistant",
+          "content": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+          "metadata": {
+            "capability": "clarify_project",
+            "clarification_required": true,
+            "response": {
+              "success": true,
+              "message": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": true
+            }
+          },
+          "created_at": "2026-11-10T04:42:23.462808+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "78433c26-ba7b-432b-a25a-abbddc496c09",
+      "owner_id": "local",
+      "conversation_id": "5350eb4c-ada1-440c-9e95-ab7ee2f55b46",
+      "created_at": "2026-11-10T04:51:17.067384+00:00",
+      "updated_at": "2026-11-10T04:51:17.366202+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "b592dd62-44ef-4b41-a225-a0e734391a2d",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true,
+            "response": {
+              "success": true,
+              "message": "Hello. I am Lumira and I am ready.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": false,
+              "capability": "greeting"
+            }
+          },
+          "created_at": "2026-11-10T04:51:17.266359+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "74e540d5-c40d-412f-889a-a99ad2907d2c",
+      "owner_id": "local",
+      "conversation_id": "e68bf516-d3ae-4bab-99fd-b3a29e16ac68",
+      "created_at": "2026-11-10T04:51:17.411406+00:00",
+      "updated_at": "2026-11-10T04:51:17.672784+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": "Build an app",
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "b154abac-ebc0-431d-9feb-da7ed3c7a7f3",
+          "role": "user",
+          "content": "Build an app",
+          "metadata": {},
+          "created_at": "2026-11-10T04:51:17.563200+00:00"
+        },
+        {
+          "message_id": "6e052135-f5f8-4c6b-b3d3-ccece596d3e7",
+          "role": "assistant",
+          "content": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+          "metadata": {
+            "capability": "clarify_project",
+            "clarification_required": true,
+            "response": {
+              "success": true,
+              "message": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": true
+            }
+          },
+          "created_at": "2026-11-10T04:51:17.597000+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "ebef5f67-d408-4bc8-b228-394f2b4eaba8",
+      "owner_id": "local",
+      "conversation_id": "41af021a-c89a-49bf-b60e-7cdf7e7084fd",
+      "created_at": "2026-11-10T06:15:34.900314+00:00",
+      "updated_at": "2026-11-10T06:15:35.184673+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "ee7a1cff-1833-4cd6-aa3b-b102d636f1b5",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true,
+            "response": {
+              "success": true,
+              "message": "Hello. I am Lumira and I am ready.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": false,
+              "capability": "greeting"
+            }
+          },
+          "created_at": "2026-11-10T06:15:35.089645+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "a69f50d6-208a-4295-91a7-b619817d4731",
+      "owner_id": "local",
+      "conversation_id": "d1fc8417-47af-476b-b838-359f2a22c6d0",
+      "created_at": "2026-11-10T06:15:35.236828+00:00",
+      "updated_at": "2026-11-10T06:15:35.530747+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": "Build an app",
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "0b1c1ffc-a4ba-400a-974f-a53fc98f0608",
+          "role": "user",
+          "content": "Build an app",
+          "metadata": {},
+          "created_at": "2026-11-10T06:15:35.408294+00:00"
+        },
+        {
+          "message_id": "c2cee79b-8462-497b-a277-fd97b869b984",
+          "role": "assistant",
+          "content": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+          "metadata": {
+            "capability": "clarify_project",
+            "clarification_required": true,
+            "response": {
+              "success": true,
+              "message": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": true
+            }
+          },
+          "created_at": "2026-11-10T06:15:35.457012+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "871745d5-b027-4a80-8804-8722f99111d4",
+      "owner_id": "local",
+      "conversation_id": "350def82-a4d6-40c7-a996-4b7a764b7b7e",
+      "created_at": "2026-11-10T06:37:33.908095+00:00",
+      "updated_at": "2026-11-10T06:37:34.090633+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "d54df441-8b63-436e-ace5-54a85265d885",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true,
+            "response": {
+              "success": true,
+              "message": "Hello. I am Lumira and I am ready.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": false,
+              "capability": "greeting"
+            }
+          },
+          "created_at": "2026-11-10T06:37:34.025088+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "656f1630-a6ae-4401-a8d2-6a29f32fd3d1",
+      "owner_id": "local",
+      "conversation_id": "fb2c5b15-db1b-48c3-89ae-3ed8362cac8f",
+      "created_at": "2026-11-10T06:37:34.118761+00:00",
+      "updated_at": "2026-11-10T06:37:34.340615+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": "Build an app",
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "34e6a1c2-c7b8-43e0-be46-4cf2cf6b595b",
+          "role": "user",
+          "content": "Build an app",
+          "metadata": {},
+          "created_at": "2026-11-10T06:37:34.238457+00:00"
+        },
+        {
+          "message_id": "814544e3-11fe-47a4-b76d-bbd7d6156e52",
+          "role": "assistant",
+          "content": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+          "metadata": {
+            "capability": "clarify_project",
+            "clarification_required": true,
+            "response": {
+              "success": true,
+              "message": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": true
+            }
+          },
+          "created_at": "2026-11-10T06:37:34.278366+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "58da0fab-39df-4fcc-ac24-86b34fac6dd1",
+      "owner_id": "local",
+      "conversation_id": "2393d1b7-6a54-4e5b-beba-b964e9ad89d8",
+      "created_at": "2026-11-10T06:43:06.529121+00:00",
+      "updated_at": "2026-11-10T06:43:06.741409+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "dc49716b-d569-4d6f-a9cf-2cc5283338a7",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true,
+            "response": {
+              "success": true,
+              "message": "Hello. I am Lumira and I am ready.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": false,
+              "capability": "greeting"
+            }
+          },
+          "created_at": "2026-11-10T06:43:06.669741+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "92921c54-f598-4c05-983d-9ce94ed95008",
+      "owner_id": "local",
+      "conversation_id": "e63df1d5-53a7-4429-a9a0-4a8fe594545d",
+      "created_at": "2026-11-10T06:43:06.766574+00:00",
+      "updated_at": "2026-11-10T06:43:06.983034+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": "Build an app",
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "538b8513-f2e2-48e4-b45b-748cf669916f",
+          "role": "user",
+          "content": "Build an app",
+          "metadata": {},
+          "created_at": "2026-11-10T06:43:06.882833+00:00"
+        },
+        {
+          "message_id": "20d1da54-9651-4fed-9fee-8090e5891691",
+          "role": "assistant",
+          "content": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+          "metadata": {
+            "capability": "clarify_project",
+            "clarification_required": true,
+            "response": {
+              "success": true,
+              "message": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": true
+            }
+          },
+          "created_at": "2026-11-10T06:43:06.918187+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "73f9c1dc-9fd3-485b-a2a2-33820dfce81a",
+      "owner_id": "local",
+      "conversation_id": "f9d5cbf4-7731-46f3-aeb7-0d51252abbc2",
+      "created_at": "2026-11-10T07:35:03.532088+00:00",
+      "updated_at": "2026-11-10T07:35:03.736111+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "ccd51142-be3f-4bef-8b11-d06dc7a72a13",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true,
+            "response": {
+              "success": true,
+              "message": "Hello. I am Lumira and I am ready.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": false,
+              "capability": "greeting"
+            }
+          },
+          "created_at": "2026-11-10T07:35:03.666886+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "36de96e5-ad3c-4218-a9a7-0580046646bb",
+      "owner_id": "local",
+      "conversation_id": "c60c3387-9ecd-493a-8d10-9d2a69200736",
+      "created_at": "2026-11-10T07:35:03.772801+00:00",
+      "updated_at": "2026-11-10T07:35:04.048649+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": "Build an app",
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "f85d7a4b-5c4d-4586-8c62-804bea1a5bfe",
+          "role": "user",
+          "content": "Build an app",
+          "metadata": {},
+          "created_at": "2026-11-10T07:35:03.922617+00:00"
+        },
+        {
+          "message_id": "2c721eae-7eb2-422d-bd82-84e318270cbe",
+          "role": "assistant",
+          "content": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+          "metadata": {
+            "capability": "clarify_project",
+            "clarification_required": true,
+            "response": {
+              "success": true,
+              "message": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": true
+            }
+          },
+          "created_at": "2026-11-10T07:35:03.971741+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "215a9b3a-921e-4d42-afc1-fecac70b7b85",
+      "owner_id": "local",
+      "conversation_id": "f58ab4d7-b458-4422-a5a5-1bb968a4ae89",
+      "created_at": "2026-11-10T07:54:08.371353+00:00",
+      "updated_at": "2026-11-10T07:54:08.601246+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": null,
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "36dbf502-4c61-4796-8411-618755827993",
+          "role": "assistant",
+          "content": "Hello. I am Lumira and I am ready.",
+          "metadata": {
+            "capability": "greeting",
+            "success": true,
+            "response": {
+              "success": true,
+              "message": "Hello. I am Lumira and I am ready.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": false,
+              "capability": "greeting"
+            }
+          },
+          "created_at": "2026-11-10T07:54:08.516296+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
+    },
+    {
+      "session_id": "4e306a21-381c-459f-b14e-cbebf67d56d2",
+      "owner_id": "local",
+      "conversation_id": "e49f4aa2-3b29-4d27-9a53-d4b54297d6f2",
+      "created_at": "2026-11-10T07:54:08.650982+00:00",
+      "updated_at": "2026-11-10T07:54:08.967213+00:00",
+      "status": "active",
+      "workspace_id": "default",
+      "project_id": null,
+      "active_project": null,
+      "active_version": null,
+      "active_mode": null,
+      "current_goal": null,
+      "goal_id": null,
+      "last_command": "Build an app",
+      "conversation": {
+        "summary": "",
+        "current_topic": "",
+        "active_objective": "",
+        "pending_questions": [],
+        "recent_references": [],
+        "language_context": "en"
+      },
+      "recent_messages": [
+        {
+          "message_id": "7f36dd3f-3122-4eeb-a109-1b831b2ddfb1",
+          "role": "user",
+          "content": "Build an app",
+          "metadata": {},
+          "created_at": "2026-11-10T07:54:08.836239+00:00"
+        },
+        {
+          "message_id": "b968fdaa-e581-4b6c-9c10-14e855a80057",
+          "role": "assistant",
+          "content": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+          "metadata": {
+            "capability": "clarify_project",
+            "clarification_required": true,
+            "response": {
+              "success": true,
+              "message": "I can build it, but I need the app's purpose first. What should the app help people do? For example: track homework, manage expenses, or organize projects.",
+              "output": null,
+              "attachments": [],
+              "clarification_required": true
+            }
+          },
+          "created_at": "2026-11-10T07:54:08.890832+00:00"
+        }
+      ],
+      "cognitive_state": null,
+      "context_snapshots": [],
+      "schema_version": 1
     }
   ]
 }

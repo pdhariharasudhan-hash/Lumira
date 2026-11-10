@@ -559,6 +559,504 @@
       "source": "industrial_design",
       "file": "artifacts\\blueprints\\ce7391bf-14f8-443b-94ce-188472107213.json",
       "timestamp": "2026-09-23 19:54:25"
+    },
+    {
+      "artifact_id": "8b24bb6d-ac62-44a1-ac6e-0d41388eb8a3",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\8b24bb6d-ac62-44a1-ac6e-0d41388eb8a3.json",
+      "timestamp": "2026-11-08T02:12:23.036677+00:00"
+    },
+    {
+      "artifact_id": "3f2d42af-2b54-4504-ab94-a7060b13c736",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\3f2d42af-2b54-4504-ab94-a7060b13c736.json",
+      "timestamp": "2026-11-08T02:12:23.203069+00:00"
+    },
+    {
+      "artifact_id": "86b7874a-93e8-46c8-8ac9-cb4bb73da889",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\86b7874a-93e8-46c8-8ac9-cb4bb73da889.json",
+      "timestamp": "2026-11-08T02:12:23.494398+00:00"
+    },
+    {
+      "artifact_id": "9c551c2a-a56e-4d56-9490-18e8314976bc",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\9c551c2a-a56e-4d56-9490-18e8314976bc.json",
+      "timestamp": "2026-11-08T02:14:02.822931+00:00"
+    },
+    {
+      "artifact_id": "4132fe52-55e3-4c03-8dff-d68ba687810b",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\4132fe52-55e3-4c03-8dff-d68ba687810b.json",
+      "timestamp": "2026-11-08T02:14:02.926995+00:00"
+    },
+    {
+      "artifact_id": "8835db35-43d6-456b-b9d0-522e2a0811af",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\8835db35-43d6-456b-b9d0-522e2a0811af.json",
+      "timestamp": "2026-11-08T02:14:03.190839+00:00"
+    },
+    {
+      "artifact_id": "80652560-fd1f-4fcf-9109-d35abade534e",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\80652560-fd1f-4fcf-9109-d35abade534e.json",
+      "timestamp": "2026-11-08T02:18:41.842162+00:00"
+    },
+    {
+      "artifact_id": "b39d6a53-66c4-4991-a75f-b78214d1e343",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\b39d6a53-66c4-4991-a75f-b78214d1e343.json",
+      "timestamp": "2026-11-08T02:18:41.995328+00:00"
+    },
+    {
+      "artifact_id": "e9baba52-d24b-48f4-9b79-e4b8ef8d0860",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\e9baba52-d24b-48f4-9b79-e4b8ef8d0860.json",
+      "timestamp": "2026-11-08T02:18:42.317046+00:00"
+    },
+    {
+      "artifact_id": "827de51f-464a-4996-a2b3-d704a118043b",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\827de51f-464a-4996-a2b3-d704a118043b.json",
+      "timestamp": "2026-11-08T02:20:40.793982+00:00"
+    },
+    {
+      "artifact_id": "5f753c5b-a84f-437a-a2d0-1d23680473ae",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\5f753c5b-a84f-437a-a2d0-1d23680473ae.json",
+      "timestamp": "2026-11-08T02:20:42.182914+00:00"
+    },
+    {
+      "artifact_id": "a857420d-1397-43a3-9c8b-b99bc6e64a33",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\a857420d-1397-43a3-9c8b-b99bc6e64a33.json",
+      "timestamp": "2026-11-08T02:20:43.699544+00:00"
+    },
+    {
+      "artifact_id": "49462ce4-33ed-40f8-a9fc-65f813225970",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\49462ce4-33ed-40f8-a9fc-65f813225970.json",
+      "timestamp": "2026-11-08T02:22:52.327614+00:00"
+    },
+    {
+      "artifact_id": "b8e539ca-fbb2-4eaf-bccf-926fb29ea56b",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\b8e539ca-fbb2-4eaf-bccf-926fb29ea56b.json",
+      "timestamp": "2026-11-08T02:22:52.447148+00:00"
+    },
+    {
+      "artifact_id": "e53f2196-c319-4046-81cf-18fc8aac7c9d",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\e53f2196-c319-4046-81cf-18fc8aac7c9d.json",
+      "timestamp": "2026-11-08T02:22:52.819055+00:00"
+    },
+    {
+      "artifact_id": "31fa1ca7-3ae8-474f-a24d-126f40987bf2",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\31fa1ca7-3ae8-474f-a24d-126f40987bf2.json",
+      "timestamp": "2026-11-08T02:42:06.592648+00:00"
+    },
+    {
+      "artifact_id": "28cf8542-be19-481a-a9da-4904d2a0ccc0",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\28cf8542-be19-481a-a9da-4904d2a0ccc0.json",
+      "timestamp": "2026-11-08T02:42:06.726509+00:00"
+    },
+    {
+      "artifact_id": "ef40dea2-d207-4d88-8413-30d780a370fd",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\ef40dea2-d207-4d88-8413-30d780a370fd.json",
+      "timestamp": "2026-11-08T02:42:07.045221+00:00"
+    },
+    {
+      "artifact_id": "3492e8b1-c79e-4ca5-8386-f1734d6082b3",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\3492e8b1-c79e-4ca5-8386-f1734d6082b3.json",
+      "timestamp": "2026-11-08T02:50:24.308777+00:00"
+    },
+    {
+      "artifact_id": "e90dce0e-c37d-4066-b54b-5a3c42c021c1",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\e90dce0e-c37d-4066-b54b-5a3c42c021c1.json",
+      "timestamp": "2026-11-08T02:50:24.492750+00:00"
+    },
+    {
+      "artifact_id": "6e130b45-5bf5-422d-b17f-8cfc052a0671",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\6e130b45-5bf5-422d-b17f-8cfc052a0671.json",
+      "timestamp": "2026-11-08T02:50:24.765789+00:00"
+    },
+    {
+      "artifact_id": "495f9ab7-e754-4eb8-96d9-a0ffbba80768",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\495f9ab7-e754-4eb8-96d9-a0ffbba80768.json",
+      "timestamp": "2026-11-08T03:55:10.621774+00:00",
+      "content_sha256": "8b27fcd081e65d15e2e45c5b586e9ae5154d2aec34558fb8edffeb0f522c7e90",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "b6d3662a-e20f-4aa8-9051-6d80f1652330",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\b6d3662a-e20f-4aa8-9051-6d80f1652330.json",
+      "timestamp": "2026-11-08T03:55:10.703036+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "78ea43d0-431f-447c-a62f-05713d31a5cf",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\78ea43d0-431f-447c-a62f-05713d31a5cf.json",
+      "timestamp": "2026-11-08T03:55:10.894405+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "14e92250-0081-484f-938c-2dda55a1c9bc",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\14e92250-0081-484f-938c-2dda55a1c9bc.json",
+      "timestamp": "2026-11-08T03:57:20.125371+00:00",
+      "content_sha256": "03709dbb6ae289faf0a6aedaf24426f235938bbeb0b8749ed74a58a82b074a07",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "00ce9b81-1936-4ea6-9e60-01fe37c34752",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\00ce9b81-1936-4ea6-9e60-01fe37c34752.json",
+      "timestamp": "2026-11-08T03:57:20.235402+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "5d17c600-6508-4c28-8aba-d88279a6c084",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\5d17c600-6508-4c28-8aba-d88279a6c084.json",
+      "timestamp": "2026-11-08T03:57:20.499863+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "0c7769e4-4569-47ca-8283-3b7a7b672be2",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\0c7769e4-4569-47ca-8283-3b7a7b672be2.json",
+      "timestamp": "2026-11-08T04:13:08.754612+00:00",
+      "content_sha256": "f417193cd8ee5bd0e63edf78056ca0f49ada895548962787943ddc11dc20087a",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "b29b26b7-2ebb-4f5a-8735-216676a7fa1f",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\b29b26b7-2ebb-4f5a-8735-216676a7fa1f.json",
+      "timestamp": "2026-11-08T04:13:08.876456+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "510bd71f-ffce-42c9-83b8-b635ddc34c72",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\510bd71f-ffce-42c9-83b8-b635ddc34c72.json",
+      "timestamp": "2026-11-08T04:13:09.111465+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "27da48dc-763c-461b-bef2-cf5c24f78f41",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\27da48dc-763c-461b-bef2-cf5c24f78f41.json",
+      "timestamp": "2026-11-10T04:12:00.037315+00:00",
+      "content_sha256": "04fdf0c7a4e41d8aefb4bbddaa6da79c906183699b76975564db8d600c9706d8",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "1f679d3b-3055-4519-a82d-77bca2d3f931",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\1f679d3b-3055-4519-a82d-77bca2d3f931.json",
+      "timestamp": "2026-11-10T04:12:00.320808+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "da486501-3b9e-4aa6-8291-66c00d9be62e",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\da486501-3b9e-4aa6-8291-66c00d9be62e.json",
+      "timestamp": "2026-11-10T04:12:00.882102+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "9c742329-5ab8-4d5f-92ed-b34688edae87",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\9c742329-5ab8-4d5f-92ed-b34688edae87.json",
+      "timestamp": "2026-11-10T04:43:33.510463+00:00",
+      "content_sha256": "9c6f252dd0dca371f9c30c5e06b547592e92b768c88f76c79da28a65d685fd17",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "5ac1c152-f592-4a2d-92f2-8bc06ae35b73",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\5ac1c152-f592-4a2d-92f2-8bc06ae35b73.json",
+      "timestamp": "2026-11-10T04:43:33.798006+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "509814bd-1572-4bf6-8c39-cb45b86859e9",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\509814bd-1572-4bf6-8c39-cb45b86859e9.json",
+      "timestamp": "2026-11-10T04:43:34.391436+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "97c644a7-ffea-4fd0-a645-529e69d62275",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\97c644a7-ffea-4fd0-a645-529e69d62275.json",
+      "timestamp": "2026-11-10T04:52:25.736403+00:00",
+      "content_sha256": "69bc13ff475e43940ced04c9682e3d43ec351f0bbd336e41f184b199a7bf4899",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "c1fede7a-8cfe-4ce0-aa2e-44b5b6626e86",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\c1fede7a-8cfe-4ce0-aa2e-44b5b6626e86.json",
+      "timestamp": "2026-11-10T04:52:26.022933+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "1eb18d44-112f-4bc7-811d-3a5e275d057c",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\1eb18d44-112f-4bc7-811d-3a5e275d057c.json",
+      "timestamp": "2026-11-10T04:52:26.670069+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "1c6b824b-98c6-42fb-9c2b-2d22fa3a96e6",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\1c6b824b-98c6-42fb-9c2b-2d22fa3a96e6.json",
+      "timestamp": "2026-11-10T06:16:41.306837+00:00",
+      "content_sha256": "ce30fa02349b9b7fc74d0052a5594e5a47dd3c11a46bf933e0ded5da4a5ec4c8",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "7c336ec2-b1ca-4529-9bb6-b98981fc3a4a",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\7c336ec2-b1ca-4529-9bb6-b98981fc3a4a.json",
+      "timestamp": "2026-11-10T06:16:41.615879+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "4ac2bf83-31ae-44fe-8d53-75efb3b60864",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\4ac2bf83-31ae-44fe-8d53-75efb3b60864.json",
+      "timestamp": "2026-11-10T06:16:42.019376+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "207dec2b-f445-40a8-9b1b-5c97ee16db88",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\207dec2b-f445-40a8-9b1b-5c97ee16db88.json",
+      "timestamp": "2026-11-10T06:38:22.862577+00:00",
+      "content_sha256": "1dec51347fdeb54335c6796044351ebaa34bb8ef7c021c63e5e5a26303931f51",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "dad68e2b-e856-4a01-8aaf-1f0ed4a12cee",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\dad68e2b-e856-4a01-8aaf-1f0ed4a12cee.json",
+      "timestamp": "2026-11-10T06:38:23.029972+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "15fa6ef7-3b74-4f46-bdc4-b2043e0b094f",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\15fa6ef7-3b74-4f46-bdc4-b2043e0b094f.json",
+      "timestamp": "2026-11-10T06:38:23.318407+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "e1dae267-9769-4728-96b2-40b867378ac6",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\e1dae267-9769-4728-96b2-40b867378ac6.json",
+      "timestamp": "2026-11-10T06:43:51.725272+00:00",
+      "content_sha256": "4950e5ecdc16b88c8725aa743b57258374ba5e76499b1a2ac268fa4a44effc75",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "8daa6b18-b910-4eec-b2da-a33a5c11cbfd",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\8daa6b18-b910-4eec-b2da-a33a5c11cbfd.json",
+      "timestamp": "2026-11-10T06:43:51.955489+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "2c097aa7-9f56-430d-8fbb-9cb1b8ecf249",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\2c097aa7-9f56-430d-8fbb-9cb1b8ecf249.json",
+      "timestamp": "2026-11-10T06:43:52.270791+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "cda6e420-70e0-4eba-acd8-c1bee7653259",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\cda6e420-70e0-4eba-acd8-c1bee7653259.json",
+      "timestamp": "2026-11-10T07:36:50.792817+00:00",
+      "content_sha256": "e145d5ad58c0ca9dd471efa0fa5752cc6d53e94594ebc5643953a0b826fdc3b7",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "5b1aad85-e76d-4809-b777-ddba29a93743",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\5b1aad85-e76d-4809-b777-ddba29a93743.json",
+      "timestamp": "2026-11-10T07:36:51.146044+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "22b103b1-860c-426f-b3d4-0673a40a4840",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\22b103b1-860c-426f-b3d4-0673a40a4840.json",
+      "timestamp": "2026-11-10T07:36:52.285818+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
+    },
+    {
+      "artifact_id": "433f60c8-9e9f-4d44-827b-657d2346fc97",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\433f60c8-9e9f-4d44-827b-657d2346fc97.json",
+      "timestamp": "2026-11-10T07:55:18.314236+00:00",
+      "content_sha256": "1cb9d87c639239370734a103d4d78f38dc5ec824961435d4225803666348ed61",
+      "content_bytes": 183
+    },
+    {
+      "artifact_id": "52760ebe-1e23-4836-89d2-870172249299",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:web_research",
+      "file": "artifacts\\reports\\52760ebe-1e23-4836-89d2-870172249299.json",
+      "timestamp": "2026-11-10T07:55:18.583976+00:00",
+      "content_sha256": "e69d4844c96ffd5a339e6a40ead3706940778bdf9b4d99f4cfe32ea3e911f4e0",
+      "content_bytes": 184
+    },
+    {
+      "artifact_id": "88eb7893-2f99-4b1d-9938-399a0caa2dc6",
+      "owner_id": "local",
+      "type": "reports",
+      "source": "research:technical_research",
+      "file": "artifacts\\reports\\88eb7893-2f99-4b1d-9938-399a0caa2dc6.json",
+      "timestamp": "2026-11-10T07:55:18.980473+00:00",
+      "content_sha256": "dce8eba85e0d3fbf186cea22dc8052452421162c7b6ce86f4282c37201bfde93",
+      "content_bytes": 153
     }
   ]
 }
