@@ -40,6 +40,7 @@ The language classifier uses local deterministic rules for Tamil script, romaniz
 - `core.artifact_list`: at most 50 artifact metadata records; no storage paths, file names or content.
 - `core.artifact_verify`: verifies stored artifact content against its checksum without returning the content.
 - `core.artifact_read_text`: reads at most 20,000 characters from a non-archived text artifact after one-time argument-bound approval; it verifies the checksum and never returns file paths or binary media.
+- `core.voice_consent_status`: reports explicit capture, storage, transcription and retention flags for a saved audio artifact without reading audio content or exposing the consent receipt ID.
 - `core.artifact_archive` and `core.artifact_restore`: archive or restore without deleting or changing artifact content. Permanent deletion is not exposed.
 
 All write capabilities and text-artifact reads require a one-time, argument-bound execution approval in addition to the plugin permission grant. First call `POST /plugins/{plugin_id}/capabilities/{capability}/approval` with `confirm: true`, the session ID and exact arguments. Then pass the returned approval ID and unchanged arguments to the Brain execution endpoint.

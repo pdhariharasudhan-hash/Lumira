@@ -52,7 +52,7 @@ BUILTIN_PLUGIN_MANIFESTS = {
         "schema_version": 1, "plugin_id": "lumira.core.artifacts.read",
         "name": "Lumira Core Artifact Read", "version": "1.0.0", "api_version": "1",
         "description": "Read-only artifact metadata and integrity capabilities.",
-        "capabilities": ["core.artifact_list", "core.artifact_verify", "core.artifact_read_text"],
+        "capabilities": ["core.artifact_list", "core.artifact_verify", "core.artifact_read_text", "core.voice_consent_status"],
         "permissions": ["filesystem.artifacts.read"], "dependencies": [],
     },
     "lumira.core.artifacts.write": {
@@ -258,6 +258,19 @@ BUILTIN_HANDLERS = {
                     "limit": {"type": "integer", "minimum": 1, "maximum": 50},
                 },
                 "required": [],
+                "additionalProperties": False,
+            },
+            "requires_approval": False,
+        },
+    },
+    "core.voice_consent_status": {
+        "permission": "filesystem.artifacts.read",
+        "tool_manifest": {
+            "description": "Inspect consent and retention flags for a stored voice recording without reading its audio content.",
+            "parameters": {
+                "type": "object",
+                "properties": {"audio_artifact_id": {"type": "string", "minLength": 1, "maxLength": 128}},
+                "required": ["audio_artifact_id"],
                 "additionalProperties": False,
             },
             "requires_approval": False,
@@ -547,6 +560,33 @@ async def _project_list(arguments: dict[str, Any]) -> dict[str, Any]:
     return {"success": True, "count": len(projects), "projects": projects}
 
 
+async def _voice_consent_status(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.artifacts.artifact_manager_service import ArtifactManagerService
+
+    def inspect_consent() -> dict[str, Any]:
+        artifact = ArtifactManagerService().get_artifact(arguments["audio_artifact_id"])
+        if not isinstance(artifact, dict) or artifact.get("type") != "audio":
+            return {"success": False, "code": "audio_artifact_not_found"}
+        consent = artifact.get("consent")
+        if not isinstance(consent, dict):
+            return {"success": True, "audio_artifact_id": arguments["audio_artifact_id"], "consent_present": False}
+        retention = consent.get("retention")
+        retention = retention if isinstance(retention, dict) else {}
+        return {
+            "success": True,
+            "audio_artifact_id": arguments["audio_artifact_id"],
+            "consent_present": True,
+            "voice_capture": consent.get("voice_capture") is True,
+            "audio_storage": consent.get("audio_storage") is True,
+            "transcription": consent.get("transcription") is True,
+            "retention_mode": retention.get("mode"),
+            "retention_days": retention.get("days"),
+            "consented_at": consent.get("consented_at"),
+        }
+
+    return await asyncio.to_thread(inspect_consent)
+
+
 async def _artifact_read_text(arguments: dict[str, Any]) -> dict[str, Any]:
     from app.services.artifacts.artifact_manager_service import ArtifactManagerService
 
@@ -664,6 +704,7 @@ def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
         "core.artifact_archive": _artifact_archive,
         "core.artifact_verify": _artifact_verify,
         "core.artifact_read_text": _artifact_read_text,
+        "core.voice_consent_status": _voice_consent_status,
         "core.artifact_restore": _artifact_restore,
     }
     registered = 0
