@@ -34,6 +34,22 @@ BUILTIN_HANDLERS = {
             "requires_approval": False,
         },
     },
+    "core.memory_search": {
+        "permission": "memory.read",
+        "tool_manifest": {
+            "description": "Search bounded cognitive memory using deterministic local ranking.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "minLength": 1, "maxLength": 500},
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 10},
+                },
+                "required": ["query"],
+                "additionalProperties": False,
+            },
+            "requires_approval": False,
+        },
+    },
     "core.artifact_list": {
         "permission": "filesystem.artifacts.read",
         "tool_manifest": {
@@ -49,6 +65,15 @@ async def _health_snapshot(arguments: dict[str, Any]) -> dict[str, Any]:
     from app.services.system.system_health_service import SystemHealthService
 
     return await asyncio.to_thread(SystemHealthService().snapshot)
+
+
+async def _memory_search(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.memory.memory_service import MemoryService
+
+    query = arguments.get("query", "")
+    limit = arguments.get("limit", 5)
+    result = await asyncio.to_thread(MemoryService().search, query, None, None, limit)
+    return {"success": True, "query": query, "collections": result}
 
 
 async def _artifact_list(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -105,7 +130,11 @@ def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
         item.get("capability") for item in runtime.list_handlers()
         if item.get("plugin_id") == CORE_PLUGIN_ID
     }
-    handlers = {"core.health_snapshot": _health_snapshot, "core.artifact_list": _artifact_list}
+    handlers = {
+        "core.health_snapshot": _health_snapshot,
+        "core.memory_search": _memory_search,
+        "core.artifact_list": _artifact_list,
+    }
     registered = 0
     skipped = []
     for capability, specification in BUILTIN_HANDLERS.items():
