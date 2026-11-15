@@ -149,7 +149,57 @@ class PluginRuntimeService:
         with self._lock:
             return self._handlers.pop((plugin_id.strip(), capability.strip()), None) is not None
 
+    def reconcile_handlers(self) -> dict:
+        """Remove handlers whose plugin approval or grants have been withdrawn.
+
+        Plugin approval can be revoked through the metadata API while this
+        process is running. Execution already rechecks approval, but retaining
+        stale registrations misreports runtime availability and leaves dead
+        handlers resident. Reconciliation fails closed if registry state cannot
+        be trusted.
+        """
+        with self._lock:
+            snapshot = list(self._handlers.items())
+        revoked: list[tuple[str, str]] = []
+        unavailable = False
+        for key, registered in snapshot:
+            try:
+                record = self._approved_record(
+                    registered.plugin_id, registered.required_permissions
+                )
+                if registered.capability not in record["manifest"].get("capabilities", []):
+                    revoked.append(key)
+            except (KeyError, PermissionError, ValueError):
+                revoked.append(key)
+            except Exception:
+                unavailable = True
+                # Do not guess that approval remains valid when the registry
+                # cannot be read. Remove this handler until explicitly rebound.
+                revoked.append(key)
+        with self._lock:
+            removed = 0
+            for key in revoked:
+                if self._handlers.pop(key, None) is not None:
+                    removed += 1
+        return {
+            "success": not unavailable,
+            "removed_handlers": removed,
+            "registry_unavailable": unavailable,
+        }
+
+    def unregister_plugin_handlers(self, plugin_id: str) -> int:
+        """Immediately evict all process-local handlers for one plugin."""
+        if not isinstance(plugin_id, str) or not plugin_id.strip():
+            return 0
+        target = plugin_id.strip()
+        with self._lock:
+            keys = [key for key in self._handlers if key[0] == target]
+            for key in keys:
+                self._handlers.pop(key, None)
+        return len(keys)
+
     def list_handlers(self) -> list[dict]:
+        self.reconcile_handlers()
         with self._lock:
             return [
                 {

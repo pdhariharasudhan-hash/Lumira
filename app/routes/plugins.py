@@ -245,7 +245,7 @@ def approve_plugin(plugin_id: str, request: PluginApprovalRequest):
 
 
 @router.post("/{plugin_id}/revoke")
-def revoke_plugin_permission(plugin_id: str, request: PluginRevokeRequest):
+def revoke_plugin_permission(plugin_id: str, request: PluginRevokeRequest, http_request: Request):
     if request.confirm is not True:
         raise HTTPException(status_code=409, detail="Explicit owner confirmation is required.")
     registry = _registry()
@@ -258,6 +258,13 @@ def revoke_plugin_permission(plugin_id: str, request: PluginRevokeRequest):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Plugin permission revocation could not be completed safely.") from exc
+    # Revocation may also disable dependent plugins; reconcile the complete
+    # in-process handler set so no withdrawn capability remains advertised.
+    runtime = getattr(http_request.app, "state", None)
+    if runtime is not None:
+        plugin_runtime = getattr(runtime, "plugin_runtime", None)
+        if plugin_runtime is not None:
+            plugin_runtime.reconcile_handlers()
     try:
         _audit("plugin.permission.revoke", "completed", plugin_id, {"permission": request.permission})
     except Exception as exc:
@@ -269,7 +276,7 @@ def revoke_plugin_permission(plugin_id: str, request: PluginRevokeRequest):
 
 
 @router.post("/{plugin_id}/disable")
-def disable_plugin(plugin_id: str, request: PluginDisableRequest):
+def disable_plugin(plugin_id: str, request: PluginDisableRequest, http_request: Request):
     if request.confirm is not True:
         raise HTTPException(status_code=409, detail="Explicit owner confirmation is required.")
     registry = _registry()
@@ -282,6 +289,9 @@ def disable_plugin(plugin_id: str, request: PluginDisableRequest):
         raise HTTPException(status_code=503, detail="Plugin registry integrity could not be established.") from exc
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Plugin disable could not be completed safely.") from exc
+    plugin_runtime = getattr(http_request.app.state, "plugin_runtime", None)
+    if plugin_runtime is not None:
+        plugin_runtime.reconcile_handlers()
     try:
         _audit("plugin.disable", "completed", plugin_id)
     except Exception as exc:
