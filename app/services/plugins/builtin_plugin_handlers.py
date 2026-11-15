@@ -31,7 +31,7 @@ BUILTIN_PLUGIN_MANIFESTS = {
         "schema_version": 1, "plugin_id": "lumira.core.memory.write",
         "name": "Lumira Core Memory Write", "version": "1.0.0", "api_version": "1",
         "description": "Owner-approved cognitive memory and goal mutation capabilities.",
-        "capabilities": ["core.memory_record_experience", "core.goal_create", "core.goal_decompose", "core.goal_update"],
+        "capabilities": ["core.memory_record_experience", "core.memory_archive", "core.goal_create", "core.goal_decompose", "core.goal_update"],
         "permissions": ["memory.write"], "dependencies": [],
     },
     "lumira.core.projects.read": {
@@ -152,6 +152,23 @@ BUILTIN_HANDLERS = {
                     "priority": {"type": "string", "enum": ["low", "normal", "high", "urgent"]},
                 },
                 "required": ["title"],
+                "additionalProperties": False,
+            },
+            "requires_approval": True,
+        },
+    },
+    "core.memory_archive": {
+        "permission": "memory.write",
+        "tool_manifest": {
+            "description": "Archive a cognitive memory record without permanently deleting it; requires one-time owner approval.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "collection": {"type": "string", "enum": ["goals", "decisions", "experiences", "learning_records"]},
+                    "record_id": {"type": "string", "minLength": 1, "maxLength": 128},
+                    "reason": {"type": "string", "minLength": 1, "maxLength": 500},
+                },
+                "required": ["collection", "record_id", "reason"],
                 "additionalProperties": False,
             },
             "requires_approval": True,
@@ -361,6 +378,26 @@ async def _goal_create(arguments: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+async def _memory_archive(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.memory.memory_service import MemoryService
+
+    record = await asyncio.to_thread(
+        MemoryService().evolve,
+        arguments["collection"],
+        arguments["record_id"],
+        forget=True,
+        reason=arguments["reason"],
+        source="lumira_core_plugin",
+    )
+    return {
+        "success": True,
+        "archived": record.get("archived") is True,
+        "collection": arguments["collection"],
+        "record_id": arguments["record_id"],
+        "permanently_deleted": False,
+    }
+
+
 async def _memory_record_experience(arguments: dict[str, Any]) -> dict[str, Any]:
     from app.services.memory.memory_service import MemoryService
 
@@ -493,6 +530,7 @@ def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
         "core.memory_summary": _memory_summary,
         "core.memory_search": _memory_search,
         "core.memory_record_experience": _memory_record_experience,
+        "core.memory_archive": _memory_archive,
         "core.goal_create": _goal_create,
         "core.goal_decompose": _goal_decompose,
         "core.goal_update": _goal_update,
