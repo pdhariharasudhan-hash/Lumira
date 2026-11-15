@@ -9,42 +9,55 @@ import asyncio
 from typing import Any
 
 
-CORE_PLUGIN_ID = "lumira.core"
+CORE_PLUGIN_ID = "lumira.core.system"
 
 
-BUILTIN_PLUGIN_MANIFEST = {
-    "schema_version": 1,
-    "plugin_id": CORE_PLUGIN_ID,
-    "name": "Lumira Core Read-only and Owner-approved Tools",
-    "version": "1.0.0",
-    "api_version": "1",
-    "description": "Application-owned tools for health, memory, goals, projects and artifact lifecycle.",
-    "capabilities": [
-        "core.health_snapshot",
-        "core.memory_summary",
-        "core.memory_search",
-        "core.memory_record_experience",
-        "core.goal_create",
-        "core.goal_decompose",
-        "core.goal_update",
-        "core.goal_list",
-        "core.project_list",
-        "core.artifact_list",
-        "core.artifact_verify",
-        "core.artifact_archive",
-        "core.artifact_restore",
-    ],
-    "permissions": [
-        "device.read",
-        "memory.read",
-        "memory.write",
-        "filesystem.project.read",
-        "filesystem.artifacts.read",
-        "filesystem.artifacts.write",
-    ],
-    "dependencies": [],
+BUILTIN_PLUGIN_MANIFESTS = {
+    "lumira.core.system": {
+        "schema_version": 1, "plugin_id": "lumira.core.system",
+        "name": "Lumira Core System Read", "version": "1.0.0", "api_version": "1",
+        "description": "Read-only system health capability.",
+        "capabilities": ["core.health_snapshot"],
+        "permissions": ["device.read"], "dependencies": [],
+    },
+    "lumira.core.memory.read": {
+        "schema_version": 1, "plugin_id": "lumira.core.memory.read",
+        "name": "Lumira Core Memory Read", "version": "1.0.0", "api_version": "1",
+        "description": "Read-only cognitive memory and goal discovery capabilities.",
+        "capabilities": ["core.memory_summary", "core.memory_search", "core.goal_list"],
+        "permissions": ["memory.read"], "dependencies": [],
+    },
+    "lumira.core.memory.write": {
+        "schema_version": 1, "plugin_id": "lumira.core.memory.write",
+        "name": "Lumira Core Memory Write", "version": "1.0.0", "api_version": "1",
+        "description": "Owner-approved cognitive memory and goal mutation capabilities.",
+        "capabilities": ["core.memory_record_experience", "core.goal_create", "core.goal_decompose", "core.goal_update"],
+        "permissions": ["memory.write"], "dependencies": [],
+    },
+    "lumira.core.projects.read": {
+        "schema_version": 1, "plugin_id": "lumira.core.projects.read",
+        "name": "Lumira Core Project Read", "version": "1.0.0", "api_version": "1",
+        "description": "Read-only project discovery capability.",
+        "capabilities": ["core.project_list"],
+        "permissions": ["filesystem.project.read"], "dependencies": [],
+    },
+    "lumira.core.artifacts.read": {
+        "schema_version": 1, "plugin_id": "lumira.core.artifacts.read",
+        "name": "Lumira Core Artifact Read", "version": "1.0.0", "api_version": "1",
+        "description": "Read-only artifact metadata and integrity capabilities.",
+        "capabilities": ["core.artifact_list", "core.artifact_verify"],
+        "permissions": ["filesystem.artifacts.read"], "dependencies": [],
+    },
+    "lumira.core.artifacts.write": {
+        "schema_version": 1, "plugin_id": "lumira.core.artifacts.write",
+        "name": "Lumira Core Artifact Write", "version": "1.0.0", "api_version": "1",
+        "description": "Owner-approved artifact archive and restore capabilities.",
+        "capabilities": ["core.artifact_archive", "core.artifact_restore"],
+        "permissions": ["filesystem.artifacts.write"], "dependencies": [],
+    },
 }
 
+BUILTIN_PLUGIN_MANIFEST = BUILTIN_PLUGIN_MANIFESTS[CORE_PLUGIN_ID]
 
 def _artifact_list_schema() -> dict[str, Any]:
     return {
@@ -474,27 +487,7 @@ async def _artifact_list(arguments: dict[str, Any]) -> dict[str, Any]:
 
 
 def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
-    """Bind known app-owned handlers only when exact owner grants are present."""
-    try:
-        record = runtime.registry.get(CORE_PLUGIN_ID)
-    except Exception:
-        return {"success": False, "code": "plugin_registry_unavailable", "registered": 0}
-    if not isinstance(record, dict) or record.get("approval_state") != "approved":
-        return {"success": True, "registered": 0, "state": "not_approved"}
-
-    manifest = record.get("manifest")
-    grants = record.get("granted_permissions")
-    if not isinstance(manifest, dict) or not isinstance(grants, list):
-        return {"success": False, "code": "plugin_manifest_invalid", "registered": 0}
-    capabilities = manifest.get("capabilities")
-    declared = manifest.get("permissions")
-    if not isinstance(capabilities, list) or not isinstance(declared, list):
-        return {"success": False, "code": "plugin_manifest_invalid", "registered": 0}
-
-    existing = {
-        item.get("capability") for item in runtime.list_handlers()
-        if item.get("plugin_id") == CORE_PLUGIN_ID
-    }
+    """Bind app-owned handlers only for individually approved permission scopes."""
     handlers = {
         "core.health_snapshot": _health_snapshot,
         "core.memory_summary": _memory_summary,
@@ -512,28 +505,53 @@ def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
     }
     registered = 0
     skipped = []
-    for capability, specification in BUILTIN_HANDLERS.items():
-        if capability not in capabilities:
-            continue
-        permission = specification["permission"]
-        if permission not in declared or permission not in grants:
-            skipped.append({"capability": capability, "code": "permission_not_granted"})
-            continue
-        if capability in existing:
-            continue
+    pending = []
+    try:
+        existing_handlers = runtime.list_handlers()
+    except Exception:
+        return {"success": False, "code": "plugin_registry_unavailable", "registered": 0}
+
+    for plugin_id, expected_manifest in BUILTIN_PLUGIN_MANIFESTS.items():
         try:
-            runtime.register_handler(
-                CORE_PLUGIN_ID,
-                capability,
-                specification["tool_manifest"],
-                handlers[capability],
-                required_permissions=[permission],
-            )
-            registered += 1
-        except ValueError as exc:
-            # Duplicate registration is benign only if reconciliation already
-            # observed the existing handler; other errors remain visible.
-            skipped.append({"capability": capability, "code": str(exc)[:120]})
-        except Exception as exc:
-            skipped.append({"capability": capability, "code": type(exc).__name__})
-    return {"success": not skipped, "registered": registered, "skipped": skipped}
+            record = runtime.registry.get(plugin_id)
+        except Exception:
+            return {"success": False, "code": "plugin_registry_unavailable", "registered": registered}
+        if not isinstance(record, dict):
+            pending.append(plugin_id)
+            continue
+        if record.get("manifest") != expected_manifest:
+            skipped.append({"plugin_id": plugin_id, "code": "builtin_manifest_mismatch"})
+            continue
+        if record.get("approval_state") != "approved":
+            pending.append(plugin_id)
+            continue
+        grants = record.get("granted_permissions")
+        if not isinstance(grants, list):
+            skipped.append({"plugin_id": plugin_id, "code": "plugin_grants_invalid"})
+            continue
+        existing = {
+            item.get("capability") for item in existing_handlers
+            if item.get("plugin_id") == plugin_id
+        }
+        for capability in expected_manifest["capabilities"]:
+            specification = BUILTIN_HANDLERS[capability]
+            permission = specification["permission"]
+            if permission not in expected_manifest["permissions"] or permission not in grants:
+                skipped.append({"plugin_id": plugin_id, "capability": capability, "code": "permission_not_granted"})
+                continue
+            if capability in existing:
+                continue
+            try:
+                runtime.register_handler(
+                    plugin_id, capability, specification["tool_manifest"],
+                    handlers[capability], required_permissions=[permission],
+                )
+                registered += 1
+            except Exception as exc:
+                skipped.append({"plugin_id": plugin_id, "capability": capability, "code": type(exc).__name__})
+    return {
+        "success": not skipped,
+        "registered": registered,
+        "pending_approval": pending,
+        "skipped": skipped,
+    }

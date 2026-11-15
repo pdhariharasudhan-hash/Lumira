@@ -1,42 +1,44 @@
 # Lumira built-in trusted plugin handlers
 
-Lumira ships two application-owned, read-only handlers under the exact plugin ID `lumira.core`. They are not dynamically loaded plugins. The runtime binds them only after the owner explicitly registers and approves the matching manifest and permissions.
+Lumira provides application-owned handlers under six separate permission scopes. The scopes are separate so approving a read capability never requires granting memory or artifact write access. No third-party plugin code is imported or executed.
 
-## Supported manifest
+## Register the built-in manifests
 
-Retrieve the exact application-owned manifest from `GET /plugins/builtins/lumira-core/manifest`. Register it with `POST /plugins/builtins/lumira-core/register` and `{"confirm": true}`. This creates a pending metadata record only; it does not grant permissions or bind handlers. Alternatively, register the manifest below through `POST /plugins/register`:
+1. Retrieve the exact manifests from `GET /plugins/builtins/lumira-core/manifest`.
+2. Register all six pending manifests with `POST /plugins/builtins/lumira-core/register` and body `{"confirm": true}`. Registration creates metadata only; it grants no permissions and binds no handlers.
+3. Approve only the permission scopes you actually want, using `POST /plugins/{plugin_id}/approve` with `confirm: true` and the exact permission in `granted_permissions`. Each manifest has one permission, so scopes can be enabled independently.
+4. The approval route binds the known application handlers. Application startup rebinds approved handlers after restart.
 
-```json
-{
-  "schema_version": 1,
-  "plugin_id": "lumira.core",
-  "name": "Lumira Core Read-only Tools",
-  "version": "1.0.0",
-  "api_version": "1",
-  "description": "Application-owned read-only health and artifact metadata tools.",
-  "capabilities": ["core.health_snapshot", "core.memory_summary", "core.memory_search", "core.memory_record_experience", "core.goal_create", "core.goal_decompose", "core.goal_update", "core.goal_list", "core.project_list", "core.artifact_list", "core.artifact_archive", "core.artifact_restore", "core.artifact_verify"],
-  "permissions": ["device.read", "memory.read", "memory.write", "filesystem.project.read", "filesystem.artifacts.read", "filesystem.artifacts.write"],
-  "dependencies": []
-}
-```
+## Permission scopes and capabilities
 
-Then explicitly approve the two declared permissions using `POST /plugins/lumira.core/approve` with `confirm: true`. The approval route binds the known application handlers; application startup also rebinds them after restart. No handler is installed for any other plugin ID or unknown capability.
+| Plugin ID | Permission | Capabilities |
+|---|---|---|
+| `lumira.core.system` | `device.read` | `core.health_snapshot` |
+| `lumira.core.memory.read` | `memory.read` | `core.memory_summary`, `core.memory_search`, `core.goal_list` |
+| `lumira.core.memory.write` | `memory.write` | `core.memory_record_experience`, `core.goal_create`, `core.goal_decompose`, `core.goal_update` |
+| `lumira.core.projects.read` | `filesystem.project.read` | `core.project_list` |
+| `lumira.core.artifacts.read` | `filesystem.artifacts.read` | `core.artifact_list`, `core.artifact_verify` |
+| `lumira.core.artifacts.write` | `filesystem.artifacts.write` | `core.artifact_archive`, `core.artifact_restore` |
 
-## Handlers
+## Handler behavior
 
-- `core.health_snapshot`: bounded, read-only system health snapshot; requires `device.read`.
-- `core.memory_summary`: returns active record counts only, without record contents; requires `memory.read`.
-- `core.memory_search`: searches cognitive memory with deterministic ranking; requires `memory.read`. Query is limited to 500 characters and at most 10 records per collection are returned.
-- `core.goal_create`: creates a durable goal with bounded title, objective and priority; requires `memory.write` and a one-time argument-bound execution approval.
-- `core.goal_decompose`: creates 1?20 child objectives under an existing active goal; requires `memory.write` and a one-time argument-bound execution approval.
-- `core.goal_list`: returns at most 50 active goal metadata records with optional text/status filters; requires `memory.read`.
-- `core.goal_update`: updates an existing goal's status, progress and/or blockers; requires `memory.write` and a one-time argument-bound execution approval. Completing a goal sets progress to 100 when progress is omitted.
-- `core.memory_record_experience`: writes a bounded experience record; requires `memory.write` and a one-time argument-bound execution approval. It always stores `verified: false`; it cannot self-certify outcomes.
-- `core.project_list`: returns at most 50 project names and version counts; requires `filesystem.project.read`. It never returns source files or paths.
-- `core.artifact_verify`: checks an artifact's stored file against its checksum without returning file content; requires `filesystem.artifacts.read`.
-- `core.artifact_archive` and `core.artifact_restore`: archive or restore an artifact without deleting or changing its content; require `filesystem.artifacts.write` and a one-time argument-bound execution approval. Permanent deletion is deliberately not exposed.
-- `core.artifact_list`: returns at most 50 artifact metadata records; requires `filesystem.artifacts.read`. It never returns storage paths, file names or artifact contents. Optional filters are `limit`, `artifact_type`, and `include_archived`.
+- `core.health_snapshot`: bounded, read-only system health snapshot.
+- `core.memory_summary`: active cognitive-memory record counts only.
+- `core.memory_search`: deterministic memory search; query up to 500 characters and at most 10 records per collection.
+- `core.goal_list`: at most 50 goal metadata records with optional text/status filters.
+- `core.memory_record_experience`: records a bounded experience; always stores `verified: false`.
+- `core.goal_create`: creates a durable goal with title, objective and priority.
+- `core.goal_decompose`: creates 1?20 child objectives under an existing active goal.
+- `core.goal_update`: updates goal status, progress and/or blockers; completing a goal sets progress to 100 if omitted.
+- `core.project_list`: at most 50 project names and version counts; no source files or paths.
+- `core.artifact_list`: at most 50 artifact metadata records; no storage paths, file names or content.
+- `core.artifact_verify`: verifies stored artifact content against its checksum without returning the content.
+- `core.artifact_archive` and `core.artifact_restore`: archive or restore without deleting or changing artifact content. Permanent deletion is not exposed.
 
-Use `GET /plugins/runtime/handlers` or `GET /brain/plugins/capabilities` to inspect currently bound handlers. The Brain discovery endpoint lists only reconciled handlers and provides their Brain execution paths; approved manifest capabilities without a trusted handler are deliberately omitted. Invoke through `POST /brain/plugins/lumira.core/capabilities/{capability}/execute`; requests must include `confirm: true`, a valid session, and a Brain message that passes explicit verification. For `core.goal_create`, `core.goal_decompose`, `core.goal_update`, `core.memory_record_experience`, `core.artifact_archive` and `core.artifact_restore`, first obtain a one-time approval from `POST /plugins/lumira.core/capabilities/core.memory_record_experience/approval` with `confirm: true`, the same session ID, and the exact arguments; pass the returned approval ID and unchanged arguments to the Brain execution endpoint. The normal runtime then rechecks plugin grants and writes execution audit records.
+All write capabilities require a one-time, argument-bound execution approval in addition to the plugin permission grant. First call `POST /plugins/{plugin_id}/capabilities/{capability}/approval` with `confirm: true`, the session ID and exact arguments. Then pass the returned approval ID and unchanged arguments to the Brain execution endpoint.
 
-Revoking either permission or disabling the plugin causes runtime reconciliation to evict the handler. The handlers are sequentially bounded by the shared tool execution capacity and result-size policy.
+## Brain discovery and execution
+
+Use `GET /brain/plugins/capabilities` to inspect only currently bound, reconciled handlers. Invoke a handler through `POST /brain/plugins/{plugin_id}/capabilities/{capability}/execute`. The request requires `confirm: true`, a valid session, a Brain message that passes explicit verification, and (for write handlers) the one-time approval ID. The runtime rechecks plugin grants and records execution audit events.
+
+Revoking a permission or disabling a plugin evicts its in-process handlers. The handlers use the shared bounded tool execution capacity and result-size policy.

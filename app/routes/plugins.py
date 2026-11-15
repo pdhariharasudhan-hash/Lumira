@@ -107,12 +107,13 @@ def _safe_record(record: dict) -> dict:
 
 @router.get("/builtins/lumira-core/manifest")
 def get_lumira_core_builtin_manifest():
-    from app.services.plugins.builtin_plugin_handlers import BUILTIN_PLUGIN_MANIFEST
+    from app.services.plugins.builtin_plugin_handlers import BUILTIN_PLUGIN_MANIFESTS
 
     return {
         "success": True,
-        "manifest": BUILTIN_PLUGIN_MANIFEST,
+        "manifests": BUILTIN_PLUGIN_MANIFESTS,
         "approval_required": True,
+        "permission_scopes_are_separate": True,
         "dynamic_code_execution_enabled": False,
     }
 
@@ -123,24 +124,37 @@ def register_lumira_core_builtin_plugin(
 ):
     if request.confirm is not True:
         raise HTTPException(status_code=409, detail="Explicit owner confirmation is required.")
-    from app.services.plugins.builtin_plugin_handlers import BUILTIN_PLUGIN_MANIFEST
+    from app.services.plugins.builtin_plugin_handlers import BUILTIN_PLUGIN_MANIFESTS
 
     registry = _registry()
     try:
-        _audit("plugin.builtin.register", "requested", "lumira.core")
-        record = registry.register(BUILTIN_PLUGIN_MANIFEST)
-    except ValueError as exc:
-        raise HTTPException(status_code=409, detail="Lumira core plugin is already registered or cannot be registered.") from exc
+        # Preflight every existing entry before writing any missing manifest.
+        existing = {plugin_id: registry.get(plugin_id) for plugin_id in BUILTIN_PLUGIN_MANIFESTS}
+        for plugin_id, record in existing.items():
+            if record is not None and record.get("manifest") != BUILTIN_PLUGIN_MANIFESTS[plugin_id]:
+                raise HTTPException(status_code=409, detail={"code": "builtin_manifest_mismatch", "plugin_id": plugin_id})
+        _audit("plugin.builtin.register", "requested", "lumira.core", {"manifest_count": len(BUILTIN_PLUGIN_MANIFESTS)})
+        registered = {}
+        for plugin_id, manifest in BUILTIN_PLUGIN_MANIFESTS.items():
+            record = existing[plugin_id] or registry.register(manifest)
+            registered[plugin_id] = _safe_record(record)
+    except HTTPException:
+        raise
     except Exception as exc:
-        raise HTTPException(status_code=503, detail="Lumira core plugin registration could not be completed safely.") from exc
+        raise HTTPException(status_code=503, detail={"code": "builtin_registration_incomplete", "error_type": type(exc).__name__}) from exc
     try:
-        _audit("plugin.builtin.register", "completed", "lumira.core", {"approval_state": record.get("approval_state")})
+        _audit("plugin.builtin.register", "completed", "lumira.core", {"manifest_count": len(registered)})
     except Exception as exc:
         raise HTTPException(
             status_code=503,
             detail={"code": "plugin_registration_audit_failed", "side_effect_may_have_occurred": True},
         ) from exc
-    return {"success": True, "plugin": _safe_record(record), "next_step": "Owner must explicitly approve the declared permissions before any handler is bound."}
+    return {
+        "success": True,
+        "plugins": registered,
+        "count": len(registered),
+        "next_step": "Approve only the individual permission scopes you want enabled; no permission is granted by registration.",
+    }
 
 
 @router.get("")
