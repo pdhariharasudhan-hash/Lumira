@@ -42,6 +42,23 @@ BUILTIN_HANDLERS = {
             "requires_approval": False,
         },
     },
+    "core.goal_list": {
+        "permission": "memory.read",
+        "tool_manifest": {
+            "description": "List bounded active goal metadata for Brain planning and progress tracking.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "maxLength": 200},
+                    "status": {"type": "string", "enum": ["active", "paused", "completed", "blocked", "cancelled", "in_progress"]},
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 50},
+                },
+                "required": [],
+                "additionalProperties": False,
+            },
+            "requires_approval": False,
+        },
+    },
     "core.goal_update": {
         "permission": "memory.write",
         "tool_manifest": {
@@ -160,6 +177,39 @@ async def _health_snapshot(arguments: dict[str, Any]) -> dict[str, Any]:
     from app.services.system.system_health_service import SystemHealthService
 
     return await asyncio.to_thread(SystemHealthService().snapshot)
+
+
+async def _goal_list(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.memory.memory_service import MemoryService
+
+    query = arguments.get("query", "").strip().casefold()
+    status = arguments.get("status")
+    limit = arguments.get("limit", 20)
+
+    def read_goals() -> list[dict[str, Any]]:
+        records = MemoryService().get_all().get("goals", [])
+        if not isinstance(records, list):
+            raise ValueError("goal_memory_invalid")
+        visible = []
+        for goal in records:
+            if not isinstance(goal, dict) or goal.get("archived") is True:
+                continue
+            if status and goal.get("status") != status:
+                continue
+            searchable = f"{goal.get('title', '')} {goal.get('objective', '')}".casefold()
+            if query and query not in searchable:
+                continue
+            visible.append({
+                key: goal.get(key)
+                for key in ("goal_id", "title", "objective", "priority", "status", "progress", "deadline", "project_id", "parent_goal_id")
+                if key in goal
+            })
+            if len(visible) >= limit:
+                break
+        return visible
+
+    goals = await asyncio.to_thread(read_goals)
+    return {"success": True, "count": len(goals), "goals": goals}
 
 
 async def _goal_update(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -343,6 +393,7 @@ def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
         "core.goal_create": _goal_create,
         "core.goal_decompose": _goal_decompose,
         "core.goal_update": _goal_update,
+        "core.goal_list": _goal_list,
         "core.project_list": _project_list,
         "core.artifact_list": _artifact_list,
     }
