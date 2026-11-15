@@ -1,0 +1,32 @@
+# Lumira built-in trusted plugin handlers
+
+Lumira ships two application-owned, read-only handlers under the exact plugin ID `lumira.core`. They are not dynamically loaded plugins. The runtime binds them only after the owner explicitly registers and approves the matching manifest and permissions.
+
+## Supported manifest
+
+Register this manifest through `POST /plugins/register`:
+
+```json
+{
+  "schema_version": 1,
+  "plugin_id": "lumira.core",
+  "name": "Lumira Core Read-only Tools",
+  "version": "1.0.0",
+  "api_version": "1",
+  "description": "Application-owned read-only health and artifact metadata tools.",
+  "capabilities": ["core.health_snapshot", "core.artifact_list"],
+  "permissions": ["device.read", "filesystem.artifacts.read"],
+  "dependencies": []
+}
+```
+
+Then explicitly approve the two declared permissions using `POST /plugins/lumira.core/approve` with `confirm: true`. The approval route binds the known application handlers; application startup also rebinds them after restart. No handler is installed for any other plugin ID or unknown capability.
+
+## Handlers
+
+- `core.health_snapshot`: bounded, read-only system health snapshot; requires `device.read`.
+- `core.artifact_list`: returns at most 50 artifact metadata records; requires `filesystem.artifacts.read`. It never returns storage paths, file names or artifact contents. Optional filters are `limit`, `artifact_type`, and `include_archived`.
+
+Use `GET /plugins/runtime/handlers` to inspect currently bound handlers. Invoke through `POST /brain/plugins/lumira.core/capabilities/{capability}/execute`; requests must include `confirm: true`, a valid session, and a Brain message that passes explicit verification. The normal runtime then rechecks plugin grants and writes execution audit records.
+
+Revoking either permission or disabling the plugin causes runtime reconciliation to evict the handler. The handlers are sequentially bounded by the shared tool execution capacity and result-size policy.

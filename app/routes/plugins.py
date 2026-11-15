@@ -221,7 +221,7 @@ def register_plugin(request: PluginRegisterRequest):
 
 
 @router.post("/{plugin_id}/approve")
-def approve_plugin(plugin_id: str, request: PluginApprovalRequest):
+def approve_plugin(plugin_id: str, request: PluginApprovalRequest, http_request: Request):
     if request.confirm is not True:
         raise HTTPException(status_code=409, detail="Explicit owner confirmation is required.")
     registry = _registry()
@@ -234,14 +234,28 @@ def approve_plugin(plugin_id: str, request: PluginApprovalRequest):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Plugin approval could not be completed safely.") from exc
+    binding = None
+    plugin_runtime = getattr(http_request.app.state, "plugin_runtime", None)
+    if plugin_runtime is not None and record.get("approval_state") == "approved":
+        from app.services.plugins.builtin_plugin_handlers import bind_approved_builtin_handlers
+        # Only exact, application-owned capabilities are bindable. This does
+        # not execute plugin code and does not widen the owner's grants.
+        binding = bind_approved_builtin_handlers(plugin_runtime)
     try:
-        _audit("plugin.approve", "completed", plugin_id, {"approval_state": record.get("approval_state")})
+        _audit("plugin.approve", "completed", plugin_id, {
+            "approval_state": record.get("approval_state"),
+            "builtin_handlers_registered": binding.get("registered", 0) if isinstance(binding, dict) else 0,
+        })
     except Exception as exc:
         raise HTTPException(
             status_code=503,
             detail={"code": "plugin_approval_audit_failed", "side_effect_may_have_occurred": True},
         ) from exc
-    return {"success": True, "plugin": _safe_record(record)}
+    return {
+        "success": True,
+        "plugin": _safe_record(record),
+        "runtime_binding": binding,
+    }
 
 
 @router.post("/{plugin_id}/revoke")

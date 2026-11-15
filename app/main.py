@@ -46,6 +46,10 @@ async def lifespan(application: FastAPI):
     application.state.lifecycle_manager = lifecycle
     try:
         application.state.plugin_runtime = PluginRuntimeService()
+        from app.services.plugins.builtin_plugin_handlers import bind_approved_builtin_handlers
+        application.state.builtin_plugin_binding = bind_approved_builtin_handlers(
+            application.state.plugin_runtime
+        )
         application.state.plugin_runtime_error = None
     except Exception as exc:
         # A corrupt or unavailable plugin registry disables only the plugin
