@@ -31,7 +31,7 @@ BUILTIN_PLUGIN_MANIFESTS = {
         "schema_version": 1, "plugin_id": "lumira.core.memory.read",
         "name": "Lumira Core Memory Read", "version": "1.0.0", "api_version": "1",
         "description": "Read-only cognitive memory and goal discovery capabilities.",
-        "capabilities": ["core.memory_summary", "core.memory_search", "core.goal_list", "core.todo_list", "core.note_list"],
+        "capabilities": ["core.memory_summary", "core.memory_search", "core.goal_list", "core.todo_list", "core.note_list", "core.note_search"],
         "permissions": ["memory.read"], "dependencies": [],
     },
     "lumira.core.memory.write": {
@@ -128,6 +128,22 @@ BUILTIN_HANDLERS = {
                 "additionalProperties": False,
             },
             "requires_approval": False,
+        },
+    },
+    "core.note_search": {
+        "permission": "memory.read",
+        "tool_manifest": {
+            "description": "Search personal notes and return bounded snippets after one-time owner approval.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "minLength": 1, "maxLength": 500},
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 20},
+                },
+                "required": ["query"],
+                "additionalProperties": False,
+            },
+            "requires_approval": True,
         },
     },
     "core.note_create": {
@@ -491,6 +507,26 @@ async def _note_list(arguments: dict[str, Any]) -> dict[str, Any]:
         for item in notes if isinstance(item, dict)
     ]
     return {"success": True, "count": len(visible), "notes": visible}
+
+
+async def _note_search(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.notepad_service import NotepadService
+
+    notes = await asyncio.to_thread(
+        NotepadService().search_notes,
+        arguments["query"],
+        arguments.get("limit", 10),
+    )
+    results = [
+        {
+            "note_id": item.get("note_id"),
+            "title": item.get("title"),
+            "snippet": item.get("content", "")[:500],
+            "updated_at": item.get("updated_at"),
+        }
+        for item in notes if isinstance(item, dict)
+    ]
+    return {"success": True, "count": len(results), "notes": results}
 
 
 async def _note_create(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -908,6 +944,7 @@ def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
         "core.goal_list": _goal_list,
         "core.todo_list": _todo_list,
         "core.note_list": _note_list,
+        "core.note_search": _note_search,
         "core.note_create": _note_create,
         "core.note_update": _note_update,
         "core.todo_create": _todo_create,

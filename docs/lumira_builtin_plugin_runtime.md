@@ -15,7 +15,7 @@ Lumira provides application-owned handlers under six separate permission scopes 
 |---|---|---|
 | `lumira.core.language` | None (explicit owner approval still required) | `core.language_classify` |
 | `lumira.core.system` | `device.read` | `core.health_snapshot`, `core.provider_status` |
-| `lumira.core.memory.read` | `memory.read` | `core.memory_summary`, `core.memory_search`, `core.goal_list`, `core.todo_list`, `core.note_list` |
+| `lumira.core.memory.read` | `memory.read` | `core.memory_summary`, `core.memory_search`, `core.goal_list`, `core.todo_list`, `core.note_list`, `core.note_search` |
 | `lumira.core.memory.write` | `memory.write` | `core.memory_record_experience`, `core.memory_archive`, `core.memory_link`, `core.goal_create`, `core.goal_decompose`, `core.goal_update`, `core.todo_create`, `core.todo_update`, `core.note_create`, `core.note_update`, `core.todo_create`, `core.todo_update`, `core.note_create`, `core.note_update`, `core.note_create`, `core.note_update` |
 | `lumira.core.projects.read` | `filesystem.project.read` | `core.project_list` |
 | `lumira.core.artifacts.read` | `filesystem.artifacts.read` | `core.artifact_list`, `core.artifact_verify` |
@@ -41,6 +41,7 @@ The language classifier uses local deterministic rules for Tamil script, romaniz
 - `core.todo_create`: creates a personal task with priority and optional project/blocker metadata.
 - `core.todo_update`: updates task progress; 100% automatically marks the task completed.
 - `core.note_list`: lists at most 50 note titles and timestamps without note contents.
+- `core.note_search`: searches notes and returns at most 20 snippets (500 characters each) after one-time argument-bound approval.
 - `core.note_create`: creates a personal note with bounded title and content.
 - `core.note_update`: updates the title and/or content of an existing note.
 - `core.project_list`: at most 50 project names and version counts; no source files or paths.
@@ -50,7 +51,7 @@ The language classifier uses local deterministic rules for Tamil script, romaniz
 - `core.voice_consent_status`: reports explicit capture, storage, transcription and retention flags for a saved audio artifact without reading audio content or exposing the consent receipt ID.
 - `core.artifact_archive` and `core.artifact_restore`: archive or restore without deleting or changing artifact content. Permanent deletion is not exposed.
 
-All write capabilities and text-artifact reads require a one-time, argument-bound execution approval in addition to the plugin permission grant. First call `POST /plugins/{plugin_id}/capabilities/{capability}/approval` with `confirm: true`, the session ID and exact arguments. Then pass the returned approval ID and unchanged arguments to the Brain execution endpoint.
+All write capabilities, text-artifact reads and note-content searches require a one-time, argument-bound execution approval in addition to the plugin permission grant. First call `POST /plugins/{plugin_id}/capabilities/{capability}/approval` with `confirm: true`, the session ID and exact arguments. Then pass the returned approval ID and unchanged arguments to the Brain execution endpoint.
 
 ## Brain discovery and execution
 
