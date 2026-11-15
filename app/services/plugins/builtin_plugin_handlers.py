@@ -34,6 +34,14 @@ BUILTIN_HANDLERS = {
             "requires_approval": False,
         },
     },
+    "core.memory_summary": {
+        "permission": "memory.read",
+        "tool_manifest": {
+            "description": "Return counts of active cognitive memory records without exposing record contents.",
+            "parameters": {"type": "object", "properties": {}, "required": [], "additionalProperties": False},
+            "requires_approval": False,
+        },
+    },
     "core.memory_search": {
         "permission": "memory.read",
         "tool_manifest": {
@@ -65,6 +73,13 @@ async def _health_snapshot(arguments: dict[str, Any]) -> dict[str, Any]:
     from app.services.system.system_health_service import SystemHealthService
 
     return await asyncio.to_thread(SystemHealthService().snapshot)
+
+
+async def _memory_summary(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.memory.memory_service import MemoryService
+
+    summary = await asyncio.to_thread(MemoryService().summarize)
+    return {"success": True, "summary": summary}
 
 
 async def _memory_search(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -132,6 +147,7 @@ def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
     }
     handlers = {
         "core.health_snapshot": _health_snapshot,
+        "core.memory_summary": _memory_summary,
         "core.memory_search": _memory_search,
         "core.artifact_list": _artifact_list,
     }

@@ -14,7 +14,7 @@ Register this manifest through `POST /plugins/register`:
   "version": "1.0.0",
   "api_version": "1",
   "description": "Application-owned read-only health and artifact metadata tools.",
-  "capabilities": ["core.health_snapshot", "core.memory_search", "core.artifact_list"],
+  "capabilities": ["core.health_snapshot", "core.memory_summary", "core.memory_search", "core.artifact_list"],
   "permissions": ["device.read", "memory.read", "filesystem.artifacts.read"],
   "dependencies": []
 }
@@ -25,6 +25,7 @@ Then explicitly approve the two declared permissions using `POST /plugins/lumira
 ## Handlers
 
 - `core.health_snapshot`: bounded, read-only system health snapshot; requires `device.read`.
+- `core.memory_summary`: returns active record counts only, without record contents; requires `memory.read`.
 - `core.memory_search`: searches cognitive memory with deterministic ranking; requires `memory.read`. Query is limited to 500 characters and at most 10 records per collection are returned.
 - `core.artifact_list`: returns at most 50 artifact metadata records; requires `filesystem.artifacts.read`. It never returns storage paths, file names or artifact contents. Optional filters are `limit`, `artifact_type`, and `include_archived`.
 
