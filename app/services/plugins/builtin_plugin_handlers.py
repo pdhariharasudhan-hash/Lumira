@@ -31,7 +31,7 @@ BUILTIN_PLUGIN_MANIFESTS = {
         "schema_version": 1, "plugin_id": "lumira.core.memory.write",
         "name": "Lumira Core Memory Write", "version": "1.0.0", "api_version": "1",
         "description": "Owner-approved cognitive memory and goal mutation capabilities.",
-        "capabilities": ["core.memory_record_experience", "core.memory_archive", "core.goal_create", "core.goal_decompose", "core.goal_update"],
+        "capabilities": ["core.memory_record_experience", "core.memory_archive", "core.memory_link", "core.goal_create", "core.goal_decompose", "core.goal_update"],
         "permissions": ["memory.write"], "dependencies": [],
     },
     "lumira.core.projects.read": {
@@ -152,6 +152,23 @@ BUILTIN_HANDLERS = {
                     "priority": {"type": "string", "enum": ["low", "normal", "high", "urgent"]},
                 },
                 "required": ["title"],
+                "additionalProperties": False,
+            },
+            "requires_approval": True,
+        },
+    },
+    "core.memory_link": {
+        "permission": "memory.write",
+        "tool_manifest": {
+            "description": "Create an explicit relationship between two existing cognitive memory records after one-time owner approval.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "source_id": {"type": "string", "minLength": 1, "maxLength": 128},
+                    "target_id": {"type": "string", "minLength": 1, "maxLength": 128},
+                    "relation": {"type": "string", "minLength": 1, "maxLength": 100},
+                },
+                "required": ["source_id", "target_id", "relation"],
                 "additionalProperties": False,
             },
             "requires_approval": True,
@@ -378,6 +395,37 @@ async def _goal_create(arguments: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+async def _memory_link(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.memory.memory_service import MemoryService
+
+    def create_link() -> dict[str, Any]:
+        memory = MemoryService()
+        document = memory.get_all()
+        id_fields = ("goal_id", "decision_id", "experience_id", "learning_id", "artifact_id")
+        known_ids = {
+            record.get(field)
+            for collection in ("goals", "decisions", "experiences", "learning_records", "artifacts")
+            for record in document.get(collection, [])
+            if isinstance(record, dict) and record.get("archived") is not True
+            for field in id_fields if isinstance(record.get(field), str)
+        }
+        source_id = arguments["source_id"]
+        target_id = arguments["target_id"]
+        if source_id not in known_ids or target_id not in known_ids:
+            raise KeyError("memory_link_endpoint_not_found")
+        return memory.link(source_id, target_id, arguments["relation"])
+
+    record = await asyncio.to_thread(create_link)
+    return {
+        "success": True,
+        "linked": True,
+        "memory_link_id": record.get("memory_link_id"),
+        "source_id": arguments["source_id"],
+        "target_id": arguments["target_id"],
+        "relation": arguments["relation"],
+    }
+
+
 async def _memory_archive(arguments: dict[str, Any]) -> dict[str, Any]:
     from app.services.memory.memory_service import MemoryService
 
@@ -531,6 +579,7 @@ def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
         "core.memory_search": _memory_search,
         "core.memory_record_experience": _memory_record_experience,
         "core.memory_archive": _memory_archive,
+        "core.memory_link": _memory_link,
         "core.goal_create": _goal_create,
         "core.goal_decompose": _goal_decompose,
         "core.goal_update": _goal_update,

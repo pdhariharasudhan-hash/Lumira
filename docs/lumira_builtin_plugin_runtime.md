@@ -15,7 +15,7 @@ Lumira provides application-owned handlers under six separate permission scopes.
 |---|---|---|
 | `lumira.core.system` | `device.read` | `core.health_snapshot` |
 | `lumira.core.memory.read` | `memory.read` | `core.memory_summary`, `core.memory_search`, `core.goal_list` |
-| `lumira.core.memory.write` | `memory.write` | `core.memory_record_experience`, `core.memory_archive`, `core.goal_create`, `core.goal_decompose`, `core.goal_update` |
+| `lumira.core.memory.write` | `memory.write` | `core.memory_record_experience`, `core.memory_archive`, `core.memory_link`, `core.goal_create`, `core.goal_decompose`, `core.goal_update` |
 | `lumira.core.projects.read` | `filesystem.project.read` | `core.project_list` |
 | `lumira.core.artifacts.read` | `filesystem.artifacts.read` | `core.artifact_list`, `core.artifact_verify` |
 | `lumira.core.artifacts.write` | `filesystem.artifacts.write` | `core.artifact_archive`, `core.artifact_restore` |
@@ -28,6 +28,7 @@ Lumira provides application-owned handlers under six separate permission scopes.
 - `core.goal_list`: at most 50 goal metadata records with optional text/status filters.
 - `core.memory_record_experience`: records a bounded experience; always stores `verified: false`.
 - `core.memory_archive`: archives a goal, decision, experience or learning record with a required reason; it never permanently deletes the record.
+- `core.memory_link`: creates an explicit relationship between two existing, active cognitive memory records; endpoint IDs are checked before linking.
 - `core.goal_create`: creates a durable goal with title, objective and priority.
 - `core.goal_decompose`: creates 1?20 child objectives under an existing active goal.
 - `core.goal_update`: updates goal status, progress and/or blockers; completing a goal sets progress to 100 if omitted.
