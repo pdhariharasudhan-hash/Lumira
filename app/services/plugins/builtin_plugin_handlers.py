@@ -52,7 +52,7 @@ BUILTIN_PLUGIN_MANIFESTS = {
         "schema_version": 1, "plugin_id": "lumira.core.artifacts.read",
         "name": "Lumira Core Artifact Read", "version": "1.0.0", "api_version": "1",
         "description": "Read-only artifact metadata and integrity capabilities.",
-        "capabilities": ["core.artifact_list", "core.artifact_verify"],
+        "capabilities": ["core.artifact_list", "core.artifact_verify", "core.artifact_read_text"],
         "permissions": ["filesystem.artifacts.read"], "dependencies": [],
     },
     "lumira.core.artifacts.write": {
@@ -261,6 +261,22 @@ BUILTIN_HANDLERS = {
                 "additionalProperties": False,
             },
             "requires_approval": False,
+        },
+    },
+    "core.artifact_read_text": {
+        "permission": "filesystem.artifacts.read",
+        "tool_manifest": {
+            "description": "Read a bounded text artifact after one-time owner approval; binary media and storage paths are never returned.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "artifact_id": {"type": "string", "minLength": 1, "maxLength": 128},
+                    "max_chars": {"type": "integer", "minimum": 1, "maximum": 20000},
+                },
+                "required": ["artifact_id"],
+                "additionalProperties": False,
+            },
+            "requires_approval": True,
         },
     },
     "core.artifact_verify": {
@@ -531,6 +547,35 @@ async def _project_list(arguments: dict[str, Any]) -> dict[str, Any]:
     return {"success": True, "count": len(projects), "projects": projects}
 
 
+async def _artifact_read_text(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.artifacts.artifact_manager_service import ArtifactManagerService
+
+    def read_text() -> dict[str, Any]:
+        service = ArtifactManagerService()
+        artifact_id = arguments["artifact_id"]
+        artifact = service.get_artifact(artifact_id)
+        if not isinstance(artifact, dict) or artifact.get("archived") is True:
+            return {"success": False, "code": "artifact_not_found"}
+        path = service.get_artifact_path(artifact_id)
+        if path is None or path.suffix.lower() not in {".txt", ".md", ".json", ".csv"}:
+            return {"success": False, "code": "artifact_not_readable_as_text"}
+        integrity = service.verify_artifact_content(artifact_id)
+        if integrity.get("success") is not True:
+            return {"success": False, "code": integrity.get("code", "artifact_integrity_failed")}
+        maximum = arguments.get("max_chars", 10000)
+        with path.open("r", encoding="utf-8") as handle:
+            content = handle.read(maximum + 1)
+        return {
+            "success": True,
+            "artifact_id": artifact_id,
+            "type": artifact.get("type"),
+            "content": content[:maximum],
+            "truncated": len(content) > maximum,
+        }
+
+    return await asyncio.to_thread(read_text)
+
+
 async def _artifact_verify(arguments: dict[str, Any]) -> dict[str, Any]:
     from app.services.artifacts.artifact_manager_service import ArtifactManagerService
 
@@ -618,6 +663,7 @@ def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
         "core.artifact_list": _artifact_list,
         "core.artifact_archive": _artifact_archive,
         "core.artifact_verify": _artifact_verify,
+        "core.artifact_read_text": _artifact_read_text,
         "core.artifact_restore": _artifact_restore,
     }
     registered = 0
