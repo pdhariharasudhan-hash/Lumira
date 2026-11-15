@@ -5,6 +5,7 @@ A trusted application component must register an async handler in-process.
 """
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass
 from threading import RLock
 from typing import Any, Awaitable, Callable, Mapping
@@ -29,6 +30,7 @@ class _RegisteredHandler:
     capability: str
     tool_name: str
     required_permissions: tuple[str, ...]
+    tool_manifest: dict[str, Any]
     executor: ToolExecutionService
 
 
@@ -128,6 +130,7 @@ class PluginRuntimeService:
             capability=capability,
             tool_name=normalized["name"],
             required_permissions=permissions,
+            tool_manifest=deepcopy(normalized),
             executor=executor,
         )
         with self._lock:
@@ -206,6 +209,7 @@ class PluginRuntimeService:
                     "plugin_id": item.plugin_id,
                     "capability": item.capability,
                     "required_permissions": list(item.required_permissions),
+                    "tool_manifest": deepcopy(item.tool_manifest),
                     "runtime": "trusted_in_process_handler",
                 }
                 for _, item in sorted(self._handlers.items())

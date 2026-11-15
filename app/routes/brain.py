@@ -258,6 +258,7 @@ def brain_list_available_plugin_capabilities(request: Request):
                 "plugin_id": item["plugin_id"],
                 "capability": item["capability"],
                 "required_permissions": item["required_permissions"],
+                "tool_manifest": item["tool_manifest"],
                 "runtime": item["runtime"],
                 "execution_endpoint": (
                     f"/brain/plugins/{item['plugin_id']}/capabilities/{item['capability']}/execute"

@@ -48,6 +48,6 @@ All write capabilities and text-artifact reads require a one-time, argument-boun
 
 ## Brain discovery and execution
 
-Use `GET /brain/plugins/capabilities` to inspect only currently bound, reconciled handlers. Invoke a handler through `POST /brain/plugins/{plugin_id}/capabilities/{capability}/execute`. The request requires `confirm: true`, a valid session, a Brain message that passes explicit verification, and (for write handlers) the one-time approval ID. The runtime rechecks plugin grants and records execution audit events.
+Use `GET /brain/plugins/capabilities` to inspect only currently bound, reconciled handlers. The discovery response includes each tool's validated JSON parameter schema and approval requirement, so a Brain client can construct a schema-conformant invocation without guessing. Invoke a handler through `POST /brain/plugins/{plugin_id}/capabilities/{capability}/execute`. The request requires `confirm: true`, a valid session, a Brain message that passes explicit verification, and (for write handlers) the one-time approval ID. The runtime rechecks plugin grants and records execution audit events.
 
 Revoking a permission or disabling a plugin evicts its in-process handlers. The handlers use the shared bounded tool execution capacity and result-size policy.
