@@ -1807,3 +1807,10 @@ Static Python AST parsing completed for 10 changed modules and `git diff --check
 3. Add controlled end-to-end acceptance for the Main Brain-to-plugin path when the user authorizes tests; do not claim runtime operation from compile checks alone.
 4. Continue the remaining Lumira requirements, especially full conversational tool selection/dispatch, voice processing, memory learning integration, and requirement-inventory reconciliation.
 5. Do not claim overall completion percentage from the old inventory counts. Do not enable autonomous scheduled workers or generated-project execution by default.
+
+
+## 2026-11-15 — Read-only Brain tool routing increment
+- Fixed explicit Brain plugin execution so currently bound, approved read-only handlers with `requires_approval=false` and read-only permission scopes can run after successful Main Brain processing, without being rejected by project-build-specific verification blockers. Mutating or approval-required handlers still require `ready_for_execution=true` and their one-time argument-bound approval. Plugin runtime permission/audit checks remain authoritative at invocation.
+- Added deterministic phrase-based automatic selection for a small allowlist of no-required-argument read-only capabilities in `/command`: health, provider status, model status, memory summary, goals, todos, notes, projects and artifact listing. Ambiguous/unmatched messages stay on the normal conversation path. It never auto-selects write or approval-required tools and never fabricates arguments.
+- Runtime activation must already have been explicitly approved. Automatic dispatch uses the current session, Main Brain processing and the trusted runtime; it is not general-purpose LLM tool calling.
+- Validation performed: Python compilation, `git diff --check`, route discovery, then live read-only `/command` execution after backend restart. No test suite was run.

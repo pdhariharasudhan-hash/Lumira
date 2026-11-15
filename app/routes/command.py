@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
+from starlette.concurrency import run_in_threadpool
 
 from app.schemas.common import (
     GenericInput
@@ -32,6 +33,7 @@ from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeSer
 from app.services.sessions.session_manager_service import redact_sensitive_text
 from app.services.output.user_output_adapter import adapt as adapt_user_output
 from app.services.conversation.conversation_context_service import ConversationContextService
+from app.services.plugins.plugin_capability_selection_service import PluginCapabilitySelectionService
 
 router = APIRouter()
 
@@ -60,9 +62,58 @@ def _command_result_success(result) -> bool:
 @router.post(
     "/command"
 )
-def command(
-    request: GenericInput
+async def command(
+    request: GenericInput,
+    http_request: Request,
 ):
+    # Resolve once so automatic read-only dispatch and the normal command path
+    # share the same durable conversation identity.
+    sessions = SessionManagerService()
+    try:
+        session = sessions.resolve_session(
+            request.session_id, workspace_id=request.workspace_id, project_id=request.project_id
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="session not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    request = request.model_copy(update={"session_id": session["session_id"]})
+    runtime = getattr(http_request.app.state, "plugin_runtime", None)
+    if runtime is not None:
+        try:
+            selection = PluginCapabilitySelectionService().select(request.input, runtime.list_handlers())
+        except Exception:
+            selection = None
+        if selection is not None:
+            brain_response = await run_in_threadpool(
+                BrainService().execute,
+                BrainRequest(
+                    message=request.input,
+                    session_id=session["session_id"],
+                    workspace=request.workspace_id,
+                    project=request.project_id,
+                    metadata={"requested_plugin_execution": {"plugin_id": selection["plugin_id"], "capability": selection["capability"], "read_only": True}},
+                ),
+            )
+            if brain_response.success is not True:
+                raise HTTPException(status_code=409, detail={"code": "brain_preflight_failed", "message": "Main Brain processing failed; read-only tool was not run."})
+            execution = await runtime.execute(
+                selection["plugin_id"], selection["capability"], selection["arguments"],
+                session_id=session["session_id"], autonomous=False,
+            )
+            if execution.get("success") is not True:
+                code = execution.get("code")
+                status = 503 if code in {"plugin_registry_unavailable", "security_audit_unavailable", "execution_outcome_audit_failed"} else 403 if code in {"plugin_permission_unavailable", "permission_denied"} else 409 if code in {"approval_required", "tool_capacity_busy"} else 422
+                raise HTTPException(status_code=status, detail=execution)
+            message = f"Completed read-only capability {selection['capability']}."
+            sessions.append_message(session["session_id"], "assistant", message, metadata={"capability": selection["capability"], "plugin_id": selection["plugin_id"], "success": True, "automatic_read_only_dispatch": True})
+            return adapt_user_output({
+                "success": True, "session_id": session["session_id"],
+                "intent": "plugin_tool", "message": message,
+                "result": {"success": True, "plugin_id": selection["plugin_id"], "capability": selection["capability"], "execution": execution},
+                "attachments": [],
+            }, prompt=request.input)
+
     # Normalize once, then persist the exact user-facing response contract for chat restore.
     response = adapt_user_output(_command_impl(request), prompt=request.input)
     if isinstance(response, dict):

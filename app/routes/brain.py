@@ -175,6 +175,18 @@ async def brain_execute_plugin_capability(
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Session authorization state is unavailable.") from exc
 
+    try:
+        available = runtime.list_handlers()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Plugin capability registry is unavailable.") from exc
+    selected = next((item for item in available if item.get("plugin_id") == plugin_id and item.get("capability") == capability), None)
+    if selected is None:
+        raise HTTPException(status_code=404, detail="Approved plugin capability is not currently bound.")
+    tool_manifest = selected.get("tool_manifest") if isinstance(selected.get("tool_manifest"), dict) else {}
+    permissions = selected.get("required_permissions") if isinstance(selected.get("required_permissions"), list) else []
+    readonly_permissions = {"device.read", "memory.read", "filesystem.project.read", "filesystem.artifacts.read"}
+    safe_read_only = tool_manifest.get("requires_approval") is False and set(permissions).issubset(readonly_permissions)
+
     brain_response = await run_in_threadpool(
         BrainService().execute,
         BrainRequest(
@@ -183,7 +195,7 @@ async def brain_execute_plugin_capability(
                 f"Requested trusted plugin capability: {plugin_id}.{capability}"
             ),
             session_id=payload.session_id,
-            metadata={"requested_plugin_execution": {"plugin_id": plugin_id, "capability": capability}},
+            metadata={"requested_plugin_execution": {"plugin_id": plugin_id, "capability": capability, "read_only": safe_read_only}},
         ),
     )
     if brain_response.success is not True:
@@ -199,12 +211,12 @@ async def brain_execute_plugin_capability(
         )
 
     verification = getattr(brain_response.state, "verification_result", None)
-    if not isinstance(verification, dict) or verification.get("ready_for_execution") is not True:
+    if not safe_read_only and (not isinstance(verification, dict) or verification.get("ready_for_execution") is not True):
         raise HTTPException(
             status_code=409,
             detail={
                 "code": "brain_verification_rejected",
-                "message": "Main Brain did not explicitly verify this request for execution.",
+                "message": "Main Brain did not explicitly verify this mutating or approval-required request for execution.",
                 "plugin_execution_started": False,
             },
         )
@@ -234,6 +246,7 @@ async def brain_execute_plugin_capability(
         data={
             "success": True,
             "brain_gate": "passed",
+            "brain_verification_mode": "read_only_capability" if safe_read_only else "full_execution_verification",
             "brain_execution_id": getattr(getattr(brain_response.state, "execution_context", None), "execution_id", None),
             "plugin_id": plugin_id,
             "capability": capability,
