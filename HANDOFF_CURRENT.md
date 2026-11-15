@@ -1798,7 +1798,7 @@ Static Python AST parsing completed for 10 changed modules and `git diff --check
 - Added operating instructions in `docs/lumira_builtin_plugin_runtime.md`, including activation, approval and execution examples.
 - Validation performed: Python `compileall -q app` passed; `git diff --check` passed; all 7 built-in manifests passed `PluginRegistry.validate_manifest`; all 27 capability declarations matched registered handlers; every required permission was declared and allowlisted. **No tests were run**, per user instruction.
 - The built-in manifests have **not** been registered or approved in the user's runtime. The backend was not started and no live plugin invocation was performed. Activation remains an owner-controlled next step.
-- Latest commit pushed and remote SHA confirmed: `93d86d74750050aa966e60905feca3c87eafa645` (documentation-only final commit). Previous code commits are also on the same branch. Working tree was clean at the last check.
+- Capability documentation commit before this handoff update: `93d86d74750050aa966e60905feca3c87eafa645`. This handoff was then committed separately; query the branch head on GitHub for the current exact SHA. Working tree was clean at the last check.
 - Latest remote quota check reported approximately 9% remote calls remaining.
 
 ### Next priorities
