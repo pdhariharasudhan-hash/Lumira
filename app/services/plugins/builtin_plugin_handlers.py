@@ -24,7 +24,7 @@ BUILTIN_PLUGIN_MANIFESTS = {
         "schema_version": 1, "plugin_id": "lumira.core.system",
         "name": "Lumira Core System Read", "version": "1.0.0", "api_version": "1",
         "description": "Read-only system health capability.",
-        "capabilities": ["core.health_snapshot"],
+        "capabilities": ["core.health_snapshot", "core.provider_status"],
         "permissions": ["device.read"], "dependencies": [],
     },
     "lumira.core.memory.read": {
@@ -90,6 +90,14 @@ BUILTIN_HANDLERS = {
                 "required": ["text"],
                 "additionalProperties": False,
             },
+            "requires_approval": False,
+        },
+    },
+    "core.provider_status": {
+        "permission": "device.read",
+        "tool_manifest": {
+            "description": "Inspect which supported Lumira providers are registered without exposing credentials or making network calls.",
+            "parameters": {"type": "object", "properties": {}, "required": [], "additionalProperties": False},
             "requires_approval": False,
         },
     },
@@ -349,6 +357,20 @@ async def _language_classify(arguments: dict[str, Any]) -> dict[str, Any]:
         IntentClassifierService().classify_detailed, arguments["text"]
     )
     return result
+
+
+async def _provider_status(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.providers.provider_registry import ProviderRegistry, PROVIDER_STATUS_NAMES
+
+    providers = []
+    for name in PROVIDER_STATUS_NAMES:
+        provider = ProviderRegistry.get(name)
+        providers.append({
+            "name": name,
+            "configured": provider is not None,
+            "provider_type": type(provider).__name__ if provider is not None else None,
+        })
+    return {"success": True, "providers": providers, "network_calls_made": False, "credentials_exposed": False}
 
 
 async def _health_snapshot(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -690,6 +712,7 @@ def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
     handlers = {
         "core.language_classify": _language_classify,
         "core.health_snapshot": _health_snapshot,
+        "core.provider_status": _provider_status,
         "core.memory_summary": _memory_summary,
         "core.memory_search": _memory_search,
         "core.memory_record_experience": _memory_record_experience,

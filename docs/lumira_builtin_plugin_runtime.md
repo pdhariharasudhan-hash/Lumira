@@ -14,7 +14,7 @@ Lumira provides application-owned handlers under six separate permission scopes 
 | Plugin ID | Permission | Capabilities |
 |---|---|---|
 | `lumira.core.language` | None (explicit owner approval still required) | `core.language_classify` |
-| `lumira.core.system` | `device.read` | `core.health_snapshot` |
+| `lumira.core.system` | `device.read` | `core.health_snapshot`, `core.provider_status` |
 | `lumira.core.memory.read` | `memory.read` | `core.memory_summary`, `core.memory_search`, `core.goal_list` |
 | `lumira.core.memory.write` | `memory.write` | `core.memory_record_experience`, `core.memory_archive`, `core.memory_link`, `core.goal_create`, `core.goal_decompose`, `core.goal_update` |
 | `lumira.core.projects.read` | `filesystem.project.read` | `core.project_list` |
@@ -27,6 +27,7 @@ The language classifier uses local deterministic rules for Tamil script, romaniz
 
 - `core.language_classify`: returns detected language, intent, confidence and classification source for text up to 10,000 characters.
 - `core.health_snapshot`: bounded, read-only system health snapshot.
+- `core.provider_status`: reports configured provider names and implementation types only; it makes no network calls and never exposes credentials.
 - `core.memory_summary`: active cognitive-memory record counts only.
 - `core.memory_search`: deterministic memory search; query up to 500 characters and at most 10 records per collection.
 - `core.goal_list`: at most 50 goal metadata records with optional text/status filters.
