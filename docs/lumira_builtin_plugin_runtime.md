@@ -15,8 +15,8 @@ Lumira provides application-owned handlers under six separate permission scopes 
 |---|---|---|
 | `lumira.core.language` | None (explicit owner approval still required) | `core.language_classify` |
 | `lumira.core.system` | `device.read` | `core.health_snapshot`, `core.provider_status` |
-| `lumira.core.memory.read` | `memory.read` | `core.memory_summary`, `core.memory_search`, `core.goal_list`, `core.todo_list` |
-| `lumira.core.memory.write` | `memory.write` | `core.memory_record_experience`, `core.memory_archive`, `core.memory_link`, `core.goal_create`, `core.goal_decompose`, `core.goal_update`, `core.todo_create`, `core.todo_update`, `core.todo_create`, `core.todo_update` |
+| `lumira.core.memory.read` | `memory.read` | `core.memory_summary`, `core.memory_search`, `core.goal_list`, `core.todo_list`, `core.note_list` |
+| `lumira.core.memory.write` | `memory.write` | `core.memory_record_experience`, `core.memory_archive`, `core.memory_link`, `core.goal_create`, `core.goal_decompose`, `core.goal_update`, `core.todo_create`, `core.todo_update`, `core.note_create`, `core.note_update`, `core.todo_create`, `core.todo_update`, `core.note_create`, `core.note_update`, `core.note_create`, `core.note_update` |
 | `lumira.core.projects.read` | `filesystem.project.read` | `core.project_list` |
 | `lumira.core.artifacts.read` | `filesystem.artifacts.read` | `core.artifact_list`, `core.artifact_verify` |
 | `lumira.core.artifacts.write` | `filesystem.artifacts.write` | `core.artifact_archive`, `core.artifact_restore` |
@@ -40,6 +40,9 @@ The language classifier uses local deterministic rules for Tamil script, romaniz
 - `core.todo_list`: lists at most 50 personal tasks with optional status filtering.
 - `core.todo_create`: creates a personal task with priority and optional project/blocker metadata.
 - `core.todo_update`: updates task progress; 100% automatically marks the task completed.
+- `core.note_list`: lists at most 50 note titles and timestamps without note contents.
+- `core.note_create`: creates a personal note with bounded title and content.
+- `core.note_update`: updates the title and/or content of an existing note.
 - `core.project_list`: at most 50 project names and version counts; no source files or paths.
 - `core.artifact_list`: at most 50 artifact metadata records; no storage paths, file names or content.
 - `core.artifact_verify`: verifies stored artifact content against its checksum without returning the content.

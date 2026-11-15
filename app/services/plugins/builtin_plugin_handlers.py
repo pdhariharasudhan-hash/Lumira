@@ -31,14 +31,14 @@ BUILTIN_PLUGIN_MANIFESTS = {
         "schema_version": 1, "plugin_id": "lumira.core.memory.read",
         "name": "Lumira Core Memory Read", "version": "1.0.0", "api_version": "1",
         "description": "Read-only cognitive memory and goal discovery capabilities.",
-        "capabilities": ["core.memory_summary", "core.memory_search", "core.goal_list", "core.todo_list"],
+        "capabilities": ["core.memory_summary", "core.memory_search", "core.goal_list", "core.todo_list", "core.note_list"],
         "permissions": ["memory.read"], "dependencies": [],
     },
     "lumira.core.memory.write": {
         "schema_version": 1, "plugin_id": "lumira.core.memory.write",
         "name": "Lumira Core Memory Write", "version": "1.0.0", "api_version": "1",
         "description": "Owner-approved cognitive memory and goal mutation capabilities.",
-        "capabilities": ["core.memory_record_experience", "core.memory_archive", "core.memory_link", "core.goal_create", "core.goal_decompose", "core.goal_update", "core.todo_create", "core.todo_update"],
+        "capabilities": ["core.memory_record_experience", "core.memory_archive", "core.memory_link", "core.goal_create", "core.goal_decompose", "core.goal_update", "core.todo_create", "core.todo_update", "core.note_create", "core.note_update"],
         "permissions": ["memory.write"], "dependencies": [],
     },
     "lumira.core.projects.read": {
@@ -115,6 +115,52 @@ BUILTIN_HANDLERS = {
             "description": "Return counts of active cognitive memory records without exposing record contents.",
             "parameters": {"type": "object", "properties": {}, "required": [], "additionalProperties": False},
             "requires_approval": False,
+        },
+    },
+    "core.note_list": {
+        "permission": "memory.read",
+        "tool_manifest": {
+            "description": "List bounded personal note metadata without returning note contents.",
+            "parameters": {
+                "type": "object",
+                "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 50}},
+                "required": [],
+                "additionalProperties": False,
+            },
+            "requires_approval": False,
+        },
+    },
+    "core.note_create": {
+        "permission": "memory.write",
+        "tool_manifest": {
+            "description": "Create a personal note after one-time owner approval.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string", "minLength": 1, "maxLength": 200},
+                    "content": {"type": "string", "maxLength": 20000},
+                },
+                "required": ["title"],
+                "additionalProperties": False,
+            },
+            "requires_approval": True,
+        },
+    },
+    "core.note_update": {
+        "permission": "memory.write",
+        "tool_manifest": {
+            "description": "Update a personal note after one-time owner approval.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "note_id": {"type": "string", "minLength": 1, "maxLength": 128},
+                    "title": {"type": "string", "minLength": 1, "maxLength": 200},
+                    "content": {"type": "string", "maxLength": 20000},
+                },
+                "required": ["note_id"],
+                "additionalProperties": False,
+            },
+            "requires_approval": True,
         },
     },
     "core.todo_list": {
@@ -427,6 +473,49 @@ async def _health_snapshot(arguments: dict[str, Any]) -> dict[str, Any]:
     from app.services.system.system_health_service import SystemHealthService
 
     return await asyncio.to_thread(SystemHealthService().snapshot)
+
+
+async def _note_list(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.notepad_service import NotepadService
+
+    limit = arguments.get("limit", 20)
+    notes = await asyncio.to_thread(NotepadService().recent_notes, limit)
+    visible = [
+        {
+            "note_id": item.get("note_id"),
+            "title": item.get("title"),
+            "has_content": bool(item.get("content", "").strip()),
+            "created_at": item.get("created_at"),
+            "updated_at": item.get("updated_at"),
+        }
+        for item in notes if isinstance(item, dict)
+    ]
+    return {"success": True, "count": len(visible), "notes": visible}
+
+
+async def _note_create(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.notepad_service import NotepadService
+
+    note = await asyncio.to_thread(
+        NotepadService().create_note,
+        arguments["title"],
+        arguments.get("content", ""),
+    )
+    return {"success": True, "created": True, "note": {"note_id": note.get("note_id"), "title": note.get("title"), "updated_at": note.get("updated_at")}}
+
+
+async def _note_update(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.notepad_service import NotepadService
+
+    if "title" not in arguments and "content" not in arguments:
+        return {"success": False, "code": "note_update_field_required"}
+    note = await asyncio.to_thread(
+        NotepadService().update_note,
+        arguments["note_id"],
+        title=arguments.get("title"),
+        content=arguments.get("content"),
+    )
+    return {"success": True, "updated": True, "note": {"note_id": note.get("note_id"), "title": note.get("title"), "updated_at": note.get("updated_at")}}
 
 
 async def _todo_list(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -818,6 +907,9 @@ def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
         "core.goal_update": _goal_update,
         "core.goal_list": _goal_list,
         "core.todo_list": _todo_list,
+        "core.note_list": _note_list,
+        "core.note_create": _note_create,
+        "core.note_update": _note_update,
         "core.todo_create": _todo_create,
         "core.todo_update": _todo_update,
         "core.project_list": _project_list,
