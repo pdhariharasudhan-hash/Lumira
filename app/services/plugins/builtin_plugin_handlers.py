@@ -162,6 +162,19 @@ BUILTIN_HANDLERS = {
             "requires_approval": False,
         },
     },
+    "core.artifact_verify": {
+        "permission": "filesystem.artifacts.read",
+        "tool_manifest": {
+            "description": "Verify an artifact file against its stored checksum without returning its content.",
+            "parameters": {
+                "type": "object",
+                "properties": {"artifact_id": {"type": "string", "minLength": 1, "maxLength": 128}},
+                "required": ["artifact_id"],
+                "additionalProperties": False,
+            },
+            "requires_approval": False,
+        },
+    },
     "core.artifact_archive": {
         "permission": "filesystem.artifacts.write",
         "tool_manifest": {
@@ -357,6 +370,15 @@ async def _project_list(arguments: dict[str, Any]) -> dict[str, Any]:
     return {"success": True, "count": len(projects), "projects": projects}
 
 
+async def _artifact_verify(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.artifacts.artifact_manager_service import ArtifactManagerService
+
+    result = await asyncio.to_thread(
+        ArtifactManagerService().verify_artifact_content, arguments["artifact_id"]
+    )
+    return result
+
+
 async def _artifact_archive(arguments: dict[str, Any]) -> dict[str, Any]:
     from app.services.artifacts.artifact_manager_service import ArtifactManagerService
 
@@ -451,6 +473,7 @@ def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
         "core.project_list": _project_list,
         "core.artifact_list": _artifact_list,
         "core.artifact_archive": _artifact_archive,
+        "core.artifact_verify": _artifact_verify,
         "core.artifact_restore": _artifact_restore,
     }
     registered = 0

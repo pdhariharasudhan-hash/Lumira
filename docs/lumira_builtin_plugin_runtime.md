@@ -14,7 +14,7 @@ Register this manifest through `POST /plugins/register`:
   "version": "1.0.0",
   "api_version": "1",
   "description": "Application-owned read-only health and artifact metadata tools.",
-  "capabilities": ["core.health_snapshot", "core.memory_summary", "core.memory_search", "core.memory_record_experience", "core.goal_create", "core.goal_decompose", "core.goal_update", "core.goal_list", "core.project_list", "core.artifact_list", "core.artifact_archive", "core.artifact_restore"],
+  "capabilities": ["core.health_snapshot", "core.memory_summary", "core.memory_search", "core.memory_record_experience", "core.goal_create", "core.goal_decompose", "core.goal_update", "core.goal_list", "core.project_list", "core.artifact_list", "core.artifact_archive", "core.artifact_restore", "core.artifact_verify"],
   "permissions": ["device.read", "memory.read", "memory.write", "filesystem.project.read", "filesystem.artifacts.read", "filesystem.artifacts.write"],
   "dependencies": []
 }
@@ -33,6 +33,7 @@ Then explicitly approve the two declared permissions using `POST /plugins/lumira
 - `core.goal_update`: updates an existing goal's status, progress and/or blockers; requires `memory.write` and a one-time argument-bound execution approval. Completing a goal sets progress to 100 when progress is omitted.
 - `core.memory_record_experience`: writes a bounded experience record; requires `memory.write` and a one-time argument-bound execution approval. It always stores `verified: false`; it cannot self-certify outcomes.
 - `core.project_list`: returns at most 50 project names and version counts; requires `filesystem.project.read`. It never returns source files or paths.
+- `core.artifact_verify`: checks an artifact's stored file against its checksum without returning file content; requires `filesystem.artifacts.read`.
 - `core.artifact_archive` and `core.artifact_restore`: archive or restore an artifact without deleting or changing its content; require `filesystem.artifacts.write` and a one-time argument-bound execution approval. Permanent deletion is deliberately not exposed.
 - `core.artifact_list`: returns at most 50 artifact metadata records; requires `filesystem.artifacts.read`. It never returns storage paths, file names or artifact contents. Optional filters are `limit`, `artifact_type`, and `include_archived`.
 
