@@ -127,6 +127,7 @@ def register_lumira_core_builtin_plugin(
     from app.services.plugins.builtin_plugin_handlers import BUILTIN_PLUGIN_MANIFESTS
 
     registry = _registry()
+    registered = {}
     try:
         # Preflight every existing entry before writing any missing manifest.
         existing = {plugin_id: registry.get(plugin_id) for plugin_id in BUILTIN_PLUGIN_MANIFESTS}
@@ -134,14 +135,21 @@ def register_lumira_core_builtin_plugin(
             if record is not None and record.get("manifest") != BUILTIN_PLUGIN_MANIFESTS[plugin_id]:
                 raise HTTPException(status_code=409, detail={"code": "builtin_manifest_mismatch", "plugin_id": plugin_id})
         _audit("plugin.builtin.register", "requested", "lumira.core", {"manifest_count": len(BUILTIN_PLUGIN_MANIFESTS)})
-        registered = {}
         for plugin_id, manifest in BUILTIN_PLUGIN_MANIFESTS.items():
             record = existing[plugin_id] or registry.register(manifest)
             registered[plugin_id] = _safe_record(record)
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=503, detail={"code": "builtin_registration_incomplete", "error_type": type(exc).__name__}) from exc
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "builtin_registration_incomplete",
+                "error_type": type(exc).__name__,
+                "registered_plugin_ids": list(registered),
+                "side_effect_may_have_occurred": bool(registered),
+            },
+        ) from exc
     try:
         _audit("plugin.builtin.register", "completed", "lumira.core", {"manifest_count": len(registered)})
     except Exception as exc:
