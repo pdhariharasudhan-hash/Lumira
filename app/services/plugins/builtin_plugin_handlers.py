@@ -42,6 +42,23 @@ BUILTIN_HANDLERS = {
             "requires_approval": False,
         },
     },
+    "core.goal_create": {
+        "permission": "memory.write",
+        "tool_manifest": {
+            "description": "Create a durable personal goal after one-time owner approval.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string", "minLength": 1, "maxLength": 500},
+                    "objective": {"type": "string", "maxLength": 2000},
+                    "priority": {"type": "string", "enum": ["low", "normal", "high", "urgent"]},
+                },
+                "required": ["title"],
+                "additionalProperties": False,
+            },
+            "requires_approval": True,
+        },
+    },
     "core.memory_record_experience": {
         "permission": "memory.write",
         "tool_manifest": {
@@ -109,6 +126,27 @@ async def _health_snapshot(arguments: dict[str, Any]) -> dict[str, Any]:
     from app.services.system.system_health_service import SystemHealthService
 
     return await asyncio.to_thread(SystemHealthService().snapshot)
+
+
+async def _goal_create(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.memory.memory_service import MemoryService
+
+    goal = await asyncio.to_thread(
+        MemoryService().create_goal,
+        arguments["title"],
+        arguments.get("objective", ""),
+        arguments.get("priority", "normal"),
+    )
+    return {
+        "success": True,
+        "created": True,
+        "goal": {
+            "goal_id": goal.get("goal_id"),
+            "title": goal.get("title"),
+            "priority": goal.get("priority"),
+            "status": goal.get("status"),
+        },
+    }
 
 
 async def _memory_record_experience(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -226,6 +264,7 @@ def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
         "core.memory_summary": _memory_summary,
         "core.memory_search": _memory_search,
         "core.memory_record_experience": _memory_record_experience,
+        "core.goal_create": _goal_create,
         "core.project_list": _project_list,
         "core.artifact_list": _artifact_list,
     }
