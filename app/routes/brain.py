@@ -240,3 +240,33 @@ async def brain_execute_plugin_capability(
             "execution": result,
         },
     )
+
+@router.get("/brain/plugins/capabilities")
+def brain_list_available_plugin_capabilities(request: Request):
+    """Expose only currently bound, approved plugin handlers to Brain clients."""
+    runtime = getattr(request.app.state, "plugin_runtime", None)
+    if runtime is None:
+        raise HTTPException(status_code=503, detail="Plugin runtime is unavailable.")
+    try:
+        handlers = runtime.list_handlers()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Plugin runtime state could not be reconciled.") from exc
+    return {
+        "success": True,
+        "capabilities": [
+            {
+                "plugin_id": item["plugin_id"],
+                "capability": item["capability"],
+                "required_permissions": item["required_permissions"],
+                "runtime": item["runtime"],
+                "execution_endpoint": (
+                    f"/brain/plugins/{item['plugin_id']}/capabilities/{item['capability']}/execute"
+                ),
+                "requires_owner_confirmation": True,
+            }
+            for item in handlers
+        ],
+        "count": len(handlers),
+        "discovery_scope": "currently_bound_trusted_handlers_only",
+        "untrusted_manifest_code_executed": False,
+    }
