@@ -58,6 +58,22 @@ BUILTIN_HANDLERS = {
             "requires_approval": False,
         },
     },
+    "core.project_list": {
+        "permission": "filesystem.project.read",
+        "tool_manifest": {
+            "description": "List bounded project names and version counts without exposing file paths or source contents.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "maxLength": 200},
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 50},
+                },
+                "required": [],
+                "additionalProperties": False,
+            },
+            "requires_approval": False,
+        },
+    },
     "core.artifact_list": {
         "permission": "filesystem.artifacts.read",
         "tool_manifest": {
@@ -89,6 +105,28 @@ async def _memory_search(arguments: dict[str, Any]) -> dict[str, Any]:
     limit = arguments.get("limit", 5)
     result = await asyncio.to_thread(MemoryService().search, query, None, None, limit)
     return {"success": True, "query": query, "collections": result}
+
+
+async def _project_list(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.projects.project_discovery_service import ProjectDiscoveryService
+
+    query = arguments.get("query", "").strip().casefold()
+    limit = arguments.get("limit", 20)
+
+    def read_projects() -> list[dict[str, Any]]:
+        projects = ProjectDiscoveryService().get_projects()
+        visible = []
+        for project in projects:
+            name = project.get("project") if isinstance(project, dict) else None
+            if not isinstance(name, str) or (query and query not in name.casefold()):
+                continue
+            visible.append({"project": name, "versions": project.get("versions", 0)})
+            if len(visible) >= limit:
+                break
+        return visible
+
+    projects = await asyncio.to_thread(read_projects)
+    return {"success": True, "count": len(projects), "projects": projects}
 
 
 async def _artifact_list(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -149,6 +187,7 @@ def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
         "core.health_snapshot": _health_snapshot,
         "core.memory_summary": _memory_summary,
         "core.memory_search": _memory_search,
+        "core.project_list": _project_list,
         "core.artifact_list": _artifact_list,
     }
     registered = 0
