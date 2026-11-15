@@ -165,6 +165,46 @@ def register_lumira_core_builtin_plugin(
     }
 
 
+@router.get("/builtins/lumira-core/status")
+def get_lumira_core_builtin_status(request: Request):
+    from app.services.plugins.builtin_plugin_handlers import BUILTIN_PLUGIN_MANIFESTS
+
+    try:
+        records = _registry().list_plugins()
+        runtime = getattr(request.app.state, "plugin_runtime", None)
+        handlers = runtime.list_handlers() if runtime is not None else []
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Built-in plugin status could not be reconciled safely.") from exc
+
+    bound_by_plugin: dict[str, list[str]] = {}
+    for handler in handlers:
+        plugin_id = handler.get("plugin_id")
+        capability = handler.get("capability")
+        if isinstance(plugin_id, str) and isinstance(capability, str):
+            bound_by_plugin.setdefault(plugin_id, []).append(capability)
+
+    scopes = []
+    for plugin_id, manifest in BUILTIN_PLUGIN_MANIFESTS.items():
+        record = records.get(plugin_id)
+        state = record.get("approval_state", "unknown") if isinstance(record, dict) else "not_registered"
+        scopes.append({
+            "plugin_id": plugin_id,
+            "approval_state": state,
+            "required_permissions": list(manifest["permissions"]),
+            "granted_permissions": list(record.get("granted_permissions", [])) if isinstance(record, dict) else [],
+            "declared_capabilities": list(manifest["capabilities"]),
+            "bound_capabilities": sorted(bound_by_plugin.get(plugin_id, [])),
+            "pending_capabilities": sorted(set(manifest["capabilities"]) - set(bound_by_plugin.get(plugin_id, []))),
+        })
+    return {
+        "success": True,
+        "scopes": scopes,
+        "registered_scope_count": sum(1 for item in scopes if item["approval_state"] != "not_registered"),
+        "approved_scope_count": sum(1 for item in scopes if item["approval_state"] == "approved"),
+        "bound_handler_count": sum(len(item["bound_capabilities"]) for item in scopes),
+    }
+
+
 @router.get("")
 def list_plugins():
     try:
