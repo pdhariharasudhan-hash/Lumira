@@ -42,6 +42,22 @@ BUILTIN_HANDLERS = {
             "requires_approval": False,
         },
     },
+    "core.goal_decompose": {
+        "permission": "memory.write",
+        "tool_manifest": {
+            "description": "Decompose an existing goal into bounded child objectives after one-time owner approval.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "goal_id": {"type": "string", "minLength": 1, "maxLength": 128},
+                    "objectives": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 500}, "minItems": 1, "maxItems": 20},
+                },
+                "required": ["goal_id", "objectives"],
+                "additionalProperties": False,
+            },
+            "requires_approval": True,
+        },
+    },
     "core.goal_create": {
         "permission": "memory.write",
         "tool_manifest": {
@@ -126,6 +142,25 @@ async def _health_snapshot(arguments: dict[str, Any]) -> dict[str, Any]:
     from app.services.system.system_health_service import SystemHealthService
 
     return await asyncio.to_thread(SystemHealthService().snapshot)
+
+
+async def _goal_decompose(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.memory.memory_service import MemoryService
+
+    result = await asyncio.to_thread(
+        MemoryService().decompose_goal,
+        arguments["goal_id"],
+        arguments["objectives"],
+    )
+    objectives = result.get("objectives", []) if isinstance(result, dict) else []
+    return {
+        "success": True,
+        "created_count": len(objectives),
+        "objectives": [
+            {"goal_id": item.get("goal_id"), "title": item.get("title")}
+            for item in objectives if isinstance(item, dict)
+        ],
+    }
 
 
 async def _goal_create(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -265,6 +300,7 @@ def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
         "core.memory_search": _memory_search,
         "core.memory_record_experience": _memory_record_experience,
         "core.goal_create": _goal_create,
+        "core.goal_decompose": _goal_decompose,
         "core.project_list": _project_list,
         "core.artifact_list": _artifact_list,
     }
