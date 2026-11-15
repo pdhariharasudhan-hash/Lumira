@@ -31,14 +31,14 @@ BUILTIN_PLUGIN_MANIFESTS = {
         "schema_version": 1, "plugin_id": "lumira.core.memory.read",
         "name": "Lumira Core Memory Read", "version": "1.0.0", "api_version": "1",
         "description": "Read-only cognitive memory and goal discovery capabilities.",
-        "capabilities": ["core.memory_summary", "core.memory_search", "core.goal_list"],
+        "capabilities": ["core.memory_summary", "core.memory_search", "core.goal_list", "core.todo_list"],
         "permissions": ["memory.read"], "dependencies": [],
     },
     "lumira.core.memory.write": {
         "schema_version": 1, "plugin_id": "lumira.core.memory.write",
         "name": "Lumira Core Memory Write", "version": "1.0.0", "api_version": "1",
         "description": "Owner-approved cognitive memory and goal mutation capabilities.",
-        "capabilities": ["core.memory_record_experience", "core.memory_archive", "core.memory_link", "core.goal_create", "core.goal_decompose", "core.goal_update"],
+        "capabilities": ["core.memory_record_experience", "core.memory_archive", "core.memory_link", "core.goal_create", "core.goal_decompose", "core.goal_update", "core.todo_create", "core.todo_update"],
         "permissions": ["memory.write"], "dependencies": [],
     },
     "lumira.core.projects.read": {
@@ -115,6 +115,56 @@ BUILTIN_HANDLERS = {
             "description": "Return counts of active cognitive memory records without exposing record contents.",
             "parameters": {"type": "object", "properties": {}, "required": [], "additionalProperties": False},
             "requires_approval": False,
+        },
+    },
+    "core.todo_list": {
+        "permission": "memory.read",
+        "tool_manifest": {
+            "description": "List bounded personal tasks with optional status filtering.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "status": {"type": "string", "enum": ["pending", "in_progress", "blocked", "completed", "paused"]},
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 50},
+                },
+                "required": [],
+                "additionalProperties": False,
+            },
+            "requires_approval": False,
+        },
+    },
+    "core.todo_create": {
+        "permission": "memory.write",
+        "tool_manifest": {
+            "description": "Create a personal task after one-time owner approval.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string", "minLength": 1, "maxLength": 500},
+                    "priority": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
+                    "project_id": {"type": "string", "maxLength": 128},
+                    "blocker": {"type": "string", "maxLength": 2000},
+                },
+                "required": ["title"],
+                "additionalProperties": False,
+            },
+            "requires_approval": True,
+        },
+    },
+    "core.todo_update": {
+        "permission": "memory.write",
+        "tool_manifest": {
+            "description": "Update personal task progress after one-time owner approval.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task_id": {"type": "string", "minLength": 1, "maxLength": 128},
+                    "progress": {"type": "integer", "minimum": 0, "maximum": 100},
+                },
+                "required": ["task_id", "progress"],
+                "additionalProperties": False,
+            },
+            "requires_approval": True,
         },
     },
     "core.goal_list": {
@@ -377,6 +427,51 @@ async def _health_snapshot(arguments: dict[str, Any]) -> dict[str, Any]:
     from app.services.system.system_health_service import SystemHealthService
 
     return await asyncio.to_thread(SystemHealthService().snapshot)
+
+
+async def _todo_list(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.tasks.personal_todo_service import PersonalTodoService
+
+    status = arguments.get("status")
+    limit = arguments.get("limit", 20)
+    records = await asyncio.to_thread(PersonalTodoService().list, status)
+    visible = [
+        {key: item.get(key) for key in ("task_id", "title", "priority", "project_id", "blocker", "status", "progress", "created_at") if key in item}
+        for item in records[:limit] if isinstance(item, dict)
+    ]
+    return {"success": True, "count": len(visible), "tasks": visible}
+
+
+async def _todo_create(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.tasks.personal_todo_service import PersonalTodoService
+
+    task = await asyncio.to_thread(
+        PersonalTodoService().create,
+        arguments["title"],
+        arguments.get("priority", "medium"),
+        arguments.get("project_id"),
+        arguments.get("blocker"),
+    )
+    return {
+        "success": True,
+        "created": True,
+        "task": {"task_id": task.get("task_id"), "title": task.get("title"), "status": task.get("status"), "priority": task.get("priority")},
+    }
+
+
+async def _todo_update(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.tasks.personal_todo_service import PersonalTodoService
+
+    task = await asyncio.to_thread(
+        PersonalTodoService().update_progress,
+        arguments["task_id"],
+        arguments["progress"],
+    )
+    return {
+        "success": True,
+        "updated": True,
+        "task": {"task_id": task.get("task_id"), "title": task.get("title"), "status": task.get("status"), "progress": task.get("progress")},
+    }
 
 
 async def _goal_list(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -722,6 +817,9 @@ def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
         "core.goal_decompose": _goal_decompose,
         "core.goal_update": _goal_update,
         "core.goal_list": _goal_list,
+        "core.todo_list": _todo_list,
+        "core.todo_create": _todo_create,
+        "core.todo_update": _todo_update,
         "core.project_list": _project_list,
         "core.artifact_list": _artifact_list,
         "core.artifact_archive": _artifact_archive,
