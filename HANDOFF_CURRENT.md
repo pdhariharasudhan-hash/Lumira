@@ -1776,3 +1776,34 @@ Static Python AST parsing completed for 10 changed modules and `git diff --check
 - Recovery truncation is now calculated from the full pending set rather than a separately capped 100-item listing, so the response correctly reports when more tombstones remain than the requested batch.
 - Existing tombstone ordering and retry semantics are preserved. No artifact files were deleted during this code change.
 - Static Python compilation and `git diff --check` passed for the changed service. No test suites were run, as requested.
+
+
+## Lumira Main Brain and built-in capability integration ? 2026-11-15
+
+- Active checkout: `E:\Hari\personal_ai_core`. Active branch: `codex/lumira-personal-ai-core-consolidation-2026-11-14`. `main` remains untouched.
+- Added `POST /brain/plugins/{plugin_id}/capabilities/{capability}/execute`. It requires explicit owner confirmation, an existing session, successful Main Brain processing, explicit `ready_for_execution`, then invokes only a trusted application-registered plugin handler. Runtime permission checks, one-time argument-bound approvals for sensitive operations, and execution audit remain in force.
+- Added `GET /brain/plugins/capabilities`. It exposes only currently bound/reconciled handlers, including validated tool parameter schemas and approval requirements.
+- Added seven independently approved built-in permission scopes under `app/services/plugins/builtin_plugin_handlers.py`. Six scopes request one permission each; the local language classifier requests no privileged permission but still requires explicit plugin approval. This prevents read-only activation from implicitly requiring write permissions.
+- Added 27 application-owned built-in capabilities:
+  - Language: deterministic Tamil/English/romanized-Tamil intent classification.
+  - System: health snapshot, provider status, multi-model profile/health status.
+  - Memory: summary, search, experience record, archive (not permanent delete), and validated memory links.
+  - Goals/tasks: goal list/create/decompose/update and personal task list/create/progress update.
+  - Notes: metadata list, approved search snippets, create and update; permanent delete is not exposed.
+  - Projects/artifacts: project list, artifact metadata list, checksum verification, approved bounded text read, archive and restore.
+  - Voice: inspect capture/storage/transcription consent and retention flags without reading audio.
+- Added `POST /plugins/builtins/lumira-core/register` to register the seven pending built-in manifests. It grants no permissions. Each permission scope must be approved separately. Added `GET /plugins/builtins/lumira-core/status` to show registration, approval, and handler-binding state.
+- Built-in handlers are bound only for exact app-owned manifests and only after the corresponding scope is approved. They do not import or execute manifest-supplied code. Revocation/disable reconciliation removes stale handlers.
+- Added plugin runtime health reporting to `/system/health`.
+- Added operating instructions in `docs/lumira_builtin_plugin_runtime.md`, including activation, approval and execution examples.
+- Validation performed: Python `compileall -q app` passed; `git diff --check` passed; all 7 built-in manifests passed `PluginRegistry.validate_manifest`; all 27 capability declarations matched registered handlers; every required permission was declared and allowlisted. **No tests were run**, per user instruction.
+- The built-in manifests have **not** been registered or approved in the user's runtime. The backend was not started and no live plugin invocation was performed. Activation remains an owner-controlled next step.
+- Latest commit pushed and remote SHA confirmed: `93d86d74750050aa966e60905feca3c87eafa645` (documentation-only final commit). Previous code commits are also on the same branch. Working tree was clean at the last check.
+- Latest remote quota check reported approximately 9% remote calls remaining.
+
+### Next priorities
+1. Start the backend when convenient, register the built-in manifests using `POST /plugins/builtins/lumira-core/register` with `{"confirm": true}`, and approve only the permission scopes actually needed.
+2. Inspect `GET /plugins/builtins/lumira-core/status` and `GET /brain/plugins/capabilities`; then manually verify a low-risk read-only handler before using write handlers.
+3. Add controlled end-to-end acceptance for the Main Brain-to-plugin path when the user authorizes tests; do not claim runtime operation from compile checks alone.
+4. Continue the remaining Lumira requirements, especially full conversational tool selection/dispatch, voice processing, memory learning integration, and requirement-inventory reconciliation.
+5. Do not claim overall completion percentage from the old inventory counts. Do not enable autonomous scheduled workers or generated-project execution by default.
