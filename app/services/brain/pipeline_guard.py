@@ -38,7 +38,13 @@ class PipelineGuard:
         )
         if not isinstance(metadata, dict):
             return not state.verification_result["ready_for_execution"]
+        capability = metadata.get("execute_capability")
+        side_effecting_capability = not (
+            isinstance(capability, str)
+            and capability.strip().lower() == "conversation"
+        )
         return (
-            metadata.get("execute_capability") is not None
+            capability is not None
+            and side_effecting_capability
             and not state.verification_result["ready_for_execution"]
         )

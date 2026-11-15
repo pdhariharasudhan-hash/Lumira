@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictBool
 import base64
 import binascii
 
@@ -9,6 +9,9 @@ from app.services.artifacts.artifact_manager_service import (
     SUPPORTED_ARTIFACT_TYPES,
 )
 from app.services.artifacts.artifact_library_query_service import ArtifactLibraryQueryService
+from app.services.artifacts.artifact_integrity_audit_service import ArtifactIntegrityAuditService
+from app.services.artifacts.artifact_memory_consistency_service import ArtifactMemoryConsistencyService
+from app.services.security.security_audit_log_service import SecurityAuditLogService
 
 router = APIRouter()
 
@@ -27,6 +30,16 @@ class BinaryArtifactCreateRequest(BaseModel):
     extension: str = Field(pattern=r"^[A-Za-z0-9]{1,12}$")
 
 
+class ArtifactConsistencyRepairRequest(BaseModel):
+    confirm: StrictBool
+    limit: int = Field(default=10000, ge=0, le=10000)
+
+
+class ArtifactDeletionRecoveryRequest(BaseModel):
+    confirm: StrictBool
+    limit: int = Field(default=25, ge=1, le=100)
+
+
 def _manager() -> ArtifactManagerService:
     return ArtifactManagerService()
 
@@ -40,6 +53,57 @@ def _public_artifact(record: dict) -> dict:
     return public
 
 
+def _audited_artifact_change(action: str, identity: str, operation):
+    """Fail closed before artifact mutation and record its outcome without content."""
+    audit = SecurityAuditLogService()
+    details = {"identity": identity[:128]}
+    try:
+        audit.append(
+            event_type="artifact_lifecycle",
+            action=action,
+            outcome="requested",
+            actor="local_owner",
+            details=details,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Artifact mutation blocked because audit storage is unavailable.",
+        ) from exc
+    try:
+        result = operation()
+    except Exception as exc:
+        try:
+            audit.append(
+                event_type="artifact_lifecycle",
+                action=action,
+                outcome="failed",
+                actor="local_owner",
+                details={**details, "error_type": type(exc).__name__},
+            )
+        except Exception:
+            pass
+        raise
+    try:
+        audit.append(
+            event_type="artifact_lifecycle",
+            action=action,
+            outcome="completed" if result else "not_found",
+            actor="local_owner",
+            details=details,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "artifact_mutation_audit_failed",
+                "side_effect_may_have_occurred": True,
+                "action": action,
+            },
+        ) from exc
+    return result
+
+
 @router.post("/artifacts", status_code=201)
 def create_artifact(request: ArtifactCreateRequest):
     if request.type not in SUPPORTED_ARTIFACT_TYPES:
@@ -48,11 +112,15 @@ def create_artifact(request: ArtifactCreateRequest):
             detail=f"Unsupported artifact type: {request.type}",
         )
     try:
-        artifact = _manager().create_artifact(
-            artifact_type=request.type,
-            content=request.content,
-            source=request.source,
-            extension=request.extension,
+        artifact = _audited_artifact_change(
+            "artifact.create",
+            request.type,
+            lambda: _manager().create_artifact(
+                artifact_type=request.type,
+                content=request.content,
+                source=request.source,
+                extension=request.extension,
+            ),
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -77,7 +145,11 @@ def create_binary_artifact(request: BinaryArtifactCreateRequest):
         if not valid_video:
             raise HTTPException(status_code=422, detail="Video artifacts must be MP4 or WebM content")
     try:
-        artifact = _manager().create_binary_artifact(request.type, content, request.source, extension)
+        artifact = _audited_artifact_change(
+            "artifact.create_binary",
+            request.type,
+            lambda: _manager().create_binary_artifact(request.type, content, request.source, extension),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"success": True, "artifact": _public_artifact(artifact)}
@@ -126,6 +198,159 @@ def artifact_stats():
     return {"success": True, "stats": stats}
 
 
+@router.get("/artifacts/integrity")
+def artifact_integrity_audit(
+    limit: int = Query(default=1000, ge=0, le=100000),
+    verify_hashes: bool = True,
+):
+    """Run a bounded, read-only integrity audit over indexed artifact files."""
+    manager = _manager()
+    try:
+        return ArtifactIntegrityAuditService(manager).audit(
+            limit=limit,
+            verify_hashes=verify_hashes,
+        )
+    except (OSError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail="Artifact integrity audit could not be completed safely.") from exc
+
+
+@router.get("/artifacts/consistency")
+def artifact_memory_consistency(
+    limit: int = Query(default=10000, ge=0, le=10000),
+):
+    """Preview drift between the canonical artifact index and memory mirror."""
+    try:
+        return ArtifactMemoryConsistencyService(_manager()).reconcile(
+            apply=False,
+            limit=limit,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail="Artifact consistency preview could not be completed safely.",
+        ) from exc
+
+
+@router.post("/artifacts/consistency/repair")
+def repair_artifact_memory_consistency(request: ArtifactConsistencyRepairRequest):
+    """Repair only the derived memory mirror after explicit owner confirmation."""
+    if request.confirm is not True:
+        raise HTTPException(status_code=409, detail="Explicit owner confirmation is required.")
+    audit = SecurityAuditLogService()
+    try:
+        audit.append(
+            event_type="artifact_consistency",
+            action="artifact.memory.reconcile",
+            outcome="requested",
+            actor="local_owner",
+            details={"limit": request.limit},
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Artifact repair blocked because audit storage is unavailable.") from exc
+    try:
+        result = ArtifactMemoryConsistencyService(_manager()).reconcile(
+            apply=True,
+            limit=request.limit,
+        )
+    except Exception as exc:
+        try:
+            audit.append(
+                event_type="artifact_consistency",
+                action="artifact.memory.reconcile",
+                outcome="failed",
+                actor="local_owner",
+                details={"error_type": type(exc).__name__},
+            )
+        except Exception:
+            pass
+        raise HTTPException(status_code=503, detail="Artifact mirror repair could not be completed safely.") from exc
+    try:
+        audit.append(
+            event_type="artifact_consistency",
+            action="artifact.memory.reconcile",
+            outcome="completed" if result.get("success") is True else "partial",
+            actor="local_owner",
+            details={
+                "changes": result.get("changes", {}),
+                "remaining_findings": result.get("remaining_findings"),
+            },
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "artifact_repair_audit_failed", "side_effect_may_have_occurred": True, "result": result},
+        ) from exc
+    if result.get("success") is not True:
+        raise HTTPException(status_code=503, detail=result)
+    return result
+
+
+@router.get("/artifacts/deletions/pending")
+def pending_artifact_deletions(limit: int = Query(default=25, ge=1, le=100)):
+    """List bounded deletion tombstones without changing artifact state."""
+    try:
+        return {
+            "success": True,
+            "pending": _manager().pending_deletions(limit),
+        }
+    except (OSError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail="Pending artifact deletions could not be read safely.") from exc
+
+
+@router.post("/artifacts/deletions/recover")
+def recover_pending_artifact_deletions(request: ArtifactDeletionRecoveryRequest):
+    """Resume only previously requested deletions after explicit confirmation."""
+    if request.confirm is not True:
+        raise HTTPException(status_code=409, detail="Explicit owner confirmation is required.")
+    audit = SecurityAuditLogService()
+    details = {"limit": request.limit}
+    try:
+        audit.append(
+            event_type="artifact_lifecycle",
+            action="artifact.deletion.recover",
+            outcome="requested",
+            actor="local_owner",
+            details=details,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Deletion recovery blocked because audit storage is unavailable.") from exc
+    try:
+        result = _manager().recover_pending_deletions(request.limit)
+    except Exception as exc:
+        try:
+            audit.append(
+                event_type="artifact_lifecycle",
+                action="artifact.deletion.recover",
+                outcome="failed",
+                actor="local_owner",
+                details={**details, "error_type": type(exc).__name__},
+            )
+        except Exception:
+            pass
+        raise HTTPException(status_code=503, detail="Pending artifact deletion recovery failed safely.") from exc
+    try:
+        audit.append(
+            event_type="artifact_lifecycle",
+            action="artifact.deletion.recover",
+            outcome="completed" if result.get("success") is True else "partial",
+            actor="local_owner",
+            details={
+                **details,
+                "examined": result.get("examined", 0),
+                "recovered": result.get("recovered", 0),
+                "failed": result.get("failed", 0),
+            },
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "artifact_recovery_audit_failed", "side_effect_may_have_occurred": True, "result": result},
+        ) from exc
+    if result.get("success") is not True:
+        raise HTTPException(status_code=503, detail=result)
+    return result
+
+
 @router.get("/artifacts/{artifact_id}/content")
 def get_artifact_content(artifact_id: str):
     manager = _manager()
@@ -158,7 +383,10 @@ def get_artifact(artifact_id: str):
 @router.post("/artifacts/{artifact_id}/archive")
 def archive_artifact(artifact_id: str):
     try:
-        archived = _manager().archive_artifact(artifact_id)
+        archived = _audited_artifact_change(
+            "artifact.archive", artifact_id,
+            lambda: _manager().archive_artifact(artifact_id),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     if not archived:
@@ -169,7 +397,10 @@ def archive_artifact(artifact_id: str):
 @router.post("/artifacts/{artifact_id}/restore")
 def restore_artifact(artifact_id: str):
     try:
-        restored = _manager().restore_artifact(artifact_id)
+        restored = _audited_artifact_change(
+            "artifact.restore", artifact_id,
+            lambda: _manager().restore_artifact(artifact_id),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     if not restored:
@@ -180,7 +411,10 @@ def restore_artifact(artifact_id: str):
 @router.delete("/artifacts/{artifact_id}")
 def delete_artifact(artifact_id: str):
     try:
-        deleted = _manager().delete_artifact(artifact_id)
+        deleted = _audited_artifact_change(
+            "artifact.delete", artifact_id,
+            lambda: _manager().delete_artifact(artifact_id),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     if not deleted:

@@ -52,6 +52,7 @@ class ConstraintModule(BrainModule):
             objective=state.objective,
             context=state.context,
             state=state.constraints,
+            capability=state.execution_context.metadata.get("execute_capability"),
         )
 
         return state

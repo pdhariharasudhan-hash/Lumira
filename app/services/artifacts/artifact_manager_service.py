@@ -105,8 +105,9 @@ class ArtifactManagerService:
             exist_ok=True
         )
 
-        if not self.index_path.exists():
-            self.store.write({"artifacts": []})
+        # Serialize first-run creation so a concurrent artifact registration
+        # cannot be overwritten by another process initializing the index.
+        self.store.update(self._validate_index, {"artifacts": []})
 
     def _load_index(self):
         return self._validate_index(self.store.read({"artifacts": []}))
@@ -142,6 +143,13 @@ class ArtifactManagerService:
                 raise PersistenceIntegrityError("Artifact owner identifier is invalid")
             if "archived" in record and not isinstance(record["archived"], bool):
                 raise PersistenceIntegrityError("Artifact archive state must be a boolean")
+            if "deletion_pending" in record and not isinstance(record["deletion_pending"], bool):
+                raise PersistenceIntegrityError("Artifact deletion state must be a boolean")
+            if "deletion_requested_at" in record and (
+                not isinstance(record["deletion_requested_at"], str)
+                or len(record["deletion_requested_at"]) > 40
+            ):
+                raise PersistenceIntegrityError("Artifact deletion timestamp is invalid")
             if "content_sha256" in record and (
                 not isinstance(record["content_sha256"], str)
                 or not re.fullmatch(r"[0-9a-f]{64}", record["content_sha256"])
@@ -260,9 +268,12 @@ class ArtifactManagerService:
 
         def append_record(index):
             self._validate_index(index)
+            if len(index["artifacts"]) >= self.MAX_ARTIFACTS:
+                raise PersistenceIntegrityError("Artifact index has reached its retention limit")
             if any(item["artifact_id"] == record["artifact_id"] for item in index["artifacts"]):
                 raise PersistenceIntegrityError("Artifact identifier already exists")
             index["artifacts"].append(record)
+            self._validate_index(index)
 
         self.store.update(append_record, {"artifacts": []})
         self.memory.add_artifact(record)
@@ -423,34 +434,182 @@ class ArtifactManagerService:
             self.memory.update_artifact(artifact_id, {"archived": False})
         return restored["value"]
 
-    def delete_artifact(self, artifact_id: str) -> bool:
-        removed = {}
+    def _safe_artifact_file_path(self, raw_path: Any) -> Path:
+        """Resolve an indexed artifact path without following links outside storage.
 
-        def remove_record(index):
+        Stored paths must be absolute descendants of the artifact root. Existing
+        symlink/junction components are rejected before any filesystem probe or
+        deletion. This is a defense-in-depth check; the artifact directory must
+        remain writable only by the Lumira service account.
+        """
+        if not isinstance(raw_path, str) or not raw_path or len(raw_path) > 4096:
+            raise ValueError("Artifact path is invalid")
+        candidate = Path(os.path.abspath(raw_path))
+        base = self.base_path.resolve()
+        try:
+            relative = candidate.relative_to(base)
+        except ValueError as exc:
+            raise ValueError("Artifact path is outside the artifact store") from exc
+        if not relative.parts:
+            raise ValueError("Artifact path cannot be the artifact store root")
+
+        current = base
+        for part in relative.parts:
+            current = current / part
+            is_junction = getattr(current, "is_junction", None)
+            if current.is_symlink() or (callable(is_junction) and is_junction()):
+                raise ValueError("Artifact path contains a symbolic link or junction")
+            if current.exists() and current != candidate and not current.is_dir():
+                raise ValueError("Artifact parent is not a directory")
+
+        resolved = candidate.resolve(strict=False)
+        try:
+            resolved.relative_to(base)
+        except ValueError as exc:
+            raise ValueError("Resolved artifact path is outside the artifact store") from exc
+        if resolved == base:
+            raise ValueError("Artifact path cannot be the artifact store root")
+        return candidate
+
+    def delete_artifact(self, artifact_id: str) -> bool:
+        """Delete through a retryable tombstone, refusing unsafe filesystem paths."""
+        if not isinstance(artifact_id, str) or not artifact_id or len(artifact_id) > 128:
+            return False
+        requested_at = datetime.now(timezone.utc).isoformat()
+        selected: dict[str, Any] = {}
+
+        def mark_pending(index):
             self._validate_index(index)
-            artifacts = index["artifacts"]
-            artifact = next((item for item in artifacts if item.get("artifact_id") == artifact_id), None)
+            artifact = next(
+                (item for item in index["artifacts"] if item.get("artifact_id") == artifact_id),
+                None,
+            )
             if artifact is None:
                 return False
-            path = Path(artifact["file"]).resolve()
-            base = self.base_path.resolve()
-            if path == base or base not in path.parents:
-                raise ValueError("Artifact path is outside the artifact store")
-            removed["path"] = path
-            removed["artifact"] = artifact
-            index["artifacts"] = [item for item in artifacts if item.get("artifact_id") != artifact_id]
+            path = self._safe_artifact_file_path(artifact.get("file"))
+            artifact["deletion_pending"] = True
+            artifact.setdefault("deletion_requested_at", requested_at)
+            selected["path"] = str(path)
+            selected["artifact"] = dict(artifact)
             return True
 
-        deleted = self.store.update(remove_record, {"artifacts": []})
-        artifact = removed.get("artifact")
-        if artifact is None:
+        found = self.store.update(mark_pending, {"artifacts": []})
+        if not found or "artifact" not in selected:
             return False
 
-        path = removed["path"]
+        # Revalidate immediately before touching disk. Tombstones remain if the
+        # path becomes unsafe or a filesystem operation fails.
+        path = self._safe_artifact_file_path(selected["path"])
         if path.exists():
+            is_junction = getattr(path, "is_junction", None)
+            if path.is_symlink() or (callable(is_junction) and is_junction()) or not path.is_file():
+                raise ValueError("Artifact content path is not a regular file")
             path.unlink()
+
         self.memory.remove_artifact(artifact_id)
-        return deleted
+
+        def finalize(index):
+            self._validate_index(index)
+            before = len(index["artifacts"])
+            index["artifacts"] = [
+                item for item in index["artifacts"]
+                if item.get("artifact_id") != artifact_id
+            ]
+            return len(index["artifacts"]) != before
+
+        return bool(self.store.update(finalize, {"artifacts": []}))
+
+    def pending_deletions(self, limit: int = 100) -> list[dict]:
+        """Return bounded metadata without probing paths outside artifact storage."""
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
+            raise ValueError("limit must be between 1 and 100")
+        records = self.get_all_artifacts()
+        pending = [item for item in records if item.get("deletion_pending") is True]
+        result = []
+        for item in pending[:limit]:
+            try:
+                path = self._safe_artifact_file_path(item.get("file"))
+                available = path.is_file() and not path.is_symlink()
+            except (OSError, ValueError, TypeError):
+                available = False
+            result.append({
+                "artifact_id": item["artifact_id"],
+                "type": item["type"],
+                "deletion_requested_at": item.get("deletion_requested_at"),
+                "content_available": available,
+            })
+        return result
+
+    def recover_pending_deletions(self, limit: int = 25) -> dict:
+        """Resume retryable tombstones and report truncation from the full index."""
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
+            raise ValueError("limit must be between 1 and 100")
+        records = self.get_all_artifacts()
+        all_pending = [item for item in records if item.get("deletion_pending") is True]
+        pending = all_pending[:limit]
+        recovered: list[str] = []
+        failed: list[dict] = []
+        for item in pending:
+            artifact_id = item["artifact_id"]
+            try:
+                if self.delete_artifact(artifact_id):
+                    recovered.append(artifact_id)
+                else:
+                    failed.append({"artifact_id": artifact_id, "error_type": "DeletionNotFinalized"})
+            except Exception as exc:
+                failed.append({"artifact_id": artifact_id, "error_type": type(exc).__name__})
+        return {
+            "success": not failed,
+            "examined": len(pending),
+            "recovered": len(recovered),
+            "failed": len(failed),
+            "recovered_ids": recovered,
+            "failures": failed[:100],
+            "truncated": len(all_pending) > len(pending),
+        }
+
+    def pending_deletions(self, limit: int = 100) -> list[dict]:
+        """Return bounded metadata for artifact deletions awaiting recovery."""
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
+            raise ValueError("limit must be between 1 and 100")
+        records = self.get_all_artifacts()
+        pending = [
+            {
+                "artifact_id": item["artifact_id"],
+                "type": item["type"],
+                "deletion_requested_at": item.get("deletion_requested_at"),
+                "content_available": Path(item["file"]).is_file(),
+            }
+            for item in records
+            if item.get("deletion_pending") is True
+        ]
+        return pending[:limit]
+
+    def recover_pending_deletions(self, limit: int = 25) -> dict:
+        """Resume retryable tombstones without deleting unrelated artifacts."""
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
+            raise ValueError("limit must be between 1 and 100")
+        pending = self.pending_deletions(limit)
+        recovered: list[str] = []
+        failed: list[dict] = []
+        for item in pending:
+            artifact_id = item["artifact_id"]
+            try:
+                if self.delete_artifact(artifact_id):
+                    recovered.append(artifact_id)
+                else:
+                    failed.append({"artifact_id": artifact_id, "error_type": "DeletionNotFinalized"})
+            except Exception as exc:
+                failed.append({"artifact_id": artifact_id, "error_type": type(exc).__name__})
+        return {
+            "success": not failed,
+            "examined": len(pending),
+            "recovered": len(recovered),
+            "failed": len(failed),
+            "recovered_ids": recovered,
+            "failures": failed[:100],
+            "truncated": len(self.pending_deletions(100)) > len(pending),
+        }
 
     def availability_summary(self) -> dict:
         total = 0

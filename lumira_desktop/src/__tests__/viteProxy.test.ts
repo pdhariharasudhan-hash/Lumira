@@ -12,7 +12,8 @@ describe("desktop development API proxy", () => {
       "health", "ai-mode", "providers", "resources", "intelligence",
       "images", "modes", "features", "notepad", "sessions", "command",
       "projects", "artifacts", "goals", "workflows", "search", "memory",
-      "runs", "voice", "devices", "openapi.json",
+      "runs", "voice", "devices", "openapi.json", "agents", "background-tasks",
+      "creator", "data", "device-profiles", "market", "system",
     ];
 
     expect([...API_ROOTS]).toEqual(expect.arrayContaining(requiredRoots));

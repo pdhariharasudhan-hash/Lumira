@@ -237,3 +237,53 @@ def test_experience_writes_reject_malformed_or_unbounded_fields(tmp_path):
     with pytest.raises(MemoryValidationError, match="outcome must be"):
         service.record_experience("success", "Valid summary", " ")
     assert service.summarize()["counts"]["experiences"] == 0
+
+
+def test_archived_memories_are_excluded_from_retrieval_and_search(tmp_path):
+    service = MemoryService(str(tmp_path / "memory.json"))
+    decision = service.record_decision("Use the archived decision")
+    experience = service.record_experience(
+        "success", "Archived experience summary", "Archived outcome",
+    )
+    service.archive("decisions", decision["decision_id"])
+    service.evolve("experiences", experience["experience_id"], forget=True)
+
+    retrieved = service.retrieve_relevant("archived decision experience")
+    searched = service.search("archived decision experience")
+
+    assert retrieved["decisions"] == []
+    assert retrieved["experiences"] == []
+    assert searched["decisions"] == []
+    assert searched["experiences"] == []
+
+
+def test_corrected_memory_retrieval_uses_current_value_without_superseded_history(tmp_path):
+    service = MemoryService(str(tmp_path / "memory.json"))
+    original = service.record_decision("Use keyword retrieval")
+
+    service.evolve(
+        "decisions",
+        original["decision_id"],
+        correction={"decision": "Use vector retrieval"},
+        reason="The retrieval strategy changed",
+        source="user_api",
+    )
+
+    current = service.retrieve_relevant("vector retrieval")["decisions"]
+    old_matches = service.search("keyword")["decisions"]
+
+    assert len(current) == 1
+    assert current[0]["decision"] == "Use vector retrieval"
+    assert "superseded_record" not in current[0]
+    assert old_matches == []
+    assert service.get_all()["decisions"][0]["superseded_record"]["decision"] == "Use keyword retrieval"
+
+
+def test_archived_memories_are_excluded_from_active_summary_counts(tmp_path):
+    service = MemoryService(str(tmp_path / "memory.json"))
+    decision = service.record_decision("Archive this decision")
+    service.archive("decisions", decision["decision_id"])
+
+    summary = service.summarize()
+
+    assert summary["counts"]["decisions"] == 0

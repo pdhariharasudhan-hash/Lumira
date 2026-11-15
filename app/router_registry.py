@@ -106,6 +106,8 @@ from app.routes.autonomy import router as autonomy_router
 from app.routes.capabilities import router as capabilities_router
 from app.routes.data_backup import router as data_backup_router
 from app.routes.security import router as security_router
+from app.routes.plugins import router as plugins_router
+from app.routes.language import router as language_router
 
 
 ROUTERS = [
@@ -122,6 +124,8 @@ ROUTERS = [
     (goals_router, ["Goals"]), (goal_intelligence_router, ["Goal Intelligence"]), (agents_router, ["Agents"]),
     (workflow_insights_router, ["Workflow Insights"]), (workflows_router, ["Workflows"]),
     (auth_router, ["Authentication"]), (devices_router, ["Device Gateway"]), (device_profiles_router, ["Device Profiles"]), (ai_modes_router, ["AI Modes"]), (personal_preferences_router, ["Personal Preferences"]),
+    (plugins_router, ["Plugins"]),
+    (language_router, ["Language"]),
     (system_prompt_router, ["System Prompt"]),
     (project_terminal_router, ["Project Terminal"]), (project_preview_router, ["Project Preview"]),
     (web_router, ["Web Access"]), (recovery_router, ["Workflow Recovery"]), (features_router, ["Features"]),

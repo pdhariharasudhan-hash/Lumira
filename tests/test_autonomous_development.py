@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from app.services.resources.resource_budget_service import ResourceBudgetService
+import app.services.autonomous_development.autonomous_development_service as autonomous_development_module
 from app.services.autonomous_development.autonomous_development_service import (
     AutonomousDevelopmentService,
 )
@@ -73,6 +74,11 @@ def _service(
     *,
     apply_changes: bool = True,
 ) -> tuple[AutonomousDevelopmentService, list[dict]]:
+    monkeypatch.setattr(
+        autonomous_development_module,
+        "preflight_workflow_execution",
+        lambda *args, **kwargs: {"allowed": True},
+    )
     work_items = WorkItemService(tmp_path / "work_items.json")
     service = AutonomousDevelopmentService(
         tmp_path,
@@ -1282,6 +1288,57 @@ def test_worker_retries_no_change_with_task_context_then_accepts_changes(
     assert generator.contexts[1]["provider_attempt"] == 2
     assert "retry_instruction" in generator.contexts[1]
     assert "previous_provider_result" in generator.contexts[1]
+
+
+@pytest.mark.parametrize(
+    ("approval", "expected_code"),
+    [
+        (
+            {
+                "allowed": False,
+                "state": "rejected",
+                "code": "brain_verification_rejected",
+                "message": "Lumira Brain did not verify this request for workflow execution.",
+            },
+            "brain_verification_rejected",
+        ),
+        (None, "brain_preflight_failed"),
+        ({"allowed": 1}, "brain_preflight_failed"),
+    ],
+)
+def test_brain_rejection_stops_autonomous_resume_before_state_or_command_changes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    approval: object,
+    expected_code: str,
+) -> None:
+    service, _ = _service(tmp_path, monkeypatch, [0])
+    run_id, _ = _interrupted_validation_run(service, tmp_path)
+    before = service.recovery.get_run(run_id)
+    command_calls = []
+    monkeypatch.setattr(
+        autonomous_development_module,
+        "preflight_workflow_execution",
+        lambda *args, **kwargs: approval,
+    )
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *args, **kwargs: command_calls.append(args),
+    )
+
+    result = service.resume(run_id)
+
+    after = service.recovery.get_run(run_id)
+    assert result["success"] is False
+    assert result["state"] == (
+        "rejected" if expected_code == "brain_verification_rejected" else "failed"
+    )
+    assert result["code"] == expected_code
+    assert after["resume_count"] == before["resume_count"]
+    assert after["status"] == before["status"]
+    assert after["stage_records"] == before["stage_records"]
+    assert command_calls == []
 
 
 def test_worker_retries_malformed_changes_before_application(

@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 
+from app.core.lumira_core import LumiraCore
+from app.services.brain.workflow_execution_gate import preflight_workflow_execution
 from app.schemas.common import (
     GenericInput
 )
@@ -17,6 +19,21 @@ router = APIRouter()
 def run_pipeline(
     request: GenericInput
 ):
+    approval = preflight_workflow_execution(
+        request.input,
+        session_id=request.session_id,
+        project_id=request.project_id,
+        workspace=request.workspace_id,
+        source="workflow_run",
+        core_factory=LumiraCore,
+    )
+    if approval.get("allowed") is not True:
+        return {
+            "success": False,
+            "endpoint": "run",
+            "status": approval["state"],
+            "data": {key: value for key, value in approval.items() if key != "allowed"},
+        }
 
     result = (
 
@@ -24,6 +41,7 @@ def run_pipeline(
         .execute(
             request.input,
             session_id=request.session_id,
+            project_id=request.project_id,
         )
     )
 
@@ -62,7 +80,19 @@ def inspect_run(run_id: str):
 
 @router.post("/runs/{run_id}/resume")
 def resume_run(run_id: str):
-    result = WorkflowEngine().resume(run_id)
+    result = WorkflowEngine().resume(
+        run_id,
+        before_resume=lambda run: preflight_workflow_execution(
+            run.get("goal", ""),
+            session_id=run.get("session_id"),
+            project_id=(run.get("core_context") or {}).get("project_id")
+            if isinstance(run.get("core_context"), dict)
+            else None,
+            source="workflow_resume",
+            run_id=run_id,
+            core_factory=LumiraCore,
+        ),
+    )
     if result.get("code") == "run_not_found":
         raise HTTPException(status_code=404, detail="run not found")
     if result.get("code") == "session_closed":

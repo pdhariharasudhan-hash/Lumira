@@ -1,10 +1,14 @@
+from datetime import datetime, timezone
+import secrets
+
 from fastapi import (
     APIRouter,
     UploadFile,
     File,
+    Form,
     HTTPException
 )
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictBool
 
 from app.services.voice.voice_capture_service import (
     VoiceCaptureService
@@ -13,6 +17,7 @@ from app.services.voice.transcript_service import TranscriptService
 from app.services.response.summary_service import SummaryService
 from app.services.memory.memory_service import MemoryService
 from app.services.voice.wake_word_listener_service import WakeWordListenerService
+from app.services.voice.voice_retention_service import VoiceRetentionService
 
 router = APIRouter()
 _wake_word_listener = WakeWordListenerService()
@@ -54,50 +59,93 @@ class PlaybackRequest(BaseModel):
     language: str = Field(default="en", pattern=r"^(en|ta|ta-en)$")
 
 
-@router.post(
-    "/voice/upload"
-)
-async def upload_voice(
+class VoiceRetentionExpireRequest(BaseModel):
+    confirm: StrictBool
+    limit: int = Field(default=200, ge=0, le=200)
 
-    audio: UploadFile = File(...)
-):
 
-    allowed_extensions = {
-        "wav",
-        "mp3",
-        "m4a",
-        "ogg",
-        "webm",
-    }
-
-    extension = (audio.filename or "").rsplit(".", 1)[-1].lower()
-
-    if extension not in allowed_extensions:
-
-        raise HTTPException(
-
-            status_code=400,
-
-            detail=
-            "Supported formats: wav, mp3, m4a, ogg, webm"
-        )
-
+@router.get("/voice/retention/preview")
+def preview_voice_retention(limit: int = 200):
     try:
-        result = VoiceCaptureService().save_audio(audio)
+        return VoiceRetentionService().preview(limit=limit)
     except ValueError as error:
-        status = 413 if "exceeds" in str(error) else 400
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.post("/voice/retention/expire")
+def expire_voice_retention(request: VoiceRetentionExpireRequest):
+    try:
+        result = VoiceRetentionService().expire(
+            confirm=request.confirm,
+            limit=request.limit,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    if result.get("failed_count", 0):
+        raise HTTPException(status_code=503, detail=result)
+    if result.get("code") == "explicit_confirmation_required":
+        raise HTTPException(status_code=409, detail=result)
+    return result
+
+
+@router.post("/voice/upload")
+async def upload_voice(
+    audio: UploadFile = File(...),
+    voice_capture_consent: bool | None = Form(default=None),
+    audio_storage_consent: bool | None = Form(default=None),
+    transcription_consent: bool | None = Form(default=None),
+    retention_mode: str | None = Form(default=None),
+    retention_days: int | None = Form(default=None),
+):
+    """Store a voice recording only after explicit, scoped consent."""
+    from app.services.voice.voice_capture_policy_service import VoiceCapturePolicyService
+
+    consent = {
+        "voice_capture": voice_capture_consent,
+        "audio_storage": audio_storage_consent,
+        "transcription": transcription_consent,
+        "retention_mode": retention_mode,
+        "retention_days": retention_days,
+        "receipt_id": secrets.token_urlsafe(24),
+        "consented_at": datetime.now(timezone.utc).isoformat(),
+    }
+    decision = VoiceCapturePolicyService().evaluate(
+        filename=audio.filename or "",
+        size_bytes=1,
+        consent=consent,
+    )
+    if not decision.get("allowed"):
+        raise HTTPException(status_code=403, detail={
+            "code": decision.get("code"),
+            "message": "Voice capture requires explicit recording, storage, transcription and retention choices.",
+        })
+
+    consent_record = {
+        "voice_capture": voice_capture_consent,
+        "audio_storage": audio_storage_consent,
+        "transcription": transcription_consent,
+        "receipt_id": decision["consent_receipt_id"],
+        "consented_at": decision["consented_at"],
+        "retention": decision["retention"],
+        "policy_version": decision["policy_version"],
+    }
+    try:
+        result = VoiceCaptureService().save_audio(audio, consent=consent_record)
+    except ValueError as error:
+        status = 413 if "exceeds" in str(error) else 422
         raise HTTPException(status_code=status, detail=str(error)) from error
 
     return {
-
-        "success":
-        True,
-
-        "message":
-        "Audio uploaded successfully",
-
-        "data":
-        result
+        "success": True,
+        "message": "Audio uploaded successfully with explicit consent.",
+        "data": result,
+        "consent": {
+            "receipt_id": decision["consent_receipt_id"],
+            "consented_at": decision["consented_at"],
+            "transcription_allowed": decision["transcription_allowed"],
+            "retention": decision["retention"],
+            "policy_version": decision["policy_version"],
+        },
     }
 
 

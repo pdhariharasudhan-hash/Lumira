@@ -19,15 +19,18 @@ class PipelineHistoryService:
         )
 
         self.store = AtomicJsonStore(self.history_file)
-        if not self.history_file.exists():
-            self.store.write([])
+        self.store.update(self._validate_history, [])
 
-    def _read(self):
-        records = self.store.read([])
+    @staticmethod
+    def _validate_history(records):
         if not isinstance(records, list):
             raise PersistenceIntegrityError("Pipeline history must be a list")
         if any(not isinstance(record, dict) for record in records):
             raise PersistenceIntegrityError("Pipeline history contains an invalid record")
+        return records
+
+    def _read(self):
+        records = self._validate_history(self.store.read([]))
         for record in records[-MAX_HISTORY_RECORDS:]:
             for field_name, limit in (("execution_id", 128), ("request_id", 128), ("session_id", 128), ("project_id", 128), ("user_input", 10000), ("error", 4000), ("timestamp", 40)):
                 value = record.get(field_name)
@@ -306,7 +309,7 @@ class PipelineHistoryService:
         }
 
     def clear(self):
-        self._write([])
+        self.store.update(lambda records: records.clear(), [])
 
         return {
             "success": True

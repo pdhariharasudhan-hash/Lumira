@@ -12,6 +12,12 @@ def test_voice_activation_and_playback_have_truthful_provider_boundaries(tmp_pat
     upload = client.post(
         "/voice/upload",
         files={"audio": ("sample.wav", b"RIFF\x00\x00\x00\x00WAVE", "audio/wav")},
+        data={
+            "voice_capture_consent": "true",
+            "audio_storage_consent": "true",
+            "transcription_consent": "true",
+            "retention_mode": "until_deleted",
+        },
     )
     audio_id = upload.json()["data"]["artifact"]["artifact_id"]
 
@@ -276,3 +282,45 @@ def test_retry_summary_attaches_summary_artifact_to_existing_voice_memory(tmp_pa
     assert body["memory"]["state"] == "updated"
     memory_record = next(item for item in MemoryService().get_all()["experiences"] if item["experience_id"] == experience["experience_id"])
     assert body["summary_artifact_id"] in memory_record["artifact_ids"]
+
+
+def test_voice_upload_requires_explicit_capture_and_storage_consent(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    client = TestClient(app)
+    response = client.post(
+        "/voice/upload",
+        files={"audio": ("sample.wav", b"RIFF\x00\x00\x00\x00WAVE", "audio/wav")},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"]["code"] == "voice_capture_not_consented"
+
+
+def test_voice_upload_persists_consent_and_blocks_unapproved_transcription(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    client = TestClient(app)
+    response = client.post(
+        "/voice/upload",
+        files={"audio": ("sample.wav", b"RIFF\x00\x00\x00\x00WAVE", "audio/wav")},
+        data={
+            "voice_capture_consent": "true",
+            "audio_storage_consent": "true",
+            "transcription_consent": "false",
+            "retention_mode": "days",
+            "retention_days": "30",
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    artifact_id = body["data"]["artifact"]["artifact_id"]
+    record = ArtifactManagerService().get_artifact(artifact_id)
+    assert record["consent"]["transcription"] is False
+    assert record["consent"]["retention"]["days"] == 30
+
+    class MustNotRun:
+        provider_scope = "local"
+        def transcribe(self, audio_path):
+            raise AssertionError("transcription must not run without consent")
+
+    result = TranscriptService(provider=MustNotRun()).generate_transcript(artifact_id)
+    assert result["success"] is False
+    assert result["code"] == "transcription_not_consented"

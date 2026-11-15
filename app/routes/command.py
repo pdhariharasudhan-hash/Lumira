@@ -1,4 +1,3 @@
-import inspect
 from fastapi import APIRouter, HTTPException
 
 from app.schemas.common import (
@@ -19,10 +18,6 @@ from app.services.brain.brain_service import (
 from app.services.brain.brain_agent_orchestrator import BrainAgentOrchestrator
 
 
-from app.services.capabilities.capability_router_service import (
-    CapabilityRouterService
-)
-
 from app.services.language.intent_classifier_service import (
     IntentClassifierService
 )
@@ -37,10 +32,6 @@ from app.services.system.core_runtime_bridge_service import CoreRuntimeBridgeSer
 from app.services.sessions.session_manager_service import redact_sensitive_text
 from app.services.output.user_output_adapter import adapt as adapt_user_output
 from app.services.conversation.conversation_context_service import ConversationContextService
-from app.services.conversation.conversation_provider_router import (
-    ConversationProviderRouter,
-    ConversationProviderUnavailable,
-)
 
 router = APIRouter()
 
@@ -217,6 +208,23 @@ def _command_impl(
             }
 
     brain = BrainService()
+    capability = parsed.get("capability") if parsed.get("success") is True else None
+    is_conversation = parsed.get("success") is not True
+    explicit_memory_request = request.input.strip().lower().startswith("remember ")
+    local_capabilities = {
+        "agent_task",
+        "activate_mode",
+        "resume_project",
+        "continue_project",
+    }
+    brain_managed_capability = bool(
+        is_conversation
+        or (
+            isinstance(capability, str)
+            and capability not in local_capabilities
+            and not explicit_memory_request
+        )
+    )
     try:
         shared_core_context = CoreRuntimeBridgeService().context(
             session_id=session["session_id"],
@@ -225,6 +233,23 @@ def _command_impl(
         ).get("context", {})
     except Exception:
         shared_core_context = {}
+
+    conversation_context = ""
+    conversation_payload = None
+    if is_conversation:
+        conversation_context = ConversationContextService().build(
+            request.input,
+            project_id=session.get("active_project"),
+            goal_id=session.get("goal_id"),
+        )
+        history = session.get("recent_messages", [])
+        if not isinstance(history, list):
+            history = []
+        conversation_payload = {
+            "message": request.input,
+            "history": history[-20:],
+            "context": conversation_context,
+        }
 
     brain_request = BrainRequest(
         message=request.input,
@@ -240,21 +265,36 @@ def _command_impl(
             )
         },
     )
-
-    conversation_context = ""
-    if not parsed.get("success"):
-        conversation_context = ConversationContextService().build(
-            request.input,
-            project_id=session.get("active_project"),
-            goal_id=session.get("goal_id"),
-        )
+    if brain_managed_capability:
+        payload = conversation_payload if is_conversation else parsed.get("payload")
+        if not isinstance(payload, dict):
+            payload = {}
+        brain_request.metadata.update({
+            "execute_capability": "conversation" if is_conversation else capability,
+            "capability_payload": {
+                **payload,
+                "session_id": session["session_id"],
+                "project_id": session.get("active_project"),
+                "goal_id": session.get("goal_id"),
+            },
+            "autonomous": False,
+        })
 
     brain_response = brain.execute(
         brain_request
     )
 
-    # Only a literal boolean success may authorize capability execution.
-    if brain_response.success is not True:
+    coordinated_result = None
+    if brain_managed_capability:
+        state = getattr(brain_response, "state", None)
+        execution_result = getattr(state, "execution_result", None)
+        if isinstance(execution_result, dict) and execution_result:
+            coordinated_result = execution_result
+
+    # Only a literal boolean success may authorize capability execution. A
+    # failed coordinator result is returned through the established command
+    # result shape; an earlier Brain rejection retains the existing response.
+    if brain_response.success is not True and coordinated_result is None:
         return {
             "success": False,
             "brain": {
@@ -270,66 +310,19 @@ def _command_impl(
 
     intent = IntentClassifierService().classify(request.input)
     if not parsed["success"]:
-        # Every ordinary conversation now passes through Lumira's Main Brain
-        # before a model provider is called. The Brain already persisted the
-        # user turn, restored memory and updated cognitive context; this layer
-        # supplies the language-model response and persists only the assistant turn.
+        # Brain owns provider selection, context delivery, and the assistant turn.
+        # This route maps the coordinated result back to the stable command shape.
         session = sessions.get_session(session["session_id"])
-        history = session.get("recent_messages", []) if isinstance(session, dict) else []
-        if not isinstance(history, list):
-            history = []
-        # BrainService persists the incoming user turn before provider execution.
-        # Remove that final copy because the provider appends the current message itself.
-        if (
-            history
-            and isinstance(history[-1], dict)
-            and history[-1].get("role") == "user"
-            and history[-1].get("content") == request.input
-        ):
-            history = history[:-1]
-        try:
-            conversation_router = ConversationProviderRouter()
-            chat_options = {"history": history}
-            if conversation_context:
-                try:
-                    parameters = inspect.signature(conversation_router.chat).parameters.values()
-                    supports_context = any(
-                        parameter.name == "context"
-                        or parameter.kind == inspect.Parameter.VAR_KEYWORD
-                        for parameter in parameters
-                    )
-                except (TypeError, ValueError):
-                    supports_context = False
-                if supports_context:
-                    chat_options["context"] = conversation_context
-            message = conversation_router.chat(request.input, **chat_options)
-            result = {"success": True, "capability": "conversation", "message": message}
-            success = True
-        except ConversationProviderUnavailable as exc:
-            message = exc.user_message
-            result = {
-                "success": False,
-                "status": "unavailable",
-                "code": exc.code,
-                "message": message,
-            }
-            success = False
-        except Exception:
-            message = "The configured chat provider failed. Check Lumira's provider status and try again."
-            result = {
-                "success": False,
-                "status": "failed",
-                "code": "chat_provider_error",
-                "message": message,
-            }
-            success = False
-
-        sessions.append_message(
-            session["session_id"],
-            "assistant",
-            message,
-            metadata={"capability": "conversation", "success": success},
-        )
+        result = coordinated_result or {
+            "success": False,
+            "status": "failed",
+            "code": "brain_execution_result_missing",
+            "message": "Lumira could not complete the conversation request.",
+        }
+        message = result.get("message")
+        if not isinstance(message, str) or not message.strip():
+            message = "The conversation request did not return a usable response."
+        success = result.get("success") is True
         return {
             "success": success,
             "intent": "conversation",
@@ -415,17 +408,20 @@ def _command_impl(
                     session["session_id"],
                     active_version=result["new_version"],
                 )
+    elif brain_managed_capability:
+        result = coordinated_result or {
+            "success": False,
+            "status": "failed",
+            "code": "brain_execution_result_missing",
+            "message": "The Brain did not return a capability execution result.",
+        }
     else:
-        result = CapabilityRouterService().execute(
-            capability,
-            {
-                **parsed["payload"],
-                "session_id": session["session_id"],
-                "project_id": session.get("active_project"),
-                "goal_id": session.get("goal_id"),
-            },
-            mode_state=mode_state,
-        )
+        result = {
+            "success": False,
+            "status": "rejected",
+            "code": "unsupported_command_capability",
+            "message": "This command capability has no execution handler.",
+        }
 
     if _command_result_success(result) and result.get("goal_id"):
         session = sessions.update_context(

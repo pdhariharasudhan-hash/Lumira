@@ -8,6 +8,9 @@ from app.services.brain.brain_request import BrainRequest
 from app.services.brain.brain_service import BrainService
 from app.services.sessions.session_manager_service import redact_sensitive_text
 from threading import Lock
+import hashlib
+
+from app.services.security.security_audit_log_service import SecurityAuditLogService
 
 
 class BrainAgentOrchestrator:
@@ -17,11 +20,12 @@ class BrainAgentOrchestrator:
     # actual in-process gate, unlike the advisory limits exposed by the API.
     _dispatch_lock = Lock()
 
-    def __init__(self, brain_service=None, agent_manager=None):
+    def __init__(self, brain_service=None, agent_manager=None, audit_log=None):
         # Keep construction lazy: the /command route already ran the brain and
         # should not construct a second BrainService just to dispatch an agent.
         self.brain_service = brain_service
         self.agent_manager = agent_manager
+        self.audit_log = audit_log or SecurityAuditLogService()
 
     def validate_request(self, task: str, agent_name: str | None = None) -> dict | None:
         """Validate agent task bounds and names before the main brain runs."""
@@ -101,6 +105,17 @@ class BrainAgentOrchestrator:
                 },
             }
 
+        brain_state = getattr(brain_response, "state", None)
+        verification = getattr(brain_state, "verification_result", None)
+        if not isinstance(verification, dict) or verification.get("ready_for_execution") is not True:
+            return {
+                "allowed": False,
+                "success": False,
+                "state": "rejected",
+                "code": "brain_verification_rejected",
+                "message": "Lumira Brain did not explicitly verify this task for agent execution; dispatch was not started.",
+            }
+
         task = task.strip()
         if not self._dispatch_lock.acquire(blocking=False):
             return {
@@ -112,6 +127,19 @@ class BrainAgentOrchestrator:
                 "orchestration": {"brain_gate": "passed", "agent_execution_started": False},
             }
 
+        audit_details = {
+            "agent_name": agent_name[:128] if isinstance(agent_name, str) else "auto_dispatch",
+            "task_sha256": hashlib.sha256(task.encode("utf-8")).hexdigest(),
+        }
+        if not self._record_dispatch_audit("started", audit_details):
+            self._dispatch_lock.release()
+            return {
+                "allowed": False,
+                "success": False,
+                "state": "blocked",
+                "code": "security_audit_unavailable",
+                "message": "Agent dispatch was blocked because its security audit event could not be persisted.",
+            }
         try:
             result = (
                 self.agent_manager.run(agent_name, task)
@@ -119,6 +147,7 @@ class BrainAgentOrchestrator:
                 else self.agent_manager.dispatch(task)
             )
         except Exception as exc:
+            self._record_dispatch_audit("failed", {**audit_details, "error_type": type(exc).__name__})
             return {
                 "success": False,
                 "state": "failed",
@@ -129,11 +158,25 @@ class BrainAgentOrchestrator:
         finally:
             self._dispatch_lock.release()
         if not isinstance(result, dict):
+            self._record_dispatch_audit("failed", {**audit_details, "result": "invalid"})
             return {
                 "success": False,
                 "state": "failed",
                 "code": "invalid_agent_result",
                 "message": "The agent manager returned an invalid result; orchestration stopped safely.",
+            }
+        audit_outcome = "completed" if result.get("success") is True else "failed"
+        if not self._record_dispatch_audit(
+            audit_outcome,
+            {**audit_details, "agent_state": str(result.get("state", "unknown"))[:40]},
+        ):
+            return {
+                "allowed": False,
+                "success": False,
+                "state": "failed",
+                "code": "agent_outcome_audit_failed",
+                "message": "Agent dispatch returned, but its final security audit event could not be persisted.",
+                "side_effect_may_have_occurred": True,
             }
         state = getattr(brain_response, "state", None)
         execution_context = getattr(state, "execution_context", None)
@@ -160,6 +203,19 @@ class BrainAgentOrchestrator:
             },
         }
         return result
+
+    def _record_dispatch_audit(self, outcome: str, details: dict) -> bool:
+        try:
+            self.audit_log.append(
+                event_type="agent_dispatch",
+                action="agent.dispatch",
+                outcome=outcome,
+                actor="lumira_brain",
+                details=details,
+            )
+            return True
+        except Exception:
+            return False
 
     @staticmethod
     def _authorize_autonomous(autonomous: bool) -> dict:

@@ -50,7 +50,8 @@ class DeviceEcosystemService:
         permissions = set(device.get("permissions", []))
         fresh = self.registry.is_recently_seen(device_id)
         has_capability = capability in granted
-        required_permission = capability if capability in {"telemetry.read", "camera.capture", "microphone.capture", "robot.motion", "smart_home.control", "vehicle.read", "files.read", "files.write"} else "commands.receive"
+        from app.services.devices.device_gateway_service import DeviceGatewayService
+        required_permission = DeviceGatewayService._required_sensitive_permission(capability) or "commands.receive"
         has_permission = required_permission in permissions
         transport = ProviderRegistry.get("device_transport")
         transport_ready = transport is not None

@@ -1,0 +1,949 @@
+{
+  "transfer_date": "2026-11-14",
+  "source_worktree": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\lumira-full-implementation",
+  "destination_project": "E:\\Hari\\personal_ai_core",
+  "base_commit": "745be3c5643d09d96ae9227f9e995c5616f886bb",
+  "destination_branch": "codex/lumira-personal-ai-core-consolidation-2026-11-14",
+  "copied_file_count": 156,
+  "copied_bytes": 24019068,
+  "excluded_runtime_or_test_output_count": 796,
+  "deletions_transferred": false,
+  "files": [
+    {
+      "path": ".gitignore",
+      "bytes": 1097,
+      "sha256": "08004633a50f1ec0bc4ba590d48d0f33d36c1d553b97bf285c400d5bba076347",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": ".replit",
+      "bytes": 653,
+      "sha256": "3f2daaa21c06164f1b5ef1e3d299a71e5e2d648a1421392453569cdf0f7a02f5",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "HANDOFF_CURRENT.md",
+      "bytes": 190508,
+      "sha256": "eeabe511503b5bd685183e0f19e00e03b8ecf2f41e6c7b55043bfdecbec3bdd6",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "Launch Lumira.cmd",
+      "bytes": 580,
+      "sha256": "4d8a60b8ff031e02bf524f1dcbbb18d22c1288bb3e5d599f507903984d90f02e",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/agents/workflow_engine.py",
+      "bytes": 20707,
+      "sha256": "6e10ad5baf759d38988185e5aefa10aafd64718b530a8aa5c980217e8dbe4bee",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/core/lumira_core.py",
+      "bytes": 9087,
+      "sha256": "e798ac008c49ee811aa6eb33d7a5ade063e776a8a722f4320210633e658d44e6",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/core/service_registry.py",
+      "bytes": 3488,
+      "sha256": "206feb8834b894d460700cd94178bc7e7b6a987be1e320c2c8b3e5d8319dac9c",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/core/system_status.py",
+      "bytes": 2616,
+      "sha256": "7707d2ffd8984db0fb1689ac1383fe3d4fa26b818f5cd871ea423cab7a1baadc",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/launch_config.py",
+      "bytes": 859,
+      "sha256": "533173f5fb77e13a5f07f66855f805cf68ae86a72b3a848f9b432eea6bac3703",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/main.py",
+      "bytes": 5181,
+      "sha256": "a31391081fe5a3ecac2517f6a53e5d4f9a3c16c00c2d31ab68d830aba5fe7143",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/routes/artifacts.py",
+      "bytes": 8436,
+      "sha256": "cbedc064cd28255ea965547175e5f36bb8a143db1b78d6b2d28a059b54471642",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/routes/command.py",
+      "bytes": 21630,
+      "sha256": "c66c257ff59d4e1b4b70ce25b7ae454155a3a9672a9ab386ac44c8eff13a7ea4",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/routes/memory.py",
+      "bytes": 13076,
+      "sha256": "afb8e84d8fd672aed5bb4ca39d3a42422601ef76cb9974de527bcc7b94000d88",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/routes/project_terminal.py",
+      "bytes": 1574,
+      "sha256": "872551219287467e2a045db26f7317b2918439403bdc5d81df6cc14d5ce369e5",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/routes/recovery.py",
+      "bytes": 2791,
+      "sha256": "dd7a583b28315f5fab6bb26c5fed2883d0a1b3421076ea4812598e5cad40db53",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/routes/run.py",
+      "bytes": 3186,
+      "sha256": "da8e328f47c6bf99db623c49b705c056181793c585bc10fc86a0ed5199bb9160",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/routes/voice_capture.py",
+      "bytes": 27617,
+      "sha256": "55a8438581831cd817e78e9234970272bdb5ccae10e1b9655a877c6b48ae5917",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/artifacts/artifact_integrity_audit_service.py",
+      "bytes": 6207,
+      "sha256": "cf74cb5696efcb00a8e4a0dad6db2730b30d761c7d09ce42c87ddf17fd438325",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/autonomous_development/autonomous_development_service.py",
+      "bytes": 101089,
+      "sha256": "00b934e04c09fee19e8f2b722071bf4b9d8bf94a3c6bf6ec7dd69f0b224c34d1",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/brain/brain_config.py",
+      "bytes": 5057,
+      "sha256": "adad82e044f3a99f28ee52caa46fa1526a76b6e346eb917025e1c0e5f612fc06",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/brain/brain_environment_manager.py",
+      "bytes": 2919,
+      "sha256": "391c29b47aba783422d297cdadf4ba081a1a9aa0755748d7759f5adac5566caf",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/brain/brain_execution_coordinator.py",
+      "bytes": 8028,
+      "sha256": "56b6de4249640a05b5c9b47ac515a9e589be0ea6700ed983fcc0b477f1721070",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/brain/brain_executor.py",
+      "bytes": 14801,
+      "sha256": "97f83b3878c17d910963c581ad7f7f65d5ee71a6ff21b5c8430ad8e410fabe1b",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/brain/brain_registry.py",
+      "bytes": 5092,
+      "sha256": "a15b7c7a29a47b4bb07b6885878700866d17c9b346b2448bd4332ba12b9e28bc",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/brain/brain_service.py",
+      "bytes": 33414,
+      "sha256": "b2428875a9f741d7875be3da72f631e59307704356d8c22c71bf00ed7f419ecd",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/brain/pipeline_guard.py",
+      "bytes": 1893,
+      "sha256": "5624c7d8993d1cbae56c236161641ccc58c618178724cfb85c6357c853389934",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/brain/tool_execution_policy_service.py",
+      "bytes": 23670,
+      "sha256": "d5ac6833334f86500fec3745b6dfb08fe966c3a8b88cb003d0e0360916cf5308",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/brain/tool_execution_service.py",
+      "bytes": 5650,
+      "sha256": "1f74a18355ef35c925c4910587ae35a82acd6a85da43bffbcb506fe1a2788e82",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/brain/workflow_execution_gate.py",
+      "bytes": 2370,
+      "sha256": "f5ea65d5b1417804db119392a5548119c9c4a438059293fc4e59334e6b90a5e3",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/capabilities/capability_router_service.py",
+      "bytes": 68087,
+      "sha256": "c9eaee58cff06c02cdc55e7276e71a297f0ca781ea0f0e96d626d707b0d65db4",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/constraints/constraint_module.py",
+      "bytes": 1300,
+      "sha256": "339103526c489f5d11ea0dc05a7bbb0de40a1cc65a0c00335c776b9683e4819e",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/constraints/constraint_service.py",
+      "bytes": 6573,
+      "sha256": "92c3323c3574c0cf1eeeebcb5c2ef9866693b4036264345e35a34b87deb3e564",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/context/context_service.py",
+      "bytes": 4363,
+      "sha256": "6db17e8ada4a2f0fb9642c781044b4c039968b0b0d3ece0ea6569ea2a27b5fac",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/data/data_backup_service.py",
+      "bytes": 12787,
+      "sha256": "a74ba38ad2a8679307345ba80dad834f6529ec7ae9ddd289998bcda54d03d0c4",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/devices/device_profile_service.py",
+      "bytes": 4888,
+      "sha256": "c58a621640b049265382e9a5e24fdbb996a5a744f93ab6df59286a2e65958983",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/devices/device_registry_service.py",
+      "bytes": 12957,
+      "sha256": "a506a103831d4a1364f019a7cf407b7581920481c1c1b8ec3a5442a1a8a3f94b",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/language/language_evaluation_service.py",
+      "bytes": 7872,
+      "sha256": "6a7790d09afe6d5495b38ff913b0bf2a466ea3abeea7ebbb6d2ada0065378e6e",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/memory/memory_retention_service.py",
+      "bytes": 5798,
+      "sha256": "1cd02cf5a083a3355f9aaa5584db141fd75f62ddbf416607dc4b3c1b432e169e",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/memory/memory_service.py",
+      "bytes": 54706,
+      "sha256": "d6909aa0e976f85a2f1123c5b40344d15e7201d5e7a2069b9c1ad853577e56fd",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/multi_model/model_registry.py",
+      "bytes": 4703,
+      "sha256": "efd86cb164caf412795d02d6c005dc5eee1a179cc355f2c7649b927b71ce57c8",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/persistence/atomic_json_store.py",
+      "bytes": 4057,
+      "sha256": "052d5f1d4f6cd247054fa6fa54154561f64f1f0332f2fcca208a9b35ac81381c",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/persistence/schema_migration_service.py",
+      "bytes": 7638,
+      "sha256": "696048afd85191cffdc6032f72fc44a00365313889204bd4ebd1e4f7f421af01",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/planner/planner_history_service.py",
+      "bytes": 2336,
+      "sha256": "b27c7a1daf006e46bf6367230f0a59a4a6210dd3e7d420f0b6ed095535703818",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/plugins/__init__.py",
+      "bytes": 338,
+      "sha256": "62851e89f593e6d4950fd3fd160456ef5c9fc8aa3938c52bfc440e3d6b7d8cfb",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/plugins/plugin_registry.py",
+      "bytes": 18688,
+      "sha256": "cc9a52b5c9936816913f5737b61054b310872d3086459bb24635f47751d247ee",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/providers/startup_registration.py",
+      "bytes": 6269,
+      "sha256": "1b3056ef786e2195be305679b0651560b59135b6f2e489a6e9075bf2de60da60",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/system/application_lifecycle_service.py",
+      "bytes": 6935,
+      "sha256": "de59a7bbb1dc54d09b4689df6f2e562d299bc1a03d499bbd314462ab4bd83a85",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/voice/audio_quality_service.py",
+      "bytes": 11352,
+      "sha256": "425a7f08b5f2c5a10e8a710a7734bf7ca7528cdb049422f76334d3d0a979a39a",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/voice/transcript_service.py",
+      "bytes": 10875,
+      "sha256": "fc9d939239da8adeda9bae88bd0123b217c489dd0b1d6dde5dfb69fcedeff5ad",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/voice/voice_capture_policy_service.py",
+      "bytes": 4678,
+      "sha256": "5172a4043524f13a73405ac319f499247c91d45c2de594ad453a231950a51131",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/voice/voice_capture_service.py",
+      "bytes": 3190,
+      "sha256": "a3e177aaeb83dd172f4516898b52a79ea4ae15f72659f143146904dfa006d7fa",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/web/web_resource_service.py",
+      "bytes": 23123,
+      "sha256": "31270d4dcc221336e25e6709d04a4c2291537abc3d39247e57ea83986fe46199",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/workspace/project_terminal_service.py",
+      "bytes": 6607,
+      "sha256": "bd0d537806cceea79769828db4892c633e65c76075c8ca6052edaf24d1f6536d",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/workspace/sandbox_provider_factory.py",
+      "bytes": 873,
+      "sha256": "321c141cb2ed0b7aff1427fc757ec0946d634d6731306edf19bc01d4cfe45049",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "app/services/workspace/sandbox_readiness_service.py",
+      "bytes": 1206,
+      "sha256": "1d49a38af72e7e5c842b376233461cfd19c19b6b65fd91883edbf7c1a5fe29e5",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/language_evaluation.md",
+      "bytes": 1469,
+      "sha256": "7363eee7f0eb0d8e09352b2fe4498c8622f2ac80d022a4abd6dd54a9cb7f599a",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_173_to_727_master_prompt_crosswalk_2026-11-13.json",
+      "bytes": 120786,
+      "sha256": "727db06ceb89b6bc6ecea7e47f390b7f942e90602206949a48906baf22ba1d89",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_428_to_727_scope_crosswalk_candidates_2026-11-13.json",
+      "bytes": 412811,
+      "sha256": "f6a493bcb694be37cbd6d92677fa4526639ce551f2646eedb7dbc7f3db752aee",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_build_execution_status_2026-11-13.md",
+      "bytes": 24962,
+      "sha256": "173e7399d079e92b6292339d1cd045dc5527a1a5430d996a5a274223f748f013",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_crosswalk_constrained_mapping_candidates_2026-11-13.json",
+      "bytes": 375915,
+      "sha256": "932e2a1688fcf03538376bed93affd4020a6c4b834371bd59693d24b3cc67d59",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_external_machinery_mapping_2026-11-13.md",
+      "bytes": 3684,
+      "sha256": "7680362ce1745a45c27a637cc9b24765f56c87985ff8d1cf49e2adb13bec5edc",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_final_build_baseline_2026-11-12.md",
+      "bytes": 8786,
+      "sha256": "2620a23f4675e0383f8ea6ad893bf430f02069750ecf09aec1ee3f4e33ed61d6",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_final_build_only_baseline_2026-11-13.md",
+      "bytes": 24117,
+      "sha256": "c328f6f66a246e9c7e23979a23bbbcd1894014bec551f75a560038fdf4660268",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_full_scope_mapping_audit_2026-11-13.md",
+      "bytes": 13958,
+      "sha256": "6e7ada8a6fe51bb85bfae769e0b032a6213679df12735a2ae1aa5299e9a487b2",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_legacy_catalog_and_feature_area_crosswalk_candidates_2026-11-14.json",
+      "bytes": 369074,
+      "sha256": "729e9f2d36deda6a344e6f568e0f01ab03c27c6742a1843d9e90380b66a2612c",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_legacy_catalog_and_feature_area_crosswalk_report_2026-11-14.md",
+      "bytes": 2525,
+      "sha256": "e88066a028904224ac80681f2d9170d2266eeafe270c001ae1072e9bd6174178",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_prompt_atomic_requirements_2026-11-13.json",
+      "bytes": 289470,
+      "sha256": "69a6d51fbfa7f2de0bdf65f22832dd40f3a367961584734c6913507b096cafe3",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_prompt_governance_requirements_2026-11-13.json",
+      "bytes": 18151,
+      "sha256": "4c6e94fb7a4f6c190f642d5ba6a83c1830dbcc329311198bbd37ef5c09f08667",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_requirement_inventory.json",
+      "bytes": 2866193,
+      "sha256": "8f6a0d91a9653353f9fa827c339fe83cafe5fac69e7f28de7b06ec8ab8888379",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_requirement_inventory.pre_application_lifecycle_2026-11-13.json",
+      "bytes": 979168,
+      "sha256": "8d0f12148eb37e4d606c193b47b64cd019ff3dbff83a32444e7fcfdf5c96599e",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_requirement_inventory.pre_atomic_source_row_expansion_2026-11-13.json",
+      "bytes": 1060148,
+      "sha256": "b3bf6bf6f3348cffd9a084db75db60ac80ce8a2c4acc2e4426e6f08780f4643b",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_requirement_inventory.pre_brain_config_2026-11-13.json",
+      "bytes": 976005,
+      "sha256": "59a15812c04e486663ddf9c826fddac6bc1f2f15fb68409b15f3af5f0cfbcdc2",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_requirement_inventory.pre_brain_registry_2026-11-13.json",
+      "bytes": 974938,
+      "sha256": "9a116e2781a06004dbfa88fdeea0c3285c803d30b4774246ee6be97ab8359ffd",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_requirement_inventory.pre_count_reconciliation_2026-11-13.json",
+      "bytes": 997258,
+      "sha256": "d4d1f7df8b02525c354fe17994a44609e9976be3af142c44b71949b19b9dc2dc",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_requirement_inventory.pre_environment_manager_2026-11-13.json",
+      "bytes": 976005,
+      "sha256": "59a15812c04e486663ddf9c826fddac6bc1f2f15fb68409b15f3af5f0cfbcdc2",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_requirement_inventory.pre_exact_aliases_2026-11-13.json",
+      "bytes": 986100,
+      "sha256": "97d948faa8c19fde1565e628704e9b26871d7170f1405cad077775130410bf72",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_requirement_inventory.pre_full_prompt_reconciliation_metadata_2026-11-13.json",
+      "bytes": 1058608,
+      "sha256": "2545b744aca3f79627a8095dc9b36e5024e35288a8a36cc29ed3e617b3374f8e",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_requirement_inventory.pre_lifecycle_drain_2026-11-13.json",
+      "bytes": 980819,
+      "sha256": "9dc28844a5a3f504e14c555e74f6bb49b187907d3c9b1b140c910173d4a6c5a8",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_requirement_inventory.pre_mapping_2026-11-13.json",
+      "bytes": 599819,
+      "sha256": "e12f714c12456292d7bcf094c90c3293306be3e30cf89a0f2102fa08002aeae2",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_requirement_inventory.pre_master_prompt_exact_mapping_2026-11-13.json",
+      "bytes": 997258,
+      "sha256": "eef8edb5524e1686021c038be64389073c2df470df4029141ca81d4e467e76db",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_requirement_inventory.pre_model_registry_2026-11-13.json",
+      "bytes": 973354,
+      "sha256": "6264c28fee180b2d496a2bc84b9c48046b5fd44f7cd6cfecd0f5f6bf0f9aa87e",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_requirement_inventory.pre_section9_exact_alias_refresh_2026-11-13.json",
+      "bytes": 1058347,
+      "sha256": "05c6e2b1658354de6fa7da0ae6021cf6faa4e6728e998b7b7867ed765389ab2a",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_requirement_inventory.pre_section_scope_2026-11-13.json",
+      "bytes": 882128,
+      "sha256": "8f43d556b454c2bfb067db804a4b9aaf7ca453d743628c1c7a1dfa8ee38833e0",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_requirement_inventory.pre_service_registry_2026-11-13.json",
+      "bytes": 972289,
+      "sha256": "dcbf775ee99301503cb73945fa2ad6bf780e8453bee72c9e3e0cdc99530ce0a0",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_requirement_inventory.pre_source_reconciliation_2026-11-13.json",
+      "bytes": 985197,
+      "sha256": "0e532326e0ba47f2314bc90183cdb5ccc173b999730d902388aacb41d19fa22f",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_requirement_inventory.pre_tool_executor_2026-11-13.json",
+      "bytes": 981540,
+      "sha256": "923af94172993567f8a7a3715d28a1035e23c3c8c949d558e4fb9634f0a9ac59",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_master_requirement_inventory.pre_tool_executor_final_validation_2026-11-13.json",
+      "bytes": 984887,
+      "sha256": "ddb2af326b3168796ff33885dceea14055dea5d4fb0a9d6ad3219b178d4b00b2",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_sections_4_10_detailed_mapping_2026-11-13.md",
+      "bytes": 7314,
+      "sha256": "055bc55352434fb78f3633626f0cec13000e2cedfeee14c591ad1c1db32a2002",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_source_scope_reconciliation_candidates_2026-11-13.json",
+      "bytes": 480282,
+      "sha256": "aa3cf4f7279188fe1cdbac335a8c87a4758fdbb35ec5b6b9e23c2108f3cb4b03",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_source_scope_reconciliation_report_2026-11-13.md",
+      "bytes": 6305,
+      "sha256": "02c9539b4b244bd71ad6d1cc3e2af8a65c20fe5a74340881db3a3c7c46a32e9a",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_source_scope_requirements_2026-11-13.json",
+      "bytes": 49890,
+      "sha256": "8229ffe251078159f1d7a744874a66c1227c78b954fda07fe03e70c5f70b9aad",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/lumira_user_scope_prompt_crosswalk_2026-11-13.md",
+      "bytes": 6091,
+      "sha256": "001ae73bc9715e306f08e1fb3b87fc6065bfc600e763f40a54233011ee304511",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/phase1_core_correctness_status_2026-11-13.md",
+      "bytes": 19387,
+      "sha256": "14e251229d8aacac223b1ec62b60984c7729963f4daf42df54cae34c29f94a80",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/phase_1_core_correctness.md",
+      "bytes": 14228,
+      "sha256": "b53cf00b8bc4fe55930842876e77496cb759233ea1006c99f84b922082cf7f8a",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/product_completion_matrix.md",
+      "bytes": 18355,
+      "sha256": "551c748917de27b24027c04822ce8602c8f3ea052055067b5d7c17ed999dcab7",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-11-10-lumira-implementation.md",
+      "bytes": 14966,
+      "sha256": "51c4baa9ce75e5db69d1baed96883fd59e5b17991859bad6f5e249573ad319ad",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "lumira_desktop/backend-health.cjs",
+      "bytes": 557,
+      "sha256": "b359b306849165c5da58d01b1bb4733af7f43473988c72bbfe5f1b8ece259f2f",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "lumira_desktop/electron-api-proxy.cjs",
+      "bytes": 3123,
+      "sha256": "3875ba37207ef82f5f0260bed580fd7ffc432654d1b99ea02cd1dd028a720879",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "lumira_desktop/electron-main.cjs",
+      "bytes": 11088,
+      "sha256": "88140b1653ae56fbf43bfe4f03f789cf388923d1214dd553368dd9c47f0760af",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "lumira_desktop/package.json",
+      "bytes": 3996,
+      "sha256": "ae9ce18f221df59678b3c64ca877bef7bd8bc7a43d472c77266780a3df312e48",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "lumira_desktop/src/__tests__/MarkdownMessage.test.tsx",
+      "bytes": 1503,
+      "sha256": "3ba249f646fae17564f1d60e06c8fedc3b9444360934fc2c6dc10a13e8f914b0",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "lumira_desktop/src/__tests__/viteProxy.test.ts",
+      "bytes": 1953,
+      "sha256": "63ba541a85c83a1f502c51657253a321f72e11d4cb115b655cb5076469e9011d",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "lumira_desktop/src/api/client.ts",
+      "bytes": 33303,
+      "sha256": "018792e3abac90ae224f92ad75cbf4a54942671fd9b192a5bc756278d636573b",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "lumira_desktop/src/components/Chat/MarkdownMessage.tsx",
+      "bytes": 4511,
+      "sha256": "8b7dc88d9a24b483bbfc1e798aac2108ea4b30989b13bc5f91fc34a49fc043d6",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "lumira_desktop/src/layouts/MainLayout.css",
+      "bytes": 44162,
+      "sha256": "9657f495b25c167fa9632bd4608ddbf6207ec6a7ee84c53d77a902606332a043",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "lumira_desktop/src/layouts/MainLayout.tsx",
+      "bytes": 232142,
+      "sha256": "7578483c0a9898e8c7d3d8cb0f03d08c12da0bb89ea5022ee9c1b0bf033e7ad8",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "lumira_desktop/tests/backend-health.test.cjs",
+      "bytes": 1771,
+      "sha256": "6d5fecec71d7ae27d458c304466f08fc5124ec62569cd18af407f0b96582189b",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "lumira_desktop/tests/electron-api-proxy.test.cjs",
+      "bytes": 6827,
+      "sha256": "e31227c9179e6fb08d4d63b47ff9c3660fe8c1a795fda10b117a68c17a11d7d9",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "main.py",
+      "bytes": 126,
+      "sha256": "fea1604f52568b5483321926597460f13d8a7f5215cc25e0b0fcf039b183cba9",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "run.py",
+      "bytes": 432,
+      "sha256": "9b29c678ec72c01af09e66c9a0caf99b0e6339934f9280193c58828f4a6fdc1b",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_ai_mode_service.py",
+      "bytes": 3200,
+      "sha256": "574bbb4845b94b1766aecde7b7d55ba7191cb78b52fdbd446405966e536aee99",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_app_lifespan.py",
+      "bytes": 599,
+      "sha256": "94114da097b063cf43aa4f53b70eebac0dd92fc627db63316ba4b8154508fe4f",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_application_lifecycle.py",
+      "bytes": 6765,
+      "sha256": "d0d7e5aba6c856f952634ceb97ea37a2cd5d510c9c0d0055d665a39986b0e582",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_artifact_content_integrity.py",
+      "bytes": 2360,
+      "sha256": "827dc19a78c476958730d4ae7dbd7cd14478b270e5be4187d70341017e13f6c6",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_autonomous_development.py",
+      "bytes": 55722,
+      "sha256": "02653026f48362d3eaf9208b86b05c49b6fe3ee8f77ed1784060f745e4820756",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_brain_config.py",
+      "bytes": 3314,
+      "sha256": "e9a67787793db1ff0738327acf6f5f4caee5ee43672270391b423a80e24dfe4b",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_brain_environment_manager.py",
+      "bytes": 4552,
+      "sha256": "9df7004d8b2118e8175280d52bd809c45656771761bb1d0d42cb3584cb45833a",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_brain_execution_control.py",
+      "bytes": 13601,
+      "sha256": "12795ddfb5b4d6048600ee6455ffb6533522958e9f2abc1c719c50f4e11f1b02",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_brain_execution_coordinator.py",
+      "bytes": 7823,
+      "sha256": "99c8578c2b6b10dadb29d9c9674c01e6f2ceb168be80186dcff0b224298366f8",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_brain_registry.py",
+      "bytes": 3304,
+      "sha256": "bf62d754f30fc73dd41c1ed452c94c7da5651efa109b745161ac516cfaea80e4",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_capability_feature_gate.py",
+      "bytes": 5812,
+      "sha256": "fefd18e61582ff1d7eaee2db19f812661130114793b4a3a7efbea678701545b8",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_command_brain_execution.py",
+      "bytes": 1496,
+      "sha256": "5a3910ba612403a6cc87273131758b7cec5aadfc895c992127bdf22c6286a95e",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_command_conversation_routing.py",
+      "bytes": 7901,
+      "sha256": "57dddadc6e546fff4712ec642f820723dd6276bff93b63935a87a02564bc49b7",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_constraint_capability_scope.py",
+      "bytes": 1222,
+      "sha256": "a7f62ac5de59ca72ff4047cf9bb6411283d4d9de72fd11a5b94344e40a62edab",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_context_expansion.py",
+      "bytes": 732,
+      "sha256": "90e8d2370414aa88f66dc624330eb59a7b302adf95d3300ac2a14251aec750ab",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_core.py",
+      "bytes": 7621,
+      "sha256": "80507ef5249b58a3e4a5e02b208efc9090e59fd42d2049346acc676195cd740c",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_data_backup_service.py",
+      "bytes": 8149,
+      "sha256": "3cd1b7f284bd91f1ecebc61e278b6d5c6247999b4abb13a99f7a96b91ad2e974",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_device_profile_persistence.py",
+      "bytes": 1601,
+      "sha256": "3582ad393aae6aaeeb39a3b5188dd7076a49b3518772172641f7a68225c19327",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_device_registry_migration.py",
+      "bytes": 782,
+      "sha256": "4b5a63dd564eb4de365f0b25dd3fe075fb19a933affd59919a9e183cbeca3ce4",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_faster_whisper_audio_decode.py",
+      "bytes": 2337,
+      "sha256": "a2761389cca41a07bbee570b2b5f61c9168103a0a38b3fe0a200af3b8e43c35f",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_image_generation_route.py",
+      "bytes": 1259,
+      "sha256": "fdd2c68bbbd9de466eaaa763b58b4c11f22ddb824610e4b970c9565e201e7ef3",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_language_evaluation.py",
+      "bytes": 3802,
+      "sha256": "3bae76dacacb7df3e3e09c7af0f373c00b30c2810407f5461f29a3b5de8cab14",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_launch_security.py",
+      "bytes": 1914,
+      "sha256": "8f48cb0d7ae7998f218977e496abeea3236fc2bf37f8e5a3f7e1a6f5e1666bff",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_lumira_requirement_inventory.py",
+      "bytes": 6803,
+      "sha256": "e99b7cb68fd30502d06d87879ce81ab5d0d48d0a8bd79fc1c94f37ea4b205205",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_memory_evolution_route.py",
+      "bytes": 3255,
+      "sha256": "003555738b7b09f6a67343ad65d00bdfc487a98be47349df4ca16f2ea9bbb8ca",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_memory_lifecycle.py",
+      "bytes": 12605,
+      "sha256": "b10e072d51d47f6f44cf6d794842e206059a3af237083b5a84ce7e208c33f6a9",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_multi_model_registry.py",
+      "bytes": 3349,
+      "sha256": "c50e8931b15372598a6221cf2df5a10c2c03aafa7a3e059d443fbfebfa007526",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_persistence_multiprocess.py",
+      "bytes": 1569,
+      "sha256": "6feb2367e9141071e410c92ea5d6df385761ca78605c29f20da7d7e536880d0c",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_phase_2_5_foundation_services.py",
+      "bytes": 9038,
+      "sha256": "263307eebbcb5cdce57fe6bf8014c4e7abff871efdcf4654ea4b69971b8e3fde",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_pipeline_guard.py",
+      "bytes": 1634,
+      "sha256": "7e12ea2d7c1f4cae0b7dad4c8d54d9f4850950075fd6de7c65afbcae110c07b7",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_planner_history_persistence.py",
+      "bytes": 2233,
+      "sha256": "93466df86ac21742cae53737fb11eaf525eaf68127756759d562ed204d916e7b",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_plugin_architecture.py",
+      "bytes": 4766,
+      "sha256": "576ebd44b833861bb196851435f2c187148308a3ced35168f0a7bfa855c1c74a",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_provider_startup_lazy_import.py",
+      "bytes": 1221,
+      "sha256": "2b17684edea0920fa16b11993109eeb01cc6038775cb632f42054595888234f7",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_provider_startup_registration.py",
+      "bytes": 8510,
+      "sha256": "801d04e1788c879cf859400b18335abfc0df713b103883a29fac498172a5803d",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_recovery_api.py",
+      "bytes": 5769,
+      "sha256": "af1de587166fcc9517d12db21d607ba6a09ed5fe682f2dc8ceede1182206be26",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_run_brain_gate.py",
+      "bytes": 9881,
+      "sha256": "b5eb009e49c21add7949d955727ca678e89a923ed4516aeaad9fe55fdabbdd41",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_runtime_data_gitignore.py",
+      "bytes": 1660,
+      "sha256": "af9c73f0a086f655687e5b2297e5d215de69ef4af6c4a189444afc642860a15f",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_sandbox_provider_selection.py",
+      "bytes": 2647,
+      "sha256": "d70e631ac560ecaea520f562aae3ca61c3bfdbb6cdf1f48fafe6f2a89afdb31c",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_service_registry.py",
+      "bytes": 3339,
+      "sha256": "a83683447e92ac1af35455f4b8ca891c2136ccb2d6328da0e7dd30d22e4e2c12",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_terminal_feature_gate.py",
+      "bytes": 5570,
+      "sha256": "be7cc7b6c59a001b10de39817a91aed042f31ddbbbe6d49d7020064a69228853",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_tool_execution_policy.py",
+      "bytes": 4795,
+      "sha256": "22cd6a32a2d2c4a6326f7a8426439e769c05270ed4fae1613fb12f183a41d3e3",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_tool_execution_service.py",
+      "bytes": 5620,
+      "sha256": "b3d397e3563f8cd3e66065b443721ebe221e2a5651fb7f27c96d7924737d1989",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_voice_interactions.py",
+      "bytes": 14656,
+      "sha256": "18dd3f768698ddb097995c3df7689cb7b06cf54d3a5f8db07f20c09ecf04fd45",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_web_access.py",
+      "bytes": 17135,
+      "sha256": "10d6ea4d3f760ef936006193f25cd392b493db04212f56c7cb94808db6504fe8",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_web_resource_security.py",
+      "bytes": 9260,
+      "sha256": "bdbdec817109f419b4558fa636e8763fcdd948fb70c45362877e39f38dd21f95",
+      "source": "lumira-full-implementation"
+    },
+    {
+      "path": "tests/test_workflow_execution_gate.py",
+      "bytes": 4329,
+      "sha256": "214a039eddcd48bebf86025983feaa2b82b9e5106b4c38a65098ca4d0df7cc83",
+      "source": "lumira-full-implementation"
+    }
+  ]
+}

@@ -29,3 +29,21 @@ def test_verification_guard_stops_failed_state():
     )
     assert PipelineGuard.should_stop("verification", state) is True
     assert state.verification_result["failed_checks"] == ["plan"]
+
+
+def test_verification_guard_does_not_treat_read_only_conversation_as_side_effect():
+    state = SimpleNamespace(
+        verification=SimpleNamespace(
+            ready_for_execution=False,
+            passed_checks=[],
+            failed_checks=["execution authorization not applicable"],
+            warnings=[],
+        ),
+        execution_context=SimpleNamespace(
+            metadata={"execute_capability": "conversation"},
+        ),
+        verification_result=None,
+    )
+
+    assert PipelineGuard.should_stop("verification", state) is False
+    assert state.verification_result["ready_for_execution"] is False

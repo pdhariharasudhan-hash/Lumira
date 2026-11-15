@@ -270,9 +270,22 @@ export const api = {
 	listRuns: () => request<JsonObject>("/runs"),
 	getRun: (runId: string) => request<JsonObject>(`/runs/${encodeURIComponent(runId)}`),
 	resumeRun: (runId: string) => request<JsonObject>(`/runs/${encodeURIComponent(runId)}/resume`, { method: "POST" }),
-	uploadVoice: async (file: File) => {
+	uploadVoice: async (file: File, consent: {
+		voice_capture_consent: true;
+		audio_storage_consent: true;
+		transcription_consent: boolean;
+		retention_mode: "until_deleted" | "days";
+		retention_days?: number;
+	}) => {
 		const form = new FormData();
 		form.append("audio", file);
+		form.append("voice_capture_consent", String(consent.voice_capture_consent));
+		form.append("audio_storage_consent", String(consent.audio_storage_consent));
+		form.append("transcription_consent", String(consent.transcription_consent));
+		form.append("retention_mode", consent.retention_mode);
+		if (consent.retention_mode === "days" && consent.retention_days !== undefined) {
+			form.append("retention_days", String(consent.retention_days));
+		}
 		return request<JsonObject>("/voice/upload", { method: "POST", body: form });
 	},
 	processVoiceCapture: (audio_artifact_id: string, generate_summary = true) =>

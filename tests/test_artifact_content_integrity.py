@@ -32,3 +32,25 @@ def test_artifact_integrity_metadata_is_persisted_for_binary_content(tmp_path):
     assert len(record["content_sha256"]) == 64
     assert record["content_bytes"] == 16
     assert manager.verify_artifact_content(record["artifact_id"])["success"] is True
+
+
+def test_artifact_integrity_audit_route_is_read_only_and_reports_corruption(tmp_path, monkeypatch):
+    from app.routes import artifacts as artifact_routes
+
+    manager = ArtifactManagerService(
+        tmp_path / "artifacts",
+        tmp_path / "memory" / "artifact_index.json",
+    )
+    record = manager.create_artifact("summaries", "before", "test")
+    monkeypatch.setattr(artifact_routes, "_manager", lambda: manager)
+
+    clean = artifact_routes.artifact_integrity_audit(limit=10, verify_hashes=True)
+    assert clean["success"] is True
+    assert clean["read_only"] is True
+    assert clean["mutations_performed"] is False
+    assert clean["counts"]["healthy"] == 1
+
+    manager.get_artifact_path(record["artifact_id"]).write_text("change", encoding="utf-8")
+    corrupt = artifact_routes.artifact_integrity_audit(limit=10, verify_hashes=True)
+    assert corrupt["counts"]["checksum_mismatch"] == 1
+    assert manager.get_artifact(record["artifact_id"]) is not None

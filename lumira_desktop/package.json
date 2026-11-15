@@ -11,7 +11,7 @@
                     "lint":  "oxlint",
                     "preview":  "vite preview",
                     "test":  "vitest run",
-                    "test:runtime":  "node --test tests/backend-runtime.test.cjs",
+                    "test:runtime":  "node --test tests/*.test.cjs",
                     "electron":  "electron .",
                     "dist":  "npm run build \u0026\u0026 electron-builder --win nsis"
                 },
@@ -49,6 +49,7 @@
                                 "electron-main.cjs",
                                 "electron-api-proxy.cjs",
                                 "backend-runtime.cjs",
+                                "backend-health.cjs",
                                 "package.json"
                             ],
                   "directories":  {

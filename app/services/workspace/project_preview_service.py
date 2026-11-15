@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
+import socket
+import time
+import ipaddress
 from typing import Any
 from urllib.parse import urlparse
 
@@ -108,3 +111,54 @@ class ProjectPreviewService:
         current = next((x for x in data if isinstance(x, dict)
                         and x.get("project") == project and x.get("version") == version), None)
         return {"success": current is not None, "preview": current}
+
+    def probe(self, project: str, version: str, *, timeout_seconds: float = 1.5) -> dict[str, Any]:
+        """Check only TCP listener availability on a verified loopback address."""
+        if isinstance(timeout_seconds, bool) or not isinstance(timeout_seconds, (int, float)) or not 0.1 <= timeout_seconds <= 5:
+            return {"success": False, "code": "invalid_probe_timeout"}
+        current = self.get(project, version).get("preview")
+        if not isinstance(current, dict):
+            return {"success": False, "code": "preview_not_registered"}
+        if current.get("status") != "registered":
+            return {"success": True, "status": "stopped", "reachable": False}
+        parsed = urlparse(current["url"])
+        host, port = parsed.hostname, parsed.port
+        if not host or port is None:
+            return {"success": False, "code": "invalid_preview_endpoint"}
+        try:
+            resolved = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+            candidates = []
+            for family, socktype, proto, _, sockaddr in resolved:
+                if not ipaddress.ip_address(sockaddr[0]).is_loopback:
+                    return {"success": False, "code": "preview_resolution_not_loopback"}
+                candidates.append((family, socktype, proto, sockaddr))
+            if not candidates:
+                return {"success": False, "code": "preview_resolution_empty"}
+            started = time.monotonic()
+            last_error = None
+            for family, socktype, proto, sockaddr in candidates:
+                connection = socket.socket(family, socktype, proto)
+                try:
+                    connection.settimeout(float(timeout_seconds))
+                    connection.connect(sockaddr)
+                    return {
+                        "success": True, "status": "reachable", "reachable": True,
+                        "host": host, "port": port,
+                        "latency_ms": round((time.monotonic() - started) * 1000, 2),
+                        "probe": "loopback_tcp_connect",
+                    }
+                except OSError as exc:
+                    last_error = type(exc).__name__
+                finally:
+                    connection.close()
+            return {
+                "success": True, "status": "unreachable", "reachable": False,
+                "host": host, "port": port,
+                "error_type": last_error or "ConnectionError",
+                "probe": "loopback_tcp_connect",
+            }
+        except (OSError, ValueError):
+            return {
+                "success": True, "status": "unreachable", "reachable": False,
+                "host": host, "port": port, "probe": "loopback_tcp_connect",
+            }

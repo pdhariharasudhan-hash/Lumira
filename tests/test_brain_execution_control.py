@@ -305,3 +305,116 @@ def test_brain_cancel_endpoint_is_registered_in_fastapi():
     payload = response.json()
     assert payload["success"] is False
     assert payload["cancelled_executions"] == 0
+
+
+def test_resume_honors_expired_execution_deadline():
+    from app.services.brain.execution_control import BrainExecutionControl
+
+    class Module:
+        name = "conversation"
+        order = 1
+
+        def execute(self, state):
+            raise AssertionError("expired resumed execution must not enter a stage")
+
+    control = BrainExecutionControl(
+        execution_id="resume-expired",
+        session_id="session",
+        deadline=monotonic() - 1,
+        _cancel_event=Event(),
+    )
+    state = BrainState(user_input="resume")
+    result = BrainExecutor(OneModuleRegistry(Module())).resume(
+        state, 1, control=control
+    )
+
+    assert result.status == "timed_out"
+    assert result.current_stage == ""
+
+
+def test_resume_cancellation_stops_before_next_stage():
+    calls = []
+    control = BrainExecutionControl(
+        execution_id="resume-cancel",
+        session_id="session",
+        deadline=monotonic() + 60,
+        _cancel_event=Event(),
+    )
+
+    class First:
+        name = "first"
+        order = 1
+
+        def execute(self, state):
+            calls.append("first")
+            control.cancel()
+            return state
+
+    class Second:
+        name = "second"
+        order = 2
+
+        def execute(self, state):
+            calls.append("second")
+            return state
+
+    class Registry:
+        def get_modules(self):
+            return [First(), Second()]
+
+    state = BrainState(user_input="resume cancellation")
+    result = BrainExecutor(Registry()).resume(state, 1, control=control)
+
+    assert calls == ["first"]
+    assert result.status == "cancelled"
+    assert result.current_stage == ""
+
+
+def test_brain_service_keeps_cancellation_active_through_capability_execution():
+    from app.services.brain.brain_service import BrainService
+    from app.services.brain.execution_control import BrainExecutionControlRegistry
+
+    session_id = "capability-cancel-session"
+    session = {"session_id": session_id}
+    state = BrainState(user_input="run capability")
+    state.verification_result = {"ready_for_execution": True}
+    state.execution_context.metadata["execute_capability"] = "conversation"
+    control = BrainExecutionControlRegistry.register(
+        "capability-cancel-execution", session_id, timeout_seconds=60
+    )
+
+    class Validator:
+        def validate_state(self, final_state):
+            return {"valid": True}
+
+    class Coordinator:
+        def execute(self, **kwargs):
+            assert BrainExecutionControlRegistry.active_count() >= 1
+            assert BrainExecutionControlRegistry.cancel_for_session(session_id) == 1
+            return {"success": True, "status": "completed", "message": "operation returned"}
+
+    service = BrainService.__new__(BrainService)
+    service.validator = Validator()
+    service.execution_coordinator = Coordinator()
+    recorded = []
+    persisted = []
+    service._record_pipeline = lambda **kwargs: recorded.append(kwargs)
+    service._persist_run = lambda *args, **kwargs: persisted.append(kwargs)
+    service._publish_execution_outcome = lambda *args, **kwargs: None
+
+    try:
+        response = service._complete_pipeline_execution(
+            final_state=state,
+            session=session,
+            trace=[],
+            control=control,
+        )
+        assert response.success is False
+        assert response.state.status == "cancelled"
+        assert recorded[-1]["success"] is False
+        assert persisted[-1]["success"] is False
+        assert BrainExecutionControlRegistry.active_count() >= 1
+    finally:
+        BrainExecutionControlRegistry.release(control.execution_id)
+
+    assert BrainExecutionControlRegistry.active_count() == 0

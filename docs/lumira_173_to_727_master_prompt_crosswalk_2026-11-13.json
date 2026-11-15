@@ -1,0 +1,4492 @@
+{
+  "source": "Pasted text(20261112-150057).txt",
+  "target": "existing canonical master_prompt_subrequirement rows",
+  "source_numbered_items": 727,
+  "ledger_prompt_rows": 173,
+  "mapping_method": "Exact normalized requirement wording within the same PART section; lexical suggestions retained for unresolved rows only.",
+  "mapping_counts": {
+    "EXACT": 162,
+    "NO_STRONG": 3,
+    "POSSIBLE": 8
+  },
+  "confirmed_exact_aliases": 162,
+  "unresolved_rows": 11,
+  "mappings": [
+    {
+      "ledger_id": "PROMPT-04-01",
+      "ledger_name": "Main Brain ? Lumira Core",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-001"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-001",
+          "source_text": "Main Brain — Lumira Core."
+        },
+        {
+          "score": 0.381,
+          "source_id": "SRC42-PART-04-010",
+          "source_text": "Internal API gateway."
+        },
+        {
+          "score": 0.3673,
+          "source_id": "SRC42-PART-04-020",
+          "source_text": "Plugin and extension loader."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-02",
+      "ledger_name": "Core application architecture",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-002"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-002",
+          "source_text": "Core application architecture."
+        },
+        {
+          "score": 0.5517,
+          "source_id": "SRC42-PART-04-009",
+          "source_text": "Application lifecycle manager."
+        },
+        {
+          "score": 0.4571,
+          "source_id": "SRC42-PART-04-024",
+          "source_text": "System initialization and startup manager."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-03",
+      "ledger_name": "Service registry",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-003"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-003",
+          "source_text": "Service registry."
+        },
+        {
+          "score": 0.75,
+          "source_id": "SRC42-PART-04-005",
+          "source_text": "Feature registry."
+        },
+        {
+          "score": 0.6452,
+          "source_id": "SRC42-PART-04-004",
+          "source_text": "Module registry."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-04",
+      "ledger_name": "Module registry",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-004"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-004",
+          "source_text": "Module registry."
+        },
+        {
+          "score": 0.7097,
+          "source_id": "SRC42-PART-04-005",
+          "source_text": "Feature registry."
+        },
+        {
+          "score": 0.6452,
+          "source_id": "SRC42-PART-04-003",
+          "source_text": "Service registry."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-05",
+      "ledger_name": "Feature registry",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-005"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-005",
+          "source_text": "Feature registry."
+        },
+        {
+          "score": 0.75,
+          "source_id": "SRC42-PART-04-003",
+          "source_text": "Service registry."
+        },
+        {
+          "score": 0.7097,
+          "source_id": "SRC42-PART-04-004",
+          "source_text": "Module registry."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-06",
+      "ledger_name": "Feature activation and deactivation manager",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-006"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-006",
+          "source_text": "Feature activation and deactivation manager."
+        },
+        {
+          "score": 0.5714,
+          "source_id": "SRC42-PART-04-024",
+          "source_text": "System initialization and startup manager."
+        },
+        {
+          "score": 0.55,
+          "source_id": "SRC42-PART-04-022",
+          "source_text": "Graceful shutdown and restart manager."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-07",
+      "ledger_name": "Configuration manager",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-007"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-007",
+          "source_text": "Configuration manager."
+        },
+        {
+          "score": 0.6667,
+          "source_id": "SRC42-PART-04-018",
+          "source_text": "Context manager."
+        },
+        {
+          "score": 0.6111,
+          "source_id": "SRC42-PART-04-017",
+          "source_text": "Session manager."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-08",
+      "ledger_name": "Environment manager",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-008"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-008",
+          "source_text": "Environment manager."
+        },
+        {
+          "score": 0.7059,
+          "source_id": "SRC42-PART-04-017",
+          "source_text": "Session manager."
+        },
+        {
+          "score": 0.7059,
+          "source_id": "SRC42-PART-04-018",
+          "source_text": "Context manager."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-09",
+      "ledger_name": "Application lifecycle manager",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-009"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-009",
+          "source_text": "Application lifecycle manager."
+        },
+        {
+          "score": 0.56,
+          "source_id": "SRC42-PART-04-007",
+          "source_text": "Configuration manager."
+        },
+        {
+          "score": 0.5517,
+          "source_id": "SRC42-PART-04-002",
+          "source_text": "Core application architecture."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-10",
+      "ledger_name": "Internal API gateway",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-010"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-010",
+          "source_text": "Internal API gateway."
+        },
+        {
+          "score": 0.4151,
+          "source_id": "SRC42-PART-04-011",
+          "source_text": "Inter-service communication layer."
+        },
+        {
+          "score": 0.4,
+          "source_id": "SRC42-PART-04-018",
+          "source_text": "Context manager."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-11",
+      "ledger_name": "Inter-service communication layer",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-011"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-011",
+          "source_text": "Inter-service communication layer."
+        },
+        {
+          "score": 0.4528,
+          "source_id": "SRC42-PART-04-010",
+          "source_text": "Internal API gateway."
+        },
+        {
+          "score": 0.4516,
+          "source_id": "SRC42-PART-04-002",
+          "source_text": "Core application architecture."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-12",
+      "ledger_name": "Event bus and event dispatcher",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-012"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-012",
+          "source_text": "Event bus and event dispatcher."
+        },
+        {
+          "score": 0.4561,
+          "source_id": "SRC42-PART-04-020",
+          "source_text": "Plugin and extension loader."
+        },
+        {
+          "score": 0.449,
+          "source_id": "SRC42-PART-04-008",
+          "source_text": "Environment manager."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-13",
+      "ledger_name": "Message queue",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-013"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-013",
+          "source_text": "Message queue."
+        },
+        {
+          "score": 0.4286,
+          "source_id": "SRC42-PART-04-017",
+          "source_text": "Session manager."
+        },
+        {
+          "score": 0.3448,
+          "source_id": "SRC42-PART-04-005",
+          "source_text": "Feature registry."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-14",
+      "ledger_name": "Task scheduler",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-014"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-014",
+          "source_text": "Task scheduler."
+        },
+        {
+          "score": 0.3704,
+          "source_id": "SRC42-PART-04-013",
+          "source_text": "Message queue."
+        },
+        {
+          "score": 0.3704,
+          "source_id": "SRC42-PART-04-016",
+          "source_text": "State manager."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-15",
+      "ledger_name": "Background job manager",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-015"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-015",
+          "source_text": "Background job manager."
+        },
+        {
+          "score": 0.5946,
+          "source_id": "SRC42-PART-04-018",
+          "source_text": "Context manager."
+        },
+        {
+          "score": 0.5405,
+          "source_id": "SRC42-PART-04-017",
+          "source_text": "Session manager."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-16",
+      "ledger_name": "State manager",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-016"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-016",
+          "source_text": "State manager."
+        },
+        {
+          "score": 0.7143,
+          "source_id": "SRC42-PART-04-017",
+          "source_text": "Session manager."
+        },
+        {
+          "score": 0.7143,
+          "source_id": "SRC42-PART-04-018",
+          "source_text": "Context manager."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-17",
+      "ledger_name": "Session manager",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-017"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-017",
+          "source_text": "Session manager."
+        },
+        {
+          "score": 0.7143,
+          "source_id": "SRC42-PART-04-016",
+          "source_text": "State manager."
+        },
+        {
+          "score": 0.7059,
+          "source_id": "SRC42-PART-04-008",
+          "source_text": "Environment manager."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-18",
+      "ledger_name": "Context manager",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-018"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-018",
+          "source_text": "Context manager."
+        },
+        {
+          "score": 0.7143,
+          "source_id": "SRC42-PART-04-016",
+          "source_text": "State manager."
+        },
+        {
+          "score": 0.7059,
+          "source_id": "SRC42-PART-04-008",
+          "source_text": "Environment manager."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-19",
+      "ledger_name": "Dependency injection system",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-019"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-019",
+          "source_text": "Dependency injection system."
+        },
+        {
+          "score": 0.4906,
+          "source_id": "SRC42-PART-04-023",
+          "source_text": "Core error-handling system."
+        },
+        {
+          "score": 0.3667,
+          "source_id": "SRC42-PART-04-011",
+          "source_text": "Inter-service communication layer."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-20",
+      "ledger_name": "Plugin and extension loader",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-020"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-020",
+          "source_text": "Plugin and extension loader."
+        },
+        {
+          "score": 0.4857,
+          "source_id": "SRC42-PART-04-006",
+          "source_text": "Feature activation and deactivation manager."
+        },
+        {
+          "score": 0.4643,
+          "source_id": "SRC42-PART-04-009",
+          "source_text": "Application lifecycle manager."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-21",
+      "ledger_name": "Health monitoring service",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-021"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-021",
+          "source_text": "Health monitoring service."
+        },
+        {
+          "score": 0.4,
+          "source_id": "SRC42-PART-04-018",
+          "source_text": "Context manager."
+        },
+        {
+          "score": 0.3704,
+          "source_id": "SRC42-PART-04-002",
+          "source_text": "Core application architecture."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-22",
+      "ledger_name": "Graceful shutdown and restart manager",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-022"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-022",
+          "source_text": "Graceful shutdown and restart manager."
+        },
+        {
+          "score": 0.5897,
+          "source_id": "SRC42-PART-04-024",
+          "source_text": "System initialization and startup manager."
+        },
+        {
+          "score": 0.575,
+          "source_id": "SRC42-PART-04-006",
+          "source_text": "Feature activation and deactivation manager."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-23",
+      "ledger_name": "Core error-handling system",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-023"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-023",
+          "source_text": "Core error-handling system."
+        },
+        {
+          "score": 0.4906,
+          "source_id": "SRC42-PART-04-019",
+          "source_text": "Dependency injection system."
+        },
+        {
+          "score": 0.4364,
+          "source_id": "SRC42-PART-04-002",
+          "source_text": "Core application architecture."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-24",
+      "ledger_name": "System initialization and startup manager",
+      "part": 4,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-04-024"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-04-024",
+          "source_text": "System initialization and startup manager."
+        },
+        {
+          "score": 0.619,
+          "source_id": "SRC42-PART-04-006",
+          "source_text": "Feature activation and deactivation manager."
+        },
+        {
+          "score": 0.5641,
+          "source_id": "SRC42-PART-04-022",
+          "source_text": "Graceful shutdown and restart manager."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-04-25",
+      "ledger_name": "Integration of all core components into one coherent system",
+      "part": 4,
+      "mapping_status": "NO_STRONG",
+      "exact_source_ids": [],
+      "top_candidates": [
+        {
+          "score": 0.3765,
+          "source_id": "SRC42-PART-04-023",
+          "source_text": "Core error-handling system."
+        },
+        {
+          "score": 0.3409,
+          "source_id": "SRC42-PART-04-009",
+          "source_text": "Application lifecycle manager."
+        },
+        {
+          "score": 0.3256,
+          "source_id": "SRC42-PART-04-019",
+          "source_text": "Dependency injection system."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-01",
+      "ledger_name": "Natural-language understanding",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-001"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-001",
+          "source_text": "Natural-language understanding."
+        },
+        {
+          "score": 0.6667,
+          "source_id": "SRC42-PART-05-003",
+          "source_text": "Context understanding."
+        },
+        {
+          "score": 0.6667,
+          "source_id": "SRC42-PART-05-006",
+          "source_text": "Goal understanding."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-02",
+      "ledger_name": "Intent recognition",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-002"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-002",
+          "source_text": "Intent recognition."
+        },
+        {
+          "score": 0.5909,
+          "source_id": "SRC42-PART-05-017",
+          "source_text": "Intelligent tool selection."
+        },
+        {
+          "score": 0.5789,
+          "source_id": "SRC42-PART-05-020",
+          "source_text": "Context optimization."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-03",
+      "ledger_name": "Context understanding",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-003"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-003",
+          "source_text": "Context understanding."
+        },
+        {
+          "score": 0.7692,
+          "source_id": "SRC42-PART-05-006",
+          "source_text": "Goal understanding."
+        },
+        {
+          "score": 0.6667,
+          "source_id": "SRC42-PART-05-001",
+          "source_text": "Natural-language understanding."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-04",
+      "ledger_name": "Entity and relationship extraction",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-004"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-004",
+          "source_text": "Entity and relationship extraction."
+        },
+        {
+          "score": 0.4333,
+          "source_id": "SRC42-PART-05-017",
+          "source_text": "Intelligent tool selection."
+        },
+        {
+          "score": 0.4194,
+          "source_id": "SRC42-PART-05-009",
+          "source_text": "Planning and decision-making."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-05",
+      "ledger_name": "Ambiguity detection and clarification",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-005"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-005",
+          "source_text": "Ambiguity detection and clarification."
+        },
+        {
+          "score": 0.5625,
+          "source_id": "SRC42-PART-05-018",
+          "source_text": "Model selection and routing."
+        },
+        {
+          "score": 0.5,
+          "source_id": "SRC42-PART-05-014",
+          "source_text": "Output verification."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-06",
+      "ledger_name": "Goal understanding",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-006"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-006",
+          "source_text": "Goal understanding."
+        },
+        {
+          "score": 0.7692,
+          "source_id": "SRC42-PART-05-003",
+          "source_text": "Context understanding."
+        },
+        {
+          "score": 0.6667,
+          "source_id": "SRC42-PART-05-001",
+          "source_text": "Natural-language understanding."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-07",
+      "ledger_name": "Complex reasoning",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-007"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-007",
+          "source_text": "Complex reasoning."
+        },
+        {
+          "score": 0.5789,
+          "source_id": "SRC42-PART-05-003",
+          "source_text": "Context understanding."
+        },
+        {
+          "score": 0.5143,
+          "source_id": "SRC42-PART-05-006",
+          "source_text": "Goal understanding."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-08",
+      "ledger_name": "Multi-step problem solving",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-008"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-008",
+          "source_text": "Multi-step problem solving."
+        },
+        {
+          "score": 0.4706,
+          "source_id": "SRC42-PART-05-019",
+          "source_text": "Multi-model collaboration."
+        },
+        {
+          "score": 0.4651,
+          "source_id": "SRC42-PART-05-007",
+          "source_text": "Complex reasoning."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-09",
+      "ledger_name": "Planning and decision-making",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-009"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-009",
+          "source_text": "Planning and decision-making."
+        },
+        {
+          "score": 0.4839,
+          "source_id": "SRC42-PART-05-004",
+          "source_text": "Entity and relationship extraction."
+        },
+        {
+          "score": 0.4561,
+          "source_id": "SRC42-PART-05-021",
+          "source_text": "Token and resource management."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-10",
+      "ledger_name": "Constraint management",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-010"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-010",
+          "source_text": "Constraint management."
+        },
+        {
+          "score": 0.48,
+          "source_id": "SRC42-PART-05-021",
+          "source_text": "Token and resource management."
+        },
+        {
+          "score": 0.4706,
+          "source_id": "SRC42-PART-05-001",
+          "source_text": "Natural-language understanding."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-11",
+      "ledger_name": "Risk and consequence evaluation",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-011"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-011",
+          "source_text": "Risk and consequence evaluation."
+        },
+        {
+          "score": 0.5652,
+          "source_id": "SRC42-PART-05-013",
+          "source_text": "Self-evaluation."
+        },
+        {
+          "score": 0.5424,
+          "source_id": "SRC42-PART-05-022",
+          "source_text": "Model performance evaluation."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-12",
+      "ledger_name": "Decision history",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-012"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-012",
+          "source_text": "Decision history."
+        },
+        {
+          "score": 0.4545,
+          "source_id": "SRC42-PART-05-009",
+          "source_text": "Planning and decision-making."
+        },
+        {
+          "score": 0.3774,
+          "source_id": "SRC42-PART-05-005",
+          "source_text": "Ambiguity detection and clarification."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-13",
+      "ledger_name": "Self-evaluation",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-013"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-013",
+          "source_text": "Self-evaluation."
+        },
+        {
+          "score": 0.6512,
+          "source_id": "SRC42-PART-05-022",
+          "source_text": "Model performance evaluation."
+        },
+        {
+          "score": 0.5652,
+          "source_id": "SRC42-PART-05-011",
+          "source_text": "Risk and consequence evaluation."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-14",
+      "ledger_name": "Output verification",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-014"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-014",
+          "source_text": "Output verification."
+        },
+        {
+          "score": 0.5641,
+          "source_id": "SRC42-PART-05-020",
+          "source_text": "Context optimization."
+        },
+        {
+          "score": 0.4865,
+          "source_id": "SRC42-PART-05-002",
+          "source_text": "Intent recognition."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-15",
+      "ledger_name": "Hallucination and uncertainty handling",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-015"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-015",
+          "source_text": "Hallucination and uncertainty handling."
+        },
+        {
+          "score": 0.5231,
+          "source_id": "SRC42-PART-05-018",
+          "source_text": "Model selection and routing."
+        },
+        {
+          "score": 0.4179,
+          "source_id": "SRC42-PART-05-021",
+          "source_text": "Token and resource management."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-16",
+      "ledger_name": "Structured response generation",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-016"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-016",
+          "source_text": "Structured response generation."
+        },
+        {
+          "score": 0.4918,
+          "source_id": "SRC42-PART-05-011",
+          "source_text": "Risk and consequence evaluation."
+        },
+        {
+          "score": 0.4746,
+          "source_id": "SRC42-PART-05-021",
+          "source_text": "Token and resource management."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-17",
+      "ledger_name": "Intelligent tool selection",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-017"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-017",
+          "source_text": "Intelligent tool selection."
+        },
+        {
+          "score": 0.5909,
+          "source_id": "SRC42-PART-05-002",
+          "source_text": "Intent recognition."
+        },
+        {
+          "score": 0.4528,
+          "source_id": "SRC42-PART-05-018",
+          "source_text": "Model selection and routing."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-18",
+      "ledger_name": "Model selection and routing",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-018"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-018",
+          "source_text": "Model selection and routing."
+        },
+        {
+          "score": 0.5625,
+          "source_id": "SRC42-PART-05-005",
+          "source_text": "Ambiguity detection and clarification."
+        },
+        {
+          "score": 0.5556,
+          "source_id": "SRC42-PART-05-023",
+          "source_text": "Model fallback and recovery."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-19",
+      "ledger_name": "Multi-model collaboration",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-019"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-019",
+          "source_text": "Multi-model collaboration."
+        },
+        {
+          "score": 0.5161,
+          "source_id": "SRC42-PART-05-005",
+          "source_text": "Ambiguity detection and clarification."
+        },
+        {
+          "score": 0.4906,
+          "source_id": "SRC42-PART-05-022",
+          "source_text": "Model performance evaluation."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-20",
+      "ledger_name": "Context optimization",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-020"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-020",
+          "source_text": "Context optimization."
+        },
+        {
+          "score": 0.5789,
+          "source_id": "SRC42-PART-05-002",
+          "source_text": "Intent recognition."
+        },
+        {
+          "score": 0.5641,
+          "source_id": "SRC42-PART-05-014",
+          "source_text": "Output verification."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-21",
+      "ledger_name": "Token and resource management",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-021"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-021",
+          "source_text": "Token and resource management."
+        },
+        {
+          "score": 0.52,
+          "source_id": "SRC42-PART-05-010",
+          "source_text": "Constraint management."
+        },
+        {
+          "score": 0.4912,
+          "source_id": "SRC42-PART-05-009",
+          "source_text": "Planning and decision-making."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-22",
+      "ledger_name": "Model performance evaluation",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-022"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-022",
+          "source_text": "Model performance evaluation."
+        },
+        {
+          "score": 0.6512,
+          "source_id": "SRC42-PART-05-013",
+          "source_text": "Self-evaluation."
+        },
+        {
+          "score": 0.5763,
+          "source_id": "SRC42-PART-05-011",
+          "source_text": "Risk and consequence evaluation."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-05-23",
+      "ledger_name": "Model fallback and recovery",
+      "part": 5,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-05-023"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-05-023",
+          "source_text": "Model fallback and recovery."
+        },
+        {
+          "score": 0.5556,
+          "source_id": "SRC42-PART-05-018",
+          "source_text": "Model selection and routing."
+        },
+        {
+          "score": 0.4231,
+          "source_id": "SRC42-PART-05-019",
+          "source_text": "Multi-model collaboration."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-01",
+      "ledger_name": "Local model discovery",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-001"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-001",
+          "source_text": "Local model discovery."
+        },
+        {
+          "score": 0.6667,
+          "source_id": "SRC42-PART-06-012",
+          "source_text": "Local model execution."
+        },
+        {
+          "score": 0.5238,
+          "source_id": "SRC42-PART-06-013",
+          "source_text": "Cloud model execution."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-02",
+      "ledger_name": "Model installation",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-002"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-002",
+          "source_text": "Model installation."
+        },
+        {
+          "score": 0.6486,
+          "source_id": "SRC42-PART-06-006",
+          "source_text": "Model configuration."
+        },
+        {
+          "score": 0.6154,
+          "source_id": "SRC42-PART-06-015",
+          "source_text": "Provider registration."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-03",
+      "ledger_name": "Model removal",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-003"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-003",
+          "source_text": "Model removal."
+        },
+        {
+          "score": 0.5625,
+          "source_id": "SRC42-PART-06-007",
+          "source_text": "Model health checks."
+        },
+        {
+          "score": 0.5385,
+          "source_id": "SRC42-PART-06-004",
+          "source_text": "Model updates."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-04",
+      "ledger_name": "Model updates",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-004"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-004",
+          "source_text": "Model updates."
+        },
+        {
+          "score": 0.625,
+          "source_id": "SRC42-PART-06-007",
+          "source_text": "Model health checks."
+        },
+        {
+          "score": 0.5789,
+          "source_id": "SRC42-PART-06-008",
+          "source_text": "Model capability registry."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-05",
+      "ledger_name": "Model version management",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-005"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-005",
+          "source_text": "Model version management."
+        },
+        {
+          "score": 0.5778,
+          "source_id": "SRC42-PART-06-019",
+          "source_text": "Rate-limit management."
+        },
+        {
+          "score": 0.5714,
+          "source_id": "SRC42-PART-06-009",
+          "source_text": "Model benchmarking."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-06",
+      "ledger_name": "Model configuration",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-006"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-006",
+          "source_text": "Model configuration."
+        },
+        {
+          "score": 0.6486,
+          "source_id": "SRC42-PART-06-002",
+          "source_text": "Model installation."
+        },
+        {
+          "score": 0.6,
+          "source_id": "SRC42-PART-06-012",
+          "source_text": "Local model execution."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-07",
+      "ledger_name": "Model health checks",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-007"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-007",
+          "source_text": "Model health checks."
+        },
+        {
+          "score": 0.5625,
+          "source_id": "SRC42-PART-06-003",
+          "source_text": "Model removal."
+        },
+        {
+          "score": 0.5405,
+          "source_id": "SRC42-PART-06-009",
+          "source_text": "Model benchmarking."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-08",
+      "ledger_name": "Model capability registry",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-008"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-008",
+          "source_text": "Model capability registry."
+        },
+        {
+          "score": 0.5263,
+          "source_id": "SRC42-PART-06-004",
+          "source_text": "Model updates."
+        },
+        {
+          "score": 0.48,
+          "source_id": "SRC42-PART-06-022",
+          "source_text": "Model response comparison."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-09",
+      "ledger_name": "Model benchmarking",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-009"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-009",
+          "source_text": "Model benchmarking."
+        },
+        {
+          "score": 0.6512,
+          "source_id": "SRC42-PART-06-022",
+          "source_text": "Model response comparison."
+        },
+        {
+          "score": 0.5806,
+          "source_id": "SRC42-PART-06-003",
+          "source_text": "Model removal."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-10",
+      "ledger_name": "GPU, CPU and RAM requirement detection",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-010"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-010",
+          "source_text": "GPU, CPU and RAM requirement detection."
+        },
+        {
+          "score": 0.4776,
+          "source_id": "SRC42-PART-06-011",
+          "source_text": "Resource-aware model selection."
+        },
+        {
+          "score": 0.4444,
+          "source_id": "SRC42-PART-06-020",
+          "source_text": "Provider failure detection."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-11",
+      "ledger_name": "Resource-aware model selection",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-011"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-011",
+          "source_text": "Resource-aware model selection."
+        },
+        {
+          "score": 0.6667,
+          "source_id": "SRC42-PART-06-012",
+          "source_text": "Local model execution."
+        },
+        {
+          "score": 0.6275,
+          "source_id": "SRC42-PART-06-013",
+          "source_text": "Cloud model execution."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-12",
+      "ledger_name": "Local model execution",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-012"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-012",
+          "source_text": "Local model execution."
+        },
+        {
+          "score": 0.8571,
+          "source_id": "SRC42-PART-06-013",
+          "source_text": "Cloud model execution."
+        },
+        {
+          "score": 0.7442,
+          "source_id": "SRC42-PART-06-014",
+          "source_text": "Hybrid model execution."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-13",
+      "ledger_name": "Cloud model execution",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-013"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-013",
+          "source_text": "Cloud model execution."
+        },
+        {
+          "score": 0.8571,
+          "source_id": "SRC42-PART-06-012",
+          "source_text": "Local model execution."
+        },
+        {
+          "score": 0.7907,
+          "source_id": "SRC42-PART-06-014",
+          "source_text": "Hybrid model execution."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-14",
+      "ledger_name": "Hybrid model execution",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-014"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-014",
+          "source_text": "Hybrid model execution."
+        },
+        {
+          "score": 0.7907,
+          "source_id": "SRC42-PART-06-013",
+          "source_text": "Cloud model execution."
+        },
+        {
+          "score": 0.7442,
+          "source_id": "SRC42-PART-06-012",
+          "source_text": "Local model execution."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-15",
+      "ledger_name": "Provider registration",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-015"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-015",
+          "source_text": "Provider registration."
+        },
+        {
+          "score": 0.7273,
+          "source_id": "SRC42-PART-06-016",
+          "source_text": "Provider authentication."
+        },
+        {
+          "score": 0.6977,
+          "source_id": "SRC42-PART-06-023",
+          "source_text": "Provider cost tracking."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-16",
+      "ledger_name": "Provider authentication",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-016"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-016",
+          "source_text": "Provider authentication."
+        },
+        {
+          "score": 0.7347,
+          "source_id": "SRC42-PART-06-020",
+          "source_text": "Provider failure detection."
+        },
+        {
+          "score": 0.6818,
+          "source_id": "SRC42-PART-06-015",
+          "source_text": "Provider registration."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-17",
+      "ledger_name": "API key management",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-017"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-017",
+          "source_text": "API key management."
+        },
+        {
+          "score": 0.6667,
+          "source_id": "SRC42-PART-06-019",
+          "source_text": "Rate-limit management."
+        },
+        {
+          "score": 0.5714,
+          "source_id": "SRC42-PART-06-005",
+          "source_text": "Model version management."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-18",
+      "ledger_name": "Provider usage monitoring",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-018"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-018",
+          "source_text": "Provider usage monitoring."
+        },
+        {
+          "score": 0.5957,
+          "source_id": "SRC42-PART-06-023",
+          "source_text": "Provider cost tracking."
+        },
+        {
+          "score": 0.5652,
+          "source_id": "SRC42-PART-06-015",
+          "source_text": "Provider registration."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-19",
+      "ledger_name": "Rate-limit management",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-019"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-019",
+          "source_text": "Rate-limit management."
+        },
+        {
+          "score": 0.6667,
+          "source_id": "SRC42-PART-06-017",
+          "source_text": "API key management."
+        },
+        {
+          "score": 0.5778,
+          "source_id": "SRC42-PART-06-005",
+          "source_text": "Model version management."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-20",
+      "ledger_name": "Provider failure detection",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-020"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-020",
+          "source_text": "Provider failure detection."
+        },
+        {
+          "score": 0.6809,
+          "source_id": "SRC42-PART-06-015",
+          "source_text": "Provider registration."
+        },
+        {
+          "score": 0.6531,
+          "source_id": "SRC42-PART-06-016",
+          "source_text": "Provider authentication."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-21",
+      "ledger_name": "Automatic fallback",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-021"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-021",
+          "source_text": "Automatic fallback."
+        },
+        {
+          "score": 0.3243,
+          "source_id": "SRC42-PART-06-007",
+          "source_text": "Model health checks."
+        },
+        {
+          "score": 0.3182,
+          "source_id": "SRC42-PART-06-020",
+          "source_text": "Provider failure detection."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-22",
+      "ledger_name": "Model response comparison",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-022"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-022",
+          "source_text": "Model response comparison."
+        },
+        {
+          "score": 0.6512,
+          "source_id": "SRC42-PART-06-009",
+          "source_text": "Model benchmarking."
+        },
+        {
+          "score": 0.5455,
+          "source_id": "SRC42-PART-06-006",
+          "source_text": "Model configuration."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-06-23",
+      "ledger_name": "Provider cost tracking",
+      "part": 6,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-06-023"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-06-023",
+          "source_text": "Provider cost tracking."
+        },
+        {
+          "score": 0.6977,
+          "source_id": "SRC42-PART-06-015",
+          "source_text": "Provider registration."
+        },
+        {
+          "score": 0.6383,
+          "source_id": "SRC42-PART-06-018",
+          "source_text": "Provider usage monitoring."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-01",
+      "ledger_name": "Working memory",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-001"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-001",
+          "source_text": "Working memory."
+        },
+        {
+          "score": 0.6667,
+          "source_id": "SRC42-PART-07-003",
+          "source_text": "Long-term memory."
+        },
+        {
+          "score": 0.6667,
+          "source_id": "SRC42-PART-07-009",
+          "source_text": "Conversation memory."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-02",
+      "ledger_name": "Short-term memory",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-002"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-002",
+          "source_text": "Short-term memory."
+        },
+        {
+          "score": 0.7879,
+          "source_id": "SRC42-PART-07-003",
+          "source_text": "Long-term memory."
+        },
+        {
+          "score": 0.5806,
+          "source_id": "SRC42-PART-07-001",
+          "source_text": "Working memory."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-03",
+      "ledger_name": "Long-term memory",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-003"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-003",
+          "source_text": "Long-term memory."
+        },
+        {
+          "score": 0.7879,
+          "source_id": "SRC42-PART-07-002",
+          "source_text": "Short-term memory."
+        },
+        {
+          "score": 0.6667,
+          "source_id": "SRC42-PART-07-001",
+          "source_text": "Working memory."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-04",
+      "ledger_name": "Episodic memory",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-004"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-004",
+          "source_text": "Episodic memory."
+        },
+        {
+          "score": 0.6875,
+          "source_id": "SRC42-PART-07-010",
+          "source_text": "Experience memory."
+        },
+        {
+          "score": 0.6667,
+          "source_id": "SRC42-PART-07-005",
+          "source_text": "Semantic memory."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-05",
+      "ledger_name": "Semantic memory",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-005"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-005",
+          "source_text": "Semantic memory."
+        },
+        {
+          "score": 0.6667,
+          "source_id": "SRC42-PART-07-004",
+          "source_text": "Episodic memory."
+        },
+        {
+          "score": 0.6471,
+          "source_id": "SRC42-PART-07-009",
+          "source_text": "Conversation memory."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-06",
+      "ledger_name": "Personal knowledge memory",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-006"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-006",
+          "source_text": "Personal knowledge memory."
+        },
+        {
+          "score": 0.8163,
+          "source_id": "SRC42-PART-07-029",
+          "source_text": "Personal knowledge graph."
+        },
+        {
+          "score": 0.5714,
+          "source_id": "SRC42-PART-07-010",
+          "source_text": "Experience memory."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-07",
+      "ledger_name": "Project memory",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-007"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-007",
+          "source_text": "Project memory."
+        },
+        {
+          "score": 0.7097,
+          "source_id": "SRC42-PART-07-010",
+          "source_text": "Experience memory."
+        },
+        {
+          "score": 0.6897,
+          "source_id": "SRC42-PART-07-004",
+          "source_text": "Episodic memory."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-08",
+      "ledger_name": "User preference memory",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-008"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-008",
+          "source_text": "User preference memory."
+        },
+        {
+          "score": 0.6667,
+          "source_id": "SRC42-PART-07-010",
+          "source_text": "Experience memory."
+        },
+        {
+          "score": 0.6111,
+          "source_id": "SRC42-PART-07-007",
+          "source_text": "Project memory."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-09",
+      "ledger_name": "Conversation memory",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-009"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-009",
+          "source_text": "Conversation memory."
+        },
+        {
+          "score": 0.6286,
+          "source_id": "SRC42-PART-07-003",
+          "source_text": "Long-term memory."
+        },
+        {
+          "score": 0.6111,
+          "source_id": "SRC42-PART-07-010",
+          "source_text": "Experience memory."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-10",
+      "ledger_name": "Experience memory",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-010"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-010",
+          "source_text": "Experience memory."
+        },
+        {
+          "score": 0.6875,
+          "source_id": "SRC42-PART-07-004",
+          "source_text": "Episodic memory."
+        },
+        {
+          "score": 0.6667,
+          "source_id": "SRC42-PART-07-008",
+          "source_text": "User preference memory."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-11",
+      "ledger_name": "Memory indexing",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-011"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-011",
+          "source_text": "Memory indexing."
+        },
+        {
+          "score": 0.5806,
+          "source_id": "SRC42-PART-07-021",
+          "source_text": "Memory evolution."
+        },
+        {
+          "score": 0.5625,
+          "source_id": "SRC42-PART-07-020",
+          "source_text": "Memory correction."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-12",
+      "ledger_name": "Embedding generation",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-012"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-012",
+          "source_text": "Embedding generation."
+        },
+        {
+          "score": 0.439,
+          "source_id": "SRC42-PART-07-017",
+          "source_text": "Memory prioritization."
+        },
+        {
+          "score": 0.4151,
+          "source_id": "SRC42-PART-07-022",
+          "source_text": "Forgetting and retention policies."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-13",
+      "ledger_name": "Vector storage",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-013"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-013",
+          "source_text": "Vector storage."
+        },
+        {
+          "score": 0.4118,
+          "source_id": "SRC42-PART-07-018",
+          "source_text": "Memory consolidation."
+        },
+        {
+          "score": 0.4,
+          "source_id": "SRC42-PART-07-017",
+          "source_text": "Memory prioritization."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-14",
+      "ledger_name": "Contextual retrieval",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-014"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-014",
+          "source_text": "Contextual retrieval."
+        },
+        {
+          "score": 0.5417,
+          "source_id": "SRC42-PART-07-015",
+          "source_text": "Relationship-aware retrieval."
+        },
+        {
+          "score": 0.3704,
+          "source_id": "SRC42-PART-07-027",
+          "source_text": "Entity and relationship management."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-15",
+      "ledger_name": "Relationship-aware retrieval",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-015"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-015",
+          "source_text": "Relationship-aware retrieval."
+        },
+        {
+          "score": 0.5806,
+          "source_id": "SRC42-PART-07-027",
+          "source_text": "Entity and relationship management."
+        },
+        {
+          "score": 0.5417,
+          "source_id": "SRC42-PART-07-014",
+          "source_text": "Contextual retrieval."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-16",
+      "ledger_name": "Relevance scoring",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-016"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-016",
+          "source_text": "Relevance scoring."
+        },
+        {
+          "score": 0.4706,
+          "source_id": "SRC42-PART-07-010",
+          "source_text": "Experience memory."
+        },
+        {
+          "score": 0.4615,
+          "source_id": "SRC42-PART-07-008",
+          "source_text": "User preference memory."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-17",
+      "ledger_name": "Memory prioritization",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-017"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-017",
+          "source_text": "Memory prioritization."
+        },
+        {
+          "score": 0.6842,
+          "source_id": "SRC42-PART-07-020",
+          "source_text": "Memory correction."
+        },
+        {
+          "score": 0.6486,
+          "source_id": "SRC42-PART-07-021",
+          "source_text": "Memory evolution."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-18",
+      "ledger_name": "Memory consolidation",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-018"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-018",
+          "source_text": "Memory consolidation."
+        },
+        {
+          "score": 0.7222,
+          "source_id": "SRC42-PART-07-021",
+          "source_text": "Memory evolution."
+        },
+        {
+          "score": 0.7027,
+          "source_id": "SRC42-PART-07-020",
+          "source_text": "Memory correction."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-19",
+      "ledger_name": "Duplicate detection",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-019"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-019",
+          "source_text": "Duplicate detection."
+        },
+        {
+          "score": 0.3889,
+          "source_id": "SRC42-PART-07-010",
+          "source_text": "Experience memory."
+        },
+        {
+          "score": 0.3889,
+          "source_id": "SRC42-PART-07-016",
+          "source_text": "Relevance scoring."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-20",
+      "ledger_name": "Memory correction",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-020"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-020",
+          "source_text": "Memory correction."
+        },
+        {
+          "score": 0.7273,
+          "source_id": "SRC42-PART-07-021",
+          "source_text": "Memory evolution."
+        },
+        {
+          "score": 0.7027,
+          "source_id": "SRC42-PART-07-018",
+          "source_text": "Memory consolidation."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-21",
+      "ledger_name": "Memory evolution",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-021"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-021",
+          "source_text": "Memory evolution."
+        },
+        {
+          "score": 0.7273,
+          "source_id": "SRC42-PART-07-020",
+          "source_text": "Memory correction."
+        },
+        {
+          "score": 0.7222,
+          "source_id": "SRC42-PART-07-018",
+          "source_text": "Memory consolidation."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-22",
+      "ledger_name": "Forgetting and retention policies",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-022"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-022",
+          "source_text": "Forgetting and retention policies."
+        },
+        {
+          "score": 0.4776,
+          "source_id": "SRC42-PART-07-027",
+          "source_text": "Entity and relationship management."
+        },
+        {
+          "score": 0.4262,
+          "source_id": "SRC42-PART-07-015",
+          "source_text": "Relationship-aware retrieval."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-23",
+      "ledger_name": "Memory provenance",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-023"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-023",
+          "source_text": "Memory provenance."
+        },
+        {
+          "score": 0.5946,
+          "source_id": "SRC42-PART-07-018",
+          "source_text": "Memory consolidation."
+        },
+        {
+          "score": 0.5882,
+          "source_id": "SRC42-PART-07-020",
+          "source_text": "Memory correction."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-24",
+      "ledger_name": "Memory export and import",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-024"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-024",
+          "source_text": "Memory export and import."
+        },
+        {
+          "score": 0.6,
+          "source_id": "SRC42-PART-07-025",
+          "source_text": "Memory backup and recovery."
+        },
+        {
+          "score": 0.5778,
+          "source_id": "SRC42-PART-07-017",
+          "source_text": "Memory prioritization."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-25",
+      "ledger_name": "Memory backup and recovery",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-025"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-025",
+          "source_text": "Memory backup and recovery."
+        },
+        {
+          "score": 0.56,
+          "source_id": "SRC42-PART-07-024",
+          "source_text": "Memory export and import."
+        },
+        {
+          "score": 0.5581,
+          "source_id": "SRC42-PART-07-020",
+          "source_text": "Memory correction."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-26",
+      "ledger_name": "Knowledge graph engine",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-026"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-026",
+          "source_text": "Knowledge graph engine."
+        },
+        {
+          "score": 0.6522,
+          "source_id": "SRC42-PART-07-029",
+          "source_text": "Personal knowledge graph."
+        },
+        {
+          "score": 0.6061,
+          "source_id": "SRC42-PART-07-030",
+          "source_text": "Knowledge graph visualization and navigation."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-27",
+      "ledger_name": "Entity and relationship management",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-027"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-027",
+          "source_text": "Entity and relationship management."
+        },
+        {
+          "score": 0.5806,
+          "source_id": "SRC42-PART-07-015",
+          "source_text": "Relationship-aware retrieval."
+        },
+        {
+          "score": 0.4478,
+          "source_id": "SRC42-PART-07-022",
+          "source_text": "Forgetting and retention policies."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-28",
+      "ledger_name": "Graph querying",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-028"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-028",
+          "source_text": "Graph querying."
+        },
+        {
+          "score": 0.5,
+          "source_id": "SRC42-PART-07-026",
+          "source_text": "Knowledge graph engine."
+        },
+        {
+          "score": 0.4516,
+          "source_id": "SRC42-PART-07-016",
+          "source_text": "Relevance scoring."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-29",
+      "ledger_name": "Personal knowledge graph",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-029"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-029",
+          "source_text": "Personal knowledge graph."
+        },
+        {
+          "score": 0.8163,
+          "source_id": "SRC42-PART-07-006",
+          "source_text": "Personal knowledge memory."
+        },
+        {
+          "score": 0.6522,
+          "source_id": "SRC42-PART-07-026",
+          "source_text": "Knowledge graph engine."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-07-30",
+      "ledger_name": "Knowledge graph visualization and navigation",
+      "part": 7,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-07-030"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-07-030",
+          "source_text": "Knowledge graph visualization and navigation."
+        },
+        {
+          "score": 0.5455,
+          "source_id": "SRC42-PART-07-026",
+          "source_text": "Knowledge graph engine."
+        },
+        {
+          "score": 0.45,
+          "source_id": "SRC42-PART-07-029",
+          "source_text": "Personal knowledge graph."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-08-01",
+      "ledger_name": "Document ingestion",
+      "part": 8,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-08-001"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-08-001",
+          "source_text": "Document ingestion."
+        },
+        {
+          "score": 0.6829,
+          "source_id": "SRC42-PART-08-011",
+          "source_text": "Document classification."
+        },
+        {
+          "score": 0.6222,
+          "source_id": "SRC42-PART-08-018",
+          "source_text": "Document version management."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-08-02",
+      "ledger_name": "PDF processing",
+      "part": 8,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-08-002"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-08-002",
+          "source_text": "PDF processing."
+        },
+        {
+          "score": 0.7222,
+          "source_id": "SRC42-PART-08-004",
+          "source_text": "Spreadsheet processing."
+        },
+        {
+          "score": 0.6486,
+          "source_id": "SRC42-PART-08-005",
+          "source_text": "Presentation processing."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-08-03",
+      "ledger_name": "Word document processing",
+      "part": 8,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-08-003"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-08-003",
+          "source_text": "Word document processing."
+        },
+        {
+          "score": 0.6885,
+          "source_id": "SRC42-PART-08-006",
+          "source_text": "Image and scanned document processing."
+        },
+        {
+          "score": 0.6522,
+          "source_id": "SRC42-PART-08-004",
+          "source_text": "Spreadsheet processing."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-08-04",
+      "ledger_name": "Spreadsheet processing",
+      "part": 8,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-08-004"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-08-004",
+          "source_text": "Spreadsheet processing."
+        },
+        {
+          "score": 0.7222,
+          "source_id": "SRC42-PART-08-002",
+          "source_text": "PDF processing."
+        },
+        {
+          "score": 0.7111,
+          "source_id": "SRC42-PART-08-005",
+          "source_text": "Presentation processing."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-08-05",
+      "ledger_name": "Presentation processing",
+      "part": 8,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-08-005"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-08-005",
+          "source_text": "Presentation processing."
+        },
+        {
+          "score": 0.7556,
+          "source_id": "SRC42-PART-08-004",
+          "source_text": "Spreadsheet processing."
+        },
+        {
+          "score": 0.6486,
+          "source_id": "SRC42-PART-08-002",
+          "source_text": "PDF processing."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-08-06",
+      "ledger_name": "Image and scanned document processing",
+      "part": 8,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-08-006"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-08-006",
+          "source_text": "Image and scanned document processing."
+        },
+        {
+          "score": 0.6885,
+          "source_id": "SRC42-PART-08-003",
+          "source_text": "Word document processing."
+        },
+        {
+          "score": 0.5333,
+          "source_id": "SRC42-PART-08-005",
+          "source_text": "Presentation processing."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-08-07",
+      "ledger_name": "Audio and transcript ingestion",
+      "part": 8,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-08-007"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-08-007",
+          "source_text": "Audio and transcript ingestion."
+        },
+        {
+          "score": 0.7826,
+          "source_id": "SRC42-PART-08-008",
+          "source_text": "Video metadata and transcript ingestion."
+        },
+        {
+          "score": 0.5417,
+          "source_id": "SRC42-PART-08-001",
+          "source_text": "Document ingestion."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-08-08",
+      "ledger_name": "Video metadata and transcript ingestion",
+      "part": 8,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-08-008"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-08-008",
+          "source_text": "Video metadata and transcript ingestion."
+        },
+        {
+          "score": 0.7826,
+          "source_id": "SRC42-PART-08-007",
+          "source_text": "Audio and transcript ingestion."
+        },
+        {
+          "score": 0.5862,
+          "source_id": "SRC42-PART-08-012",
+          "source_text": "Metadata extraction."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-08-09",
+      "ledger_name": "Text extraction",
+      "part": 8,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-08-009"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-08-009",
+          "source_text": "Text extraction."
+        },
+        {
+          "score": 0.7647,
+          "source_id": "SRC42-PART-08-012",
+          "source_text": "Metadata extraction."
+        },
+        {
+          "score": 0.4848,
+          "source_id": "SRC42-PART-08-001",
+          "source_text": "Document ingestion."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-08-10",
+      "ledger_name": "OCR",
+      "part": 8,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-08-010"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-08-010",
+          "source_text": "OCR."
+        },
+        {
+          "score": 0.25,
+          "source_id": "SRC42-PART-08-019",
+          "source_text": "Cross-document search."
+        },
+        {
+          "score": 0.2353,
+          "source_id": "SRC42-PART-08-002",
+          "source_text": "PDF processing."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-08-11",
+      "ledger_name": "Document classification",
+      "part": 8,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-08-011"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-08-011",
+          "source_text": "Document classification."
+        },
+        {
+          "score": 0.6829,
+          "source_id": "SRC42-PART-08-001",
+          "source_text": "Document ingestion."
+        },
+        {
+          "score": 0.5957,
+          "source_id": "SRC42-PART-08-003",
+          "source_text": "Word document processing."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-08-12",
+      "ledger_name": "Metadata extraction",
+      "part": 8,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-08-012"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-08-012",
+          "source_text": "Metadata extraction."
+        },
+        {
+          "score": 0.7647,
+          "source_id": "SRC42-PART-08-009",
+          "source_text": "Text extraction."
+        },
+        {
+          "score": 0.5862,
+          "source_id": "SRC42-PART-08-008",
+          "source_text": "Video metadata and transcript ingestion."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-08-13",
+      "ledger_name": "Chunking and indexing",
+      "part": 8,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-08-013"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-08-013",
+          "source_text": "Chunking and indexing."
+        },
+        {
+          "score": 0.4545,
+          "source_id": "SRC42-PART-08-014",
+          "source_text": "Embedding and retrieval."
+        },
+        {
+          "score": 0.4483,
+          "source_id": "SRC42-PART-08-006",
+          "source_text": "Image and scanned document processing."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-08-14",
+      "ledger_name": "Embedding and retrieval",
+      "part": 8,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-08-014"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-08-014",
+          "source_text": "Embedding and retrieval."
+        },
+        {
+          "score": 0.4545,
+          "source_id": "SRC42-PART-08-013",
+          "source_text": "Chunking and indexing."
+        },
+        {
+          "score": 0.4194,
+          "source_id": "SRC42-PART-08-008",
+          "source_text": "Video metadata and transcript ingestion."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-08-15",
+      "ledger_name": "Retrieval-augmented generation (RAG)",
+      "part": 8,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-08-015"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-08-015",
+          "source_text": "Retrieval-augmented generation (RAG)."
+        },
+        {
+          "score": 0.4615,
+          "source_id": "SRC42-PART-08-001",
+          "source_text": "Document ingestion."
+        },
+        {
+          "score": 0.459,
+          "source_id": "SRC42-PART-08-018",
+          "source_text": "Document version management."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-08-16",
+      "ledger_name": "Source citations and provenance",
+      "part": 8,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-08-016"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-08-016",
+          "source_text": "Source citations and provenance."
+        },
+        {
+          "score": 0.5185,
+          "source_id": "SRC42-PART-08-005",
+          "source_text": "Presentation processing."
+        },
+        {
+          "score": 0.4815,
+          "source_id": "SRC42-PART-08-017",
+          "source_text": "Collections and folders."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-08-17",
+      "ledger_name": "Collections and folders",
+      "part": 8,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-08-017"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-08-017",
+          "source_text": "Collections and folders."
+        },
+        {
+          "score": 0.5556,
+          "source_id": "SRC42-PART-08-016",
+          "source_text": "Source citations and provenance."
+        },
+        {
+          "score": 0.4545,
+          "source_id": "SRC42-PART-08-013",
+          "source_text": "Chunking and indexing."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-08-18",
+      "ledger_name": "Document version management",
+      "part": 8,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-08-018"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-08-018",
+          "source_text": "Document version management."
+        },
+        {
+          "score": 0.6222,
+          "source_id": "SRC42-PART-08-001",
+          "source_text": "Document ingestion."
+        },
+        {
+          "score": 0.549,
+          "source_id": "SRC42-PART-08-003",
+          "source_text": "Word document processing."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-08-19",
+      "ledger_name": "Cross-document search",
+      "part": 8,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-08-019"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-08-019",
+          "source_text": "Cross-document search."
+        },
+        {
+          "score": 0.5333,
+          "source_id": "SRC42-PART-08-003",
+          "source_text": "Word document processing."
+        },
+        {
+          "score": 0.5128,
+          "source_id": "SRC42-PART-08-001",
+          "source_text": "Document ingestion."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-08-20",
+      "ledger_name": "Knowledge linking to projects and memory",
+      "part": 8,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-08-020"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-08-020",
+          "source_text": "Knowledge linking to projects and memory."
+        },
+        {
+          "score": 0.4444,
+          "source_id": "SRC42-PART-08-017",
+          "source_text": "Collections and folders."
+        },
+        {
+          "score": 0.381,
+          "source_id": "SRC42-PART-08-014",
+          "source_text": "Embedding and retrieval."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-01",
+      "ledger_name": "Agent creation",
+      "part": 9,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-09-001"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-09-001",
+          "source_text": "Agent creation."
+        },
+        {
+          "score": 0.8,
+          "source_id": "SRC42-PART-09-005",
+          "source_text": "Agent allocation."
+        },
+        {
+          "score": 0.7273,
+          "source_id": "SRC42-PART-09-008",
+          "source_text": "Agent communication."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-02",
+      "ledger_name": "Agent identity and role definitions",
+      "part": 9,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-09-002"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-09-002",
+          "source_text": "Agent identity and role definitions."
+        },
+        {
+          "score": 0.5538,
+          "source_id": "SRC42-PART-09-020",
+          "source_text": "Agent termination and recovery."
+        },
+        {
+          "score": 0.5333,
+          "source_id": "SRC42-PART-09-013",
+          "source_text": "Agent-to-agent delegation."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-03",
+      "ledger_name": "Agent capability registry",
+      "part": 9,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-09-003"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-09-003",
+          "source_text": "Agent capability registry."
+        },
+        {
+          "score": 0.5128,
+          "source_id": "SRC42-PART-09-001",
+          "source_text": "Agent creation."
+        },
+        {
+          "score": 0.5,
+          "source_id": "SRC42-PART-09-002",
+          "source_text": "Agent identity and role definitions."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-04",
+      "ledger_name": "Specialist agent templates",
+      "part": 9,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-09-004"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-09-004",
+          "source_text": "Specialist agent templates."
+        },
+        {
+          "score": 0.5098,
+          "source_id": "SRC42-PART-09-013",
+          "source_text": "Agent-to-agent delegation."
+        },
+        {
+          "score": 0.45,
+          "source_id": "SRC42-PART-09-001",
+          "source_text": "Agent creation."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-05",
+      "ledger_name": "Agent allocation",
+      "part": 9,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-09-005"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-09-005",
+          "source_text": "Agent allocation."
+        },
+        {
+          "score": 0.8,
+          "source_id": "SRC42-PART-09-001",
+          "source_text": "Agent creation."
+        },
+        {
+          "score": 0.7429,
+          "source_id": "SRC42-PART-09-008",
+          "source_text": "Agent communication."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-06",
+      "ledger_name": "Agent scheduling",
+      "part": 9,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-09-006"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-09-006",
+          "source_text": "Agent scheduling."
+        },
+        {
+          "score": 0.6667,
+          "source_id": "SRC42-PART-09-001",
+          "source_text": "Agent creation."
+        },
+        {
+          "score": 0.6061,
+          "source_id": "SRC42-PART-09-018",
+          "source_text": "Agent supervision."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-07",
+      "ledger_name": "Agent execution manager",
+      "part": 9,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-09-007"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-09-007",
+          "source_text": "Agent execution manager."
+        },
+        {
+          "score": 0.6038,
+          "source_id": "SRC42-PART-09-020",
+          "source_text": "Agent termination and recovery."
+        },
+        {
+          "score": 0.5946,
+          "source_id": "SRC42-PART-09-001",
+          "source_text": "Agent creation."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-08",
+      "ledger_name": "Agent communication",
+      "part": 9,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-09-008"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-09-008",
+          "source_text": "Agent communication."
+        },
+        {
+          "score": 0.7429,
+          "source_id": "SRC42-PART-09-005",
+          "source_text": "Agent allocation."
+        },
+        {
+          "score": 0.7273,
+          "source_id": "SRC42-PART-09-001",
+          "source_text": "Agent creation."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-09",
+      "ledger_name": "Shared context",
+      "part": 9,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-09-009"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-09-009",
+          "source_text": "Shared context."
+        },
+        {
+          "score": 0.5806,
+          "source_id": "SRC42-PART-09-010",
+          "source_text": "Shared task state."
+        },
+        {
+          "score": 0.4375,
+          "source_id": "SRC42-PART-09-011",
+          "source_text": "Parallel execution."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-10",
+      "ledger_name": "Shared task state",
+      "part": 9,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-09-010"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-09-010",
+          "source_text": "Shared task state."
+        },
+        {
+          "score": 0.5806,
+          "source_id": "SRC42-PART-09-009",
+          "source_text": "Shared context."
+        },
+        {
+          "score": 0.381,
+          "source_id": "SRC42-PART-09-013",
+          "source_text": "Agent-to-agent delegation."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-11",
+      "ledger_name": "Parallel execution",
+      "part": 9,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-09-011"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-09-011",
+          "source_text": "Parallel execution."
+        },
+        {
+          "score": 0.5854,
+          "source_id": "SRC42-PART-09-007",
+          "source_text": "Agent execution manager."
+        },
+        {
+          "score": 0.5294,
+          "source_id": "SRC42-PART-09-005",
+          "source_text": "Agent allocation."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-12",
+      "ledger_name": "Sequential collaboration",
+      "part": 9,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-09-012"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-09-012",
+          "source_text": "Sequential collaboration."
+        },
+        {
+          "score": 0.5789,
+          "source_id": "SRC42-PART-09-001",
+          "source_text": "Agent creation."
+        },
+        {
+          "score": 0.55,
+          "source_id": "SRC42-PART-09-005",
+          "source_text": "Agent allocation."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-13",
+      "ledger_name": "Agent-to-agent delegation",
+      "part": 9,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-09-013"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-09-013",
+          "source_text": "Agent-to-agent delegation."
+        },
+        {
+          "score": 0.6154,
+          "source_id": "SRC42-PART-09-001",
+          "source_text": "Agent creation."
+        },
+        {
+          "score": 0.5909,
+          "source_id": "SRC42-PART-09-008",
+          "source_text": "Agent communication."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-14",
+      "ledger_name": "Conflict detection",
+      "part": 9,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-09-014"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-09-014",
+          "source_text": "Conflict detection."
+        },
+        {
+          "score": 0.7568,
+          "source_id": "SRC42-PART-09-015",
+          "source_text": "Conflict resolution."
+        },
+        {
+          "score": 0.5263,
+          "source_id": "SRC42-PART-09-016",
+          "source_text": "Result consolidation."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-15",
+      "ledger_name": "Conflict resolution",
+      "part": 9,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-09-015"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-09-015",
+          "source_text": "Conflict resolution."
+        },
+        {
+          "score": 0.7568,
+          "source_id": "SRC42-PART-09-014",
+          "source_text": "Conflict detection."
+        },
+        {
+          "score": 0.5455,
+          "source_id": "SRC42-PART-09-001",
+          "source_text": "Agent creation."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-16",
+      "ledger_name": "Result consolidation",
+      "part": 9,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-09-016"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-09-016",
+          "source_text": "Result consolidation."
+        },
+        {
+          "score": 0.6154,
+          "source_id": "SRC42-PART-09-008",
+          "source_text": "Agent communication."
+        },
+        {
+          "score": 0.5455,
+          "source_id": "SRC42-PART-09-012",
+          "source_text": "Sequential collaboration."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-17",
+      "ledger_name": "Agent performance evaluation",
+      "part": 9,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-09-017"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-09-017",
+          "source_text": "Agent performance evaluation."
+        },
+        {
+          "score": 0.6383,
+          "source_id": "SRC42-PART-09-008",
+          "source_text": "Agent communication."
+        },
+        {
+          "score": 0.5909,
+          "source_id": "SRC42-PART-09-005",
+          "source_text": "Agent allocation."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-18",
+      "ledger_name": "Agent supervision",
+      "part": 9,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-09-018"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-09-018",
+          "source_text": "Agent supervision."
+        },
+        {
+          "score": 0.6452,
+          "source_id": "SRC42-PART-09-001",
+          "source_text": "Agent creation."
+        },
+        {
+          "score": 0.6364,
+          "source_id": "SRC42-PART-09-019",
+          "source_text": "Agent permission boundaries."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-19",
+      "ledger_name": "Agent permission boundaries",
+      "part": 9,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-09-019"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-09-019",
+          "source_text": "Agent permission boundaries."
+        },
+        {
+          "score": 0.6364,
+          "source_id": "SRC42-PART-09-018",
+          "source_text": "Agent supervision."
+        },
+        {
+          "score": 0.6316,
+          "source_id": "SRC42-PART-09-020",
+          "source_text": "Agent termination and recovery."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-20",
+      "ledger_name": "Agent termination and recovery",
+      "part": 9,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-09-020"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-09-020",
+          "source_text": "Agent termination and recovery."
+        },
+        {
+          "score": 0.6316,
+          "source_id": "SRC42-PART-09-019",
+          "source_text": "Agent permission boundaries."
+        },
+        {
+          "score": 0.6038,
+          "source_id": "SRC42-PART-09-007",
+          "source_text": "Agent execution manager."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-21",
+      "ledger_name": "Research specialist coverage",
+      "part": 9,
+      "mapping_status": "POSSIBLE",
+      "exact_source_ids": [],
+      "top_candidates": [
+        {
+          "score": 0.5185,
+          "source_id": "SRC42-PART-09-004",
+          "source_text": "Specialist agent templates."
+        },
+        {
+          "score": 0.4231,
+          "source_id": "SRC42-PART-09-012",
+          "source_text": "Sequential collaboration."
+        },
+        {
+          "score": 0.375,
+          "source_id": "SRC42-PART-09-016",
+          "source_text": "Result consolidation."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-22",
+      "ledger_name": "Coding and software development specialist coverage",
+      "part": 9,
+      "mapping_status": "NO_STRONG",
+      "exact_source_ids": [],
+      "top_candidates": [
+        {
+          "score": 0.3636,
+          "source_id": "SRC42-PART-09-004",
+          "source_text": "Specialist agent templates."
+        },
+        {
+          "score": 0.3488,
+          "source_id": "SRC42-PART-09-002",
+          "source_text": "Agent identity and role definitions."
+        },
+        {
+          "score": 0.3478,
+          "source_id": "SRC42-PART-09-014",
+          "source_text": "Conflict detection."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-23",
+      "ledger_name": "Electronics specialist coverage",
+      "part": 9,
+      "mapping_status": "POSSIBLE",
+      "exact_source_ids": [],
+      "top_candidates": [
+        {
+          "score": 0.4912,
+          "source_id": "SRC42-PART-09-004",
+          "source_text": "Specialist agent templates."
+        },
+        {
+          "score": 0.4,
+          "source_id": "SRC42-PART-09-012",
+          "source_text": "Sequential collaboration."
+        },
+        {
+          "score": 0.3934,
+          "source_id": "SRC42-PART-09-020",
+          "source_text": "Agent termination and recovery."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-24",
+      "ledger_name": "Engineering specialist coverage",
+      "part": 9,
+      "mapping_status": "POSSIBLE",
+      "exact_source_ids": [],
+      "top_candidates": [
+        {
+          "score": 0.4912,
+          "source_id": "SRC42-PART-09-004",
+          "source_text": "Specialist agent templates."
+        },
+        {
+          "score": 0.3636,
+          "source_id": "SRC42-PART-09-012",
+          "source_text": "Sequential collaboration."
+        },
+        {
+          "score": 0.3279,
+          "source_id": "SRC42-PART-09-020",
+          "source_text": "Agent termination and recovery."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-25",
+      "ledger_name": "Planning specialist coverage",
+      "part": 9,
+      "mapping_status": "POSSIBLE",
+      "exact_source_ids": [],
+      "top_candidates": [
+        {
+          "score": 0.5185,
+          "source_id": "SRC42-PART-09-004",
+          "source_text": "Specialist agent templates."
+        },
+        {
+          "score": 0.3462,
+          "source_id": "SRC42-PART-09-012",
+          "source_text": "Sequential collaboration."
+        },
+        {
+          "score": 0.3103,
+          "source_id": "SRC42-PART-09-020",
+          "source_text": "Agent termination and recovery."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-26",
+      "ledger_name": "Data analysis specialist coverage",
+      "part": 9,
+      "mapping_status": "POSSIBLE",
+      "exact_source_ids": [],
+      "top_candidates": [
+        {
+          "score": 0.4746,
+          "source_id": "SRC42-PART-09-004",
+          "source_text": "Specialist agent templates."
+        },
+        {
+          "score": 0.381,
+          "source_id": "SRC42-PART-09-020",
+          "source_text": "Agent termination and recovery."
+        },
+        {
+          "score": 0.3158,
+          "source_id": "SRC42-PART-09-012",
+          "source_text": "Sequential collaboration."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-27",
+      "ledger_name": "Project management specialist coverage",
+      "part": 9,
+      "mapping_status": "POSSIBLE",
+      "exact_source_ids": [],
+      "top_candidates": [
+        {
+          "score": 0.4706,
+          "source_id": "SRC42-PART-09-020",
+          "source_text": "Agent termination and recovery."
+        },
+        {
+          "score": 0.4375,
+          "source_id": "SRC42-PART-09-004",
+          "source_text": "Specialist agent templates."
+        },
+        {
+          "score": 0.4364,
+          "source_id": "SRC42-PART-09-018",
+          "source_text": "Agent supervision."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-28",
+      "ledger_name": "Devices and IoT specialist coverage",
+      "part": 9,
+      "mapping_status": "POSSIBLE",
+      "exact_source_ids": [],
+      "top_candidates": [
+        {
+          "score": 0.459,
+          "source_id": "SRC42-PART-09-004",
+          "source_text": "Specialist agent templates."
+        },
+        {
+          "score": 0.4068,
+          "source_id": "SRC42-PART-09-012",
+          "source_text": "Sequential collaboration."
+        },
+        {
+          "score": 0.4,
+          "source_id": "SRC42-PART-09-020",
+          "source_text": "Agent termination and recovery."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-29",
+      "ledger_name": "Robotics specialist coverage",
+      "part": 9,
+      "mapping_status": "POSSIBLE",
+      "exact_source_ids": [],
+      "top_candidates": [
+        {
+          "score": 0.5185,
+          "source_id": "SRC42-PART-09-004",
+          "source_text": "Specialist agent templates."
+        },
+        {
+          "score": 0.3462,
+          "source_id": "SRC42-PART-09-012",
+          "source_text": "Sequential collaboration."
+        },
+        {
+          "score": 0.3448,
+          "source_id": "SRC42-PART-09-020",
+          "source_text": "Agent termination and recovery."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-09-30",
+      "ledger_name": "Complete specialist coverage across all nine required roles",
+      "part": 9,
+      "mapping_status": "NO_STRONG",
+      "exact_source_ids": [],
+      "top_candidates": [
+        {
+          "score": 0.4235,
+          "source_id": "SRC42-PART-09-004",
+          "source_text": "Specialist agent templates."
+        },
+        {
+          "score": 0.2892,
+          "source_id": "SRC42-PART-09-012",
+          "source_text": "Sequential collaboration."
+        },
+        {
+          "score": 0.2791,
+          "source_id": "SRC42-PART-09-019",
+          "source_text": "Agent permission boundaries."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-01",
+      "ledger_name": "Natural-language workflow creation",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-001"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-001",
+          "source_text": "Natural-language workflow creation."
+        },
+        {
+          "score": 0.4906,
+          "source_id": "SRC42-PART-10-005",
+          "source_text": "Workflow scheduling."
+        },
+        {
+          "score": 0.4828,
+          "source_id": "SRC42-PART-10-003",
+          "source_text": "Visual workflow designer."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-02",
+      "ledger_name": "Workflow templates",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-002"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-002",
+          "source_text": "Workflow templates."
+        },
+        {
+          "score": 0.6364,
+          "source_id": "SRC42-PART-10-011",
+          "source_text": "Workflow state persistence."
+        },
+        {
+          "score": 0.5946,
+          "source_id": "SRC42-PART-10-005",
+          "source_text": "Workflow scheduling."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-03",
+      "ledger_name": "Visual workflow designer",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-003"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-003",
+          "source_text": "Visual workflow designer."
+        },
+        {
+          "score": 0.5714,
+          "source_id": "SRC42-PART-10-004",
+          "source_text": "Workflow execution engine."
+        },
+        {
+          "score": 0.56,
+          "source_id": "SRC42-PART-10-011",
+          "source_text": "Workflow state persistence."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-04",
+      "ledger_name": "Workflow execution engine",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-004"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-004",
+          "source_text": "Workflow execution engine."
+        },
+        {
+          "score": 0.6364,
+          "source_id": "SRC42-PART-10-005",
+          "source_text": "Workflow scheduling."
+        },
+        {
+          "score": 0.5909,
+          "source_id": "SRC42-PART-10-013",
+          "source_text": "Workflow monitoring."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-05",
+      "ledger_name": "Workflow scheduling",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-005"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-005",
+          "source_text": "Workflow scheduling."
+        },
+        {
+          "score": 0.6316,
+          "source_id": "SRC42-PART-10-013",
+          "source_text": "Workflow monitoring."
+        },
+        {
+          "score": 0.5909,
+          "source_id": "SRC42-PART-10-004",
+          "source_text": "Workflow execution engine."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-06",
+      "ledger_name": "Event-based triggers",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-006"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-006",
+          "source_text": "Event-based triggers."
+        },
+        {
+          "score": 0.8205,
+          "source_id": "SRC42-PART-10-007",
+          "source_text": "Time-based triggers."
+        },
+        {
+          "score": 0.4444,
+          "source_id": "SRC42-PART-10-017",
+          "source_text": "Pause and resume."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-07",
+      "ledger_name": "Time-based triggers",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-007"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-007",
+          "source_text": "Time-based triggers."
+        },
+        {
+          "score": 0.8205,
+          "source_id": "SRC42-PART-10-006",
+          "source_text": "Event-based triggers."
+        },
+        {
+          "score": 0.4324,
+          "source_id": "SRC42-PART-10-015",
+          "source_text": "Retry and recovery."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-08",
+      "ledger_name": "Conditional branches",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-008"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-008",
+          "source_text": "Conditional branches."
+        },
+        {
+          "score": 0.4286,
+          "source_id": "SRC42-PART-10-020",
+          "source_text": "Automation permissions."
+        },
+        {
+          "score": 0.4211,
+          "source_id": "SRC42-PART-10-019",
+          "source_text": "Automation builder."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-09",
+      "ledger_name": "Loops and repeat operations",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-009"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-009",
+          "source_text": "Loops and repeat operations."
+        },
+        {
+          "score": 0.4651,
+          "source_id": "SRC42-PART-10-017",
+          "source_text": "Pause and resume."
+        },
+        {
+          "score": 0.4545,
+          "source_id": "SRC42-PART-10-014",
+          "source_text": "Failure detection."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-10",
+      "ledger_name": "Dependency management",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-010"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-010",
+          "source_text": "Dependency management."
+        },
+        {
+          "score": 0.3273,
+          "source_id": "SRC42-PART-10-001",
+          "source_text": "Natural-language workflow creation."
+        },
+        {
+          "score": 0.3243,
+          "source_id": "SRC42-PART-10-017",
+          "source_text": "Pause and resume."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-11",
+      "ledger_name": "Workflow state persistence",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-011"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-011",
+          "source_text": "Workflow state persistence."
+        },
+        {
+          "score": 0.6364,
+          "source_id": "SRC42-PART-10-002",
+          "source_text": "Workflow templates."
+        },
+        {
+          "score": 0.5778,
+          "source_id": "SRC42-PART-10-005",
+          "source_text": "Workflow scheduling."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-12",
+      "ledger_name": "Workflow history",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-012"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-012",
+          "source_text": "Workflow history."
+        },
+        {
+          "score": 0.7429,
+          "source_id": "SRC42-PART-10-013",
+          "source_text": "Workflow monitoring."
+        },
+        {
+          "score": 0.6286,
+          "source_id": "SRC42-PART-10-005",
+          "source_text": "Workflow scheduling."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-13",
+      "ledger_name": "Workflow monitoring",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-013"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-013",
+          "source_text": "Workflow monitoring."
+        },
+        {
+          "score": 0.7429,
+          "source_id": "SRC42-PART-10-012",
+          "source_text": "Workflow history."
+        },
+        {
+          "score": 0.6316,
+          "source_id": "SRC42-PART-10-005",
+          "source_text": "Workflow scheduling."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-14",
+      "ledger_name": "Failure detection",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-014"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-014",
+          "source_text": "Failure detection."
+        },
+        {
+          "score": 0.4286,
+          "source_id": "SRC42-PART-10-004",
+          "source_text": "Workflow execution engine."
+        },
+        {
+          "score": 0.4138,
+          "source_id": "SRC42-PART-10-016",
+          "source_text": "Cancellation."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-15",
+      "ledger_name": "Retry and recovery",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-015"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-015",
+          "source_text": "Retry and recovery."
+        },
+        {
+          "score": 0.5294,
+          "source_id": "SRC42-PART-10-017",
+          "source_text": "Pause and resume."
+        },
+        {
+          "score": 0.4444,
+          "source_id": "SRC42-PART-10-009",
+          "source_text": "Loops and repeat operations."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-16",
+      "ledger_name": "Cancellation",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-016"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-016",
+          "source_text": "Cancellation."
+        },
+        {
+          "score": 0.4103,
+          "source_id": "SRC42-PART-10-009",
+          "source_text": "Loops and repeat operations."
+        },
+        {
+          "score": 0.4,
+          "source_id": "SRC42-PART-10-019",
+          "source_text": "Automation builder."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-17",
+      "ledger_name": "Pause and resume",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-017"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-017",
+          "source_text": "Pause and resume."
+        },
+        {
+          "score": 0.5294,
+          "source_id": "SRC42-PART-10-015",
+          "source_text": "Retry and recovery."
+        },
+        {
+          "score": 0.4651,
+          "source_id": "SRC42-PART-10-009",
+          "source_text": "Loops and repeat operations."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-18",
+      "ledger_name": "Human approval steps",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-018"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-018",
+          "source_text": "Human approval steps."
+        },
+        {
+          "score": 0.4286,
+          "source_id": "SRC42-PART-10-020",
+          "source_text": "Automation permissions."
+        },
+        {
+          "score": 0.3684,
+          "source_id": "SRC42-PART-10-015",
+          "source_text": "Retry and recovery."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-19",
+      "ledger_name": "Automation builder",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-019"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-019",
+          "source_text": "Automation builder."
+        },
+        {
+          "score": 0.6667,
+          "source_id": "SRC42-PART-10-021",
+          "source_text": "Automation versioning."
+        },
+        {
+          "score": 0.6667,
+          "source_id": "SRC42-PART-10-022",
+          "source_text": "Automation testing."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-20",
+      "ledger_name": "Automation permissions",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-020"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-020",
+          "source_text": "Automation permissions."
+        },
+        {
+          "score": 0.7907,
+          "source_id": "SRC42-PART-10-021",
+          "source_text": "Automation versioning."
+        },
+        {
+          "score": 0.7,
+          "source_id": "SRC42-PART-10-022",
+          "source_text": "Automation testing."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-21",
+      "ledger_name": "Automation versioning",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-021"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-021",
+          "source_text": "Automation versioning."
+        },
+        {
+          "score": 0.8205,
+          "source_id": "SRC42-PART-10-022",
+          "source_text": "Automation testing."
+        },
+        {
+          "score": 0.7907,
+          "source_id": "SRC42-PART-10-020",
+          "source_text": "Automation permissions."
+        }
+      ]
+    },
+    {
+      "ledger_id": "PROMPT-10-22",
+      "ledger_name": "Automation testing",
+      "part": 10,
+      "mapping_status": "EXACT",
+      "exact_source_ids": [
+        "SRC42-PART-10-022"
+      ],
+      "top_candidates": [
+        {
+          "score": 1.0,
+          "source_id": "SRC42-PART-10-022",
+          "source_text": "Automation testing."
+        },
+        {
+          "score": 0.8205,
+          "source_id": "SRC42-PART-10-021",
+          "source_text": "Automation versioning."
+        },
+        {
+          "score": 0.75,
+          "source_id": "SRC42-PART-10-020",
+          "source_text": "Automation permissions."
+        }
+      ]
+    }
+  ]
+}

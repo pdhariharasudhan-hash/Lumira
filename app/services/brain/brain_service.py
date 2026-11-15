@@ -38,6 +38,7 @@ from app.services.brain.brain_factory import (
 from app.services.brain.brain_request import (
     BrainRequest,
 )
+from app.services.brain.brain_environment_manager import BrainEnvironmentManager
 
 from app.services.brain.brain_response import (
     BrainResponse,
@@ -74,7 +75,10 @@ from app.services.objective.objective_models import ObjectiveState
 from app.services.history.event_logger_service import EventLoggerService
 from app.services.language.intent_classifier_service import IntentClassifierService
 from app.services.resources.resource_budget_service import ResourceBudgetService
-from app.services.brain.execution_control import BrainExecutionControlRegistry
+from app.services.brain.execution_control import (
+    BrainExecutionControlRegistry,
+    BrainExecutionInterrupted,
+)
 from app.services.system.core_event_log_service import CoreEventLogService
 from app.services.notifications.notification_service import NotificationService
 from app.services.brain.brain_execution_coordinator import BrainExecutionCoordinator
@@ -92,6 +96,8 @@ class BrainService:
         )
 
         self.registry = components["registry"]
+
+        self.environment_manager = BrainEnvironmentManager()
 
         self.executor = components["executor"]
 
@@ -152,10 +158,13 @@ class BrainService:
         state.user_input = request.message
         state.intent = self.intent_classifier.classify(request.message)
 
-        state.execution_context.update(
+        requested_environment = (
+            request.environment if "environment" in request.model_fields_set else None
+        )
+        state.execution_context = self.environment_manager.create_context(
+            environment=requested_environment,
             session_id=request.session_id,
             project_id=request.project or "",
-            environment=request.environment,
             workspace=request.workspace,
             metadata=dict(request.metadata),
         )
@@ -539,143 +548,18 @@ class BrainService:
                 error=error,
             )
 
-        # A verification rejection or interrupted/failed run is terminal.
-        BrainExecutionControlRegistry.release(state.execution_context.execution_id)
-
-        if final_state.status in {"cancelled", "timed_out", "failed"}:
-            status_errors = {
-                "cancelled": "Brain execution was cancelled",
-                "timed_out": "Brain execution exceeded its time budget",
-                "failed": "Brain execution failed before completion",
-            }
-            error = redact_sensitive_text(status_errors[final_state.status])
-            self._record_pipeline(
-                state=final_state,
-                success=False,
+        # Keep the execution registered until validation and any explicitly
+        # requested capability have finished. Cancellation must not go stale
+        # immediately after the cognitive stages complete.
+        try:
+            return self._complete_pipeline_execution(
+                final_state=final_state,
+                session=session,
                 trace=trace,
-                error=error,
+                control=control,
             )
-            self._persist_run(final_state, session, success=False, error=error)
-            self._publish_execution_outcome(final_state, session, success=False)
-            return BrainResponse(
-                success=False,
-                state=final_state,
-                trace=trace,
-                error=error,
-            )
-
-        if final_state.status == "rejected":
-            error = redact_sensitive_text("Verification rejected execution")
-            self._record_pipeline(
-                state=final_state,
-                success=False,
-                trace=trace,
-                error=error,
-            )
-            self._persist_run(final_state, session, success=False, error=error)
-            self._publish_execution_outcome(final_state, session, success=False)
-            return BrainResponse(
-                success=False,
-                state=final_state,
-                trace=trace,
-                error=error,
-            )
-
-        # ----------------------------------
-        # Final validation
-        # ----------------------------------
-
-        final_validation = (
-            self.validator.validate_state(
-                final_state
-            )
-        )
-
-        if not final_validation["valid"]:
-
-            error = redact_sensitive_text(str(final_validation))
-
-            self._record_pipeline(
-                state=final_state,
-                success=False,
-                trace=trace,
-                error=error,
-            )
-
-            self._persist_run(final_state, session, success=False, error=error)
-            self._publish_execution_outcome(final_state, session, success=False)
-
-            return BrainResponse(
-                success=False,
-                state=final_state,
-                trace=trace,
-                error=error,
-            )
-
-        requested_capability = final_state.execution_context.metadata.get(
-            "execute_capability"
-        )
-        if requested_capability is not None:
-            execution_result = self.execution_coordinator.execute(
-                capability=requested_capability,
-                payload=final_state.execution_context.metadata.get(
-                    "capability_payload", {}
-                ),
-                ready_for_execution=final_state.verification_result.get(
-                    "ready_for_execution", False
-                ),
-                autonomous=final_state.execution_context.metadata.get(
-                    "autonomous", False
-                ),
-                instruction=final_state.user_input,
-            )
-            final_state.selected_capability = (
-                requested_capability
-                if isinstance(requested_capability, str)
-                else ""
-            )
-            final_state.execution_result = execution_result
-            if execution_result.get("success") is not True:
-                final_state.status = "failed"
-                error = redact_sensitive_text(
-                    execution_result.get("message")
-                    or execution_result.get("code")
-                    or "Requested capability execution failed"
-                )
-                self._record_pipeline(
-                    state=final_state,
-                    success=False,
-                    trace=trace,
-                    error=error,
-                )
-                self._persist_run(final_state, session, success=False, error=error)
-                self._publish_execution_outcome(final_state, session, success=False)
-                return BrainResponse(
-                    success=False,
-                    state=final_state,
-                    trace=trace,
-                    error=error,
-                )
-
-        # ----------------------------------
-        # Successful pipeline history
-        # ----------------------------------
-
-        self._record_pipeline(
-            state=final_state,
-            success=True,
-            trace=trace,
-            error=None,
-        )
-
-        self._persist_run(final_state, session, success=True)
-        self._publish_execution_outcome(final_state, session, success=True)
-
-        return BrainResponse(
-            success=True,
-            state=final_state,
-            trace=trace,
-        )
+        finally:
+            BrainExecutionControlRegistry.release(state.execution_context.execution_id)
 
     def _publish_execution_outcome(self, state, session: dict, success: bool) -> None:
         """Publish a compact execution outcome when event integrations are available."""
@@ -735,6 +619,23 @@ class BrainService:
         session_id = session["session_id"]
         if state.user_input:
             self.sessions.append_message(session_id, "user", state.user_input)
+        if state.selected_capability == "conversation":
+            execution_result = state.execution_result
+            assistant_message = (
+                execution_result.get("message")
+                if isinstance(execution_result, dict)
+                else None
+            )
+            if isinstance(assistant_message, str) and assistant_message.strip():
+                self.sessions.append_message(
+                    session_id,
+                    "assistant",
+                    assistant_message,
+                    metadata={
+                        "capability": "conversation",
+                        "success": execution_result.get("success") is True,
+                    },
+                )
 
         goal = state.goal.primary_goal.strip()
         goal_id = session.get("goal_id")
@@ -834,3 +735,169 @@ class BrainService:
         """
 
         return self.pipeline.total_stages()
+    def _complete_pipeline_execution(self, *, final_state, session, trace, control):
+        """Validate and dispatch a completed plan while its control remains cancellable."""
+        if final_state.status in {"cancelled", "timed_out", "failed"}:
+            status_errors = {
+                "cancelled": "Brain execution was cancelled",
+                "timed_out": "Brain execution exceeded its time budget",
+                "failed": "Brain execution failed before completion",
+            }
+            return self._failed_execution_response(
+                final_state, session, trace, status_errors[final_state.status]
+            )
+
+        if final_state.status == "rejected":
+            return self._failed_execution_response(
+                final_state, session, trace, "Verification rejected execution"
+            )
+
+        interrupted = self._check_execution_control(control)
+        if interrupted is not None:
+            return self._interrupted_execution_response(
+                final_state, session, trace, interrupted
+            )
+
+        final_validation = self.validator.validate_state(final_state)
+        if not isinstance(final_validation, dict) or final_validation.get("valid") is not True:
+            return self._failed_execution_response(
+                final_state,
+                session,
+                trace,
+                str(final_validation) if isinstance(final_validation, dict) else "Final validation returned an invalid result",
+            )
+
+        # Final validation can itself be non-trivial. Recheck immediately before
+        # crossing the boundary into a capability that may have side effects.
+        interrupted = self._check_execution_control(control)
+        if interrupted is not None:
+            return self._interrupted_execution_response(
+                final_state, session, trace, interrupted
+            )
+
+        requested_capability = final_state.execution_context.metadata.get(
+            "execute_capability"
+        )
+        if requested_capability is not None:
+            capability_payload = final_state.execution_context.metadata.get(
+                "capability_payload", {}
+            )
+            if isinstance(capability_payload, dict):
+                capability_payload = dict(capability_payload)
+                # Persist the Brain's goal before dispatch so goal-aware
+                # capabilities (business plans, workflows, etc.) attach their
+                # records to the same durable goal instead of creating a twin.
+                goal_id = session.get("goal_id")
+                if not goal_id and final_state.goal.primary_goal.strip():
+                    goal_record = self.memory.create_goal(
+                        title=final_state.goal.primary_goal,
+                        objective=final_state.objective.primary_objective,
+                        priority=final_state.goal.priority,
+                        project_id=session.get("active_project") or final_state.execution_context.project_id or None,
+                        blockers=(
+                            list(final_state.constraints.missing_information)
+                            + list(final_state.constraints.risks)
+                        ),
+                    )
+                    goal_id = goal_record.get("goal_id")
+                    if isinstance(goal_id, str) and goal_id:
+                        session = self.sessions.update_context(
+                            session["session_id"],
+                            goal_id=goal_id,
+                            current_goal=final_state.goal.primary_goal,
+                        )
+                if isinstance(goal_id, str) and goal_id and not capability_payload.get("goal_id"):
+                    capability_payload["goal_id"] = goal_id
+            execution_result = self.execution_coordinator.execute(
+                capability=requested_capability,
+                payload=capability_payload,
+                ready_for_execution=final_state.verification_result.get(
+                    "ready_for_execution", False
+                ),
+                autonomous=final_state.execution_context.metadata.get(
+                    "autonomous", False
+                ),
+                instruction=final_state.user_input,
+                mode_state=final_state.mode,
+            )
+            final_state.selected_capability = (
+                requested_capability
+                if isinstance(requested_capability, str)
+                else ""
+            )
+            final_state.execution_result = execution_result
+
+            # A long-running capability may not support interruption internally,
+            # but its completion must still respect the original request budget.
+            interrupted = self._check_execution_control(control)
+            if interrupted is not None:
+                return self._interrupted_execution_response(
+                    final_state, session, trace, interrupted
+                )
+
+            if not isinstance(execution_result, dict) or execution_result.get("success") is not True:
+                final_state.status = "failed"
+                error = (
+                    execution_result.get("message")
+                    or execution_result.get("code")
+                    or "Requested capability execution failed"
+                    if isinstance(execution_result, dict)
+                    else "Requested capability returned an invalid result"
+                )
+                return self._failed_execution_response(
+                    final_state, session, trace, str(error)
+                )
+
+        interrupted = self._check_execution_control(control)
+        if interrupted is not None:
+            return self._interrupted_execution_response(
+                final_state, session, trace, interrupted
+            )
+
+        self._record_pipeline(
+            state=final_state,
+            success=True,
+            trace=trace,
+            error=None,
+        )
+        self._persist_run(final_state, session, success=True)
+        self._publish_execution_outcome(final_state, session, success=True)
+        return BrainResponse(success=True, state=final_state, trace=trace)
+
+    @staticmethod
+    def _check_execution_control(control):
+        try:
+            control.check()
+        except BrainExecutionInterrupted as interrupted:
+            return interrupted
+        return None
+
+    def _interrupted_execution_response(self, state, session, trace, interrupted):
+        state.status = interrupted.status
+        state.current_stage = ""
+        error = (
+            "Brain execution was cancelled"
+            if interrupted.status == "cancelled"
+            else "Brain execution exceeded its time budget"
+        )
+        return self._failed_execution_response(state, session, trace, error)
+
+    def _failed_execution_response(self, state, session, trace, error):
+        if state.status not in {"cancelled", "timed_out", "rejected", "failed"}:
+            state.status = "failed"
+        state.current_stage = ""
+        safe_error = redact_sensitive_text(str(error))
+        self._record_pipeline(
+            state=state,
+            success=False,
+            trace=trace,
+            error=safe_error,
+        )
+        self._persist_run(state, session, success=False, error=safe_error)
+        self._publish_execution_outcome(state, session, success=False)
+        return BrainResponse(
+            success=False,
+            state=state,
+            trace=trace,
+            error=safe_error,
+        )

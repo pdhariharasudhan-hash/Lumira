@@ -75,11 +75,13 @@ def test_terminal_os_error_does_not_disclose_machine_paths(tmp_path, monkeypatch
     monkeypatch.setattr(ProjectTerminalService, "OS_SANDBOX_ENABLED", True)
     monkeypatch.setattr(ProjectTerminalService, "_os_sandbox_verified", lambda self: True)
 
-    def fail_to_start(*args, **kwargs):
-        raise OSError(r"C:\\private\\machine\\path\\python.exe not found")
+    class FailingSandbox:
+        def run(self, command, project_path, *, timeout):
+            raise OSError(r"C:\\private\\machine\\path\\python.exe not found")
 
-    monkeypatch.setattr("app.services.workspace.project_terminal_service.subprocess.run", fail_to_start)
-    service = ProjectTerminalService(tmp_path / "terminal_runs.json")
+    service = ProjectTerminalService(
+        tmp_path / "terminal_runs.json", sandbox=FailingSandbox()
+    )
 
     result = service.run("demo", "v1", "compileall", trusted_project=True)
 
@@ -92,4 +94,54 @@ def test_terminal_os_error_does_not_disclose_machine_paths(tmp_path, monkeypatch
 
 
 def test_project_terminal_is_hard_disabled_by_default():
+    assert ProjectTerminalService.OS_SANDBOX_ENABLED is False
+
+
+def test_default_factory_provider_is_not_trusted_without_explicit_injection(monkeypatch, tmp_path):
+    class ReadySandbox:
+        def status(self):
+            return type("Status", (), {"available": True, "reason": "verified"})()
+
+    monkeypatch.setattr(
+        "app.services.workspace.project_terminal_service.create_sandbox_provider",
+        lambda: ReadySandbox(),
+    )
+    service = ProjectTerminalService(tmp_path / "runs.json")
+
+    assert service._os_sandbox_verified() is False
+    assert ProjectTerminalService.OS_SANDBOX_ENABLED is False
+
+
+def test_terminal_service_delegates_allowlisted_run_to_explicit_provider(monkeypatch, tmp_path):
+    import subprocess
+
+    calls = []
+
+    class ReadySandbox:
+        def status(self):
+            return type("Status", (), {"available": True, "reason": "verified"})()
+
+        def run(self, command, project_path, *, timeout):
+            calls.append((command, project_path, timeout))
+            return subprocess.CompletedProcess(command, 0, "sandbox pass", "")
+
+    monkeypatch.setattr(ProjectTerminalService, "OS_SANDBOX_ENABLED", True)
+    monkeypatch.chdir(tmp_path)
+    project = tmp_path / "generated" / "demo" / "v1"
+    project.mkdir(parents=True)
+
+    service = ProjectTerminalService(tmp_path / "runs.json", sandbox=ReadySandbox())
+    result = service.run("demo", "v1", "compileall", trusted_project=True)
+
+    assert result["success"] is True
+    assert calls == [(("python", "-m", "compileall", "app"), project, 120)]
+    assert service.list_runs("demo", "v1")[0]["return_code"] == 0
+
+
+def test_project_terminal_route_injects_concrete_platform_provider():
+    from app.routes import project_terminal as terminal_route
+
+    assert terminal_route.service._sandbox_explicit is True
+    assert callable(terminal_route.service.sandbox.status)
+    assert callable(terminal_route.service.sandbox.run)
     assert ProjectTerminalService.OS_SANDBOX_ENABLED is False

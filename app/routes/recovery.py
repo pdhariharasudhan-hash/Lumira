@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 
+from app.core.lumira_core import LumiraCore
+from app.services.brain.workflow_execution_gate import preflight_workflow_execution
 from app.services.workflow_recovery.run_recovery_service import RunRecoveryService
 from app.agents.workflow_engine import WorkflowEngine
 
@@ -51,7 +53,19 @@ def resume_recovery_run(run_id: str):
         recovery = RunRecoveryService()
         if recovery.get_run(run_id) is None:
             raise HTTPException(status_code=404, detail="recovery run not found")
-        return WorkflowEngine(recovery=recovery).resume(run_id)
+        return WorkflowEngine(recovery=recovery).resume(
+            run_id,
+            before_resume=lambda run: preflight_workflow_execution(
+                run.get("goal", ""),
+                session_id=run.get("session_id"),
+                project_id=(run.get("core_context") or {}).get("project_id")
+                if isinstance(run.get("core_context"), dict)
+                else None,
+                source="workflow_recovery_resume",
+                run_id=run_id,
+                core_factory=LumiraCore,
+            ),
+        )
     except HTTPException:
         raise
     except Exception as exc:

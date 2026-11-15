@@ -49,6 +49,7 @@ class ConstraintService:
         objective: ObjectiveState,
         context: ContextState,
         state: ConstraintState,
+        capability: str | None = None,
     ) -> ConstraintState:
 
         text = " ".join(
@@ -91,8 +92,9 @@ class ConstraintService:
             self._risks(text)
         )
 
-        state.missing_information = (
-            self._missing_information(context)
+        state.missing_information = self._missing_information(
+            context,
+            capability=capability,
         )
 
         state.confidence = (
@@ -232,20 +234,32 @@ class ConstraintService:
     def _missing_information(
         self,
         context: ContextState,
+        capability: str | None = None,
     ) -> list[str]:
+        # A language/framework is a prerequisite for code-producing work,
+        # not for reports, research, conversation, or other non-code outputs.
+        # Keep the legacy behavior for callers that do not provide capability
+        # context; the Brain module always supplies the requested capability.
+        code_capabilities = {
+            "project_generation",
+            "code_generation",
+            "debugging",
+            "execute",
+            "build_project",
+            "build_api",
+            "autonomous_development",
+        }
+        if capability is not None and (
+            not isinstance(capability, str)
+            or capability.strip().lower() not in code_capabilities
+        ):
+            return []
 
         missing = []
-
         if not context.programming_language:
-            missing.append(
-                "Programming language not specified."
-            )
-
+            missing.append("Programming language not specified.")
         if not context.framework:
-            missing.append(
-                "Framework not specified."
-            )
-
+            missing.append("Framework not specified.")
         return missing
 
     def _confidence(

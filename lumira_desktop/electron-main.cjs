@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { installBackendRuntime, prepareWorkspace } = require('./backend-runtime.cjs');
 const { createApiProxyHandler } = require('./electron-api-proxy.cjs');
+const { isLumiraHealthPayload } = require('./backend-health.cjs');
 
 const API_PORT = Number(process.env.LUMIRA_API_PORT || 8000);
 const APP_PORT = Number(process.env.LUMIRA_APP_PORT || 5000);
@@ -50,11 +51,15 @@ function runtimeBackendRoot() {
   }
 }
 function backendRoot() {
+  if (isPackaged) {
+    return existing([
+      runtimeBackendRoot(),
+      path.join(process.resourcesPath, 'backend'),
+    ]);
+  }
   return existing([
     process.env.LUMIRA_PROJECT_ROOT,
-    runtimeBackendRoot(),
-    isPackaged ? path.join(process.resourcesPath, 'backend') : null,
-    'E:\\Hari\\personal_ai_core'
+    path.resolve(__dirname, '..'),
   ]);
 }
 
@@ -77,11 +82,34 @@ app.on('second-instance', () => {
   if (win) { if (win.isMinimized()) win.restore(); win.focus(); }
 });
 
-function probe(port, route = '/') {
+function probe(port, route = '/health') {
   return new Promise(resolve => {
     const req = http.get({ host: '127.0.0.1', port, path: route, timeout: 1500 }, res => {
-      res.resume();
-      resolve(res.statusCode >= 200 && res.statusCode < 300);
+      if (res.statusCode !== 200 || route !== '/health') {
+        res.resume();
+        resolve(false);
+        return;
+      }
+      const chunks = [];
+      let size = 0;
+      res.on('data', chunk => {
+        size += chunk.length;
+        if (size > 65536) {
+          req.destroy();
+          resolve(false);
+          return;
+        }
+        chunks.push(chunk);
+      });
+      res.on('end', () => {
+        try {
+          const payload = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+          resolve(isLumiraHealthPayload(payload));
+        } catch {
+          resolve(false);
+        }
+      });
+      res.on('error', () => resolve(false));
     });
     req.on('error', () => resolve(false));
     req.on('timeout', () => { req.destroy(); resolve(false); });

@@ -129,7 +129,7 @@ class WorkflowEngine:
         run = self.recovery.create_run(goal, plan, session_id)
         return self._continue(run, plan, {"core_context": core_context}, [])
 
-    def resume(self, run_id: str):
+    def resume(self, run_id: str, before_resume=None):
         try:
             run = self.recovery.get_run(run_id)
         except PersistenceIntegrityError as exc:
@@ -181,6 +181,36 @@ class WorkflowEngine:
         if current_record and current_record.get("stage") in SIDE_EFFECT_STAGES and current_record.get("status") in {"running", "failed"}:
             self.recovery.update(run_id, "block", error="side_effect_outcome_unknown_reconcile_before_resume")
             return {"success": False, "state": "blocked", "code": "manual_reconciliation_required", "run_id": run_id}
+
+        if before_resume is not None:
+            if not callable(before_resume):
+                return {
+                    "success": False,
+                    "state": "blocked",
+                    "code": "invalid_resume_gate",
+                    "run_id": run_id,
+                }
+            try:
+                authorization = before_resume(run)
+            except Exception as exc:
+                return {
+                    "success": False,
+                    "state": "failed",
+                    "code": "resume_preflight_failed",
+                    "run_id": run_id,
+                    "error_type": type(exc).__name__,
+                }
+            if not isinstance(authorization, dict) or authorization.get("allowed") is not True:
+                state = authorization.get("state") if isinstance(authorization, dict) else None
+                code = authorization.get("code") if isinstance(authorization, dict) else None
+                message = authorization.get("message") if isinstance(authorization, dict) else None
+                return {
+                    "success": False,
+                    "state": state if isinstance(state, str) and state in {"rejected", "failed", "blocked"} else "blocked",
+                    "code": code if isinstance(code, str) and code else "resume_preflight_rejected",
+                    "message": message if isinstance(message, str) and message else "Workflow resume was not approved.",
+                    "run_id": run_id,
+                }
 
         completed = {item["stage"]: item.get("result") for item in run.get("stage_records", []) if item.get("status") == "completed"}
         context = {stage: value for stage, value in completed.items()}

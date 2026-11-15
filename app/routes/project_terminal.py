@@ -2,9 +2,12 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from app.services.workspace.project_terminal_service import ProjectTerminalService
+from app.services.workspace.sandbox_provider_factory import create_sandbox_provider
 
 router = APIRouter()
-service = ProjectTerminalService()
+# Inject the concrete platform provider into the terminal service. Execution
+# remains hard-disabled until the independent OS-sandbox acceptance gate passes.
+service = ProjectTerminalService(sandbox=create_sandbox_provider())
 
 
 class TerminalRequest(BaseModel):

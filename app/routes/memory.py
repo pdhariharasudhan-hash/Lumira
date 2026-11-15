@@ -1,9 +1,11 @@
 import json
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator, model_validator
 
 from app.services.memory.memory_service import MemoryService, MemoryValidationError
+from app.services.memory.memory_retention_service import MemoryRetentionService
 from app.services.artifacts.artifact_manager_service import ArtifactManagerService
 from app.services.sessions.session_manager_service import (
     SessionManagerService,
@@ -30,6 +32,30 @@ class MemoryArchivePayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
     collection: str = Field(min_length=1, max_length=40)
     record_id: str = Field(min_length=1, max_length=128)
+
+
+class MemoryEvolutionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    collection: Literal["goals", "decisions", "experiences", "learning_records"]
+    record_id: str = Field(min_length=1, max_length=128)
+    correction: dict[str, object] | None = None
+    forget: bool = Field(default=False, strict=True)
+    reason: str = Field(default="", max_length=500)
+
+    @model_validator(mode="after")
+    def validate_action(self):
+        if self.forget == (self.correction is not None):
+            raise ValueError("provide one correction or set forget=true")
+        if self.correction is not None:
+            if not self.correction:
+                raise ValueError("correction must be a non-empty object")
+            try:
+                correction_size = len(json.dumps(self.correction, ensure_ascii=False))
+            except (TypeError, ValueError, RecursionError) as exc:
+                raise ValueError("correction must contain JSON-compatible values") from exc
+            if correction_size > 250_000:
+                raise ValueError("correction exceeds the 250000-character limit")
+        return self
 
 
 class DecisionCreateRequest(BaseModel):
@@ -63,6 +89,11 @@ class ExperienceCreateRequest(BaseModel):
     source_run: str | None = Field(default=None, max_length=128)
 
 
+class MemoryRetentionPreviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    retention_days: dict[str, StrictInt] = Field(min_length=1, max_length=7)
+
+
 # ==========================
 # CREATE / UPDATE MEMORY
 # ==========================
@@ -90,6 +121,38 @@ def set_memory(payload: MemoryUpdatePayload):
         if isinstance(e, HTTPException):
             raise
         raise HTTPException(status_code=500, detail="Memory update failed safely") from e
+
+
+@router.post("/memory/retention/preview")
+def preview_memory_retention(request: MemoryRetentionPreviewRequest):
+    """Build an owner-configured retention plan without deleting memory."""
+    collections = {
+        "pipeline_runs": "pipeline_run",
+        "artifacts": "artifact",
+        "feature_history": "feature_history",
+        "goals": "goal",
+        "decisions": "decision",
+        "experiences": "experience",
+        "learning_records": "learning_record",
+    }
+    try:
+        memory = memory_service.get_all()
+        records = []
+        for collection, category in collections.items():
+            values = memory.get(collection, [])
+            if not isinstance(values, list):
+                raise MemoryValidationError(f"{collection} must be a list")
+            for value in values:
+                if isinstance(value, dict):
+                    records.append({**value, "type": category})
+                else:
+                    records.append(value)
+        result = MemoryRetentionService().plan(records, request.retention_days)
+    except (MemoryValidationError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Memory retention preview is unavailable.") from exc
+    return {**result, "records_scanned": len(records), "collections_scanned": list(collections)}
 
 
 # ==========================
@@ -238,6 +301,24 @@ def archive_memory(payload: MemoryArchivePayload):
         raise
     except MemoryValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/memory/evolve")
+def evolve_memory(payload: MemoryEvolutionRequest):
+    try:
+        record = memory_service.evolve(
+            payload.collection,
+            payload.record_id,
+            correction=payload.correction,
+            forget=payload.forget,
+            reason=payload.reason,
+            source="user_api",
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="memory record not found") from exc
+    except MemoryValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"status": "ok", "data": redact_sensitive_value(record)}
 
 
 # ==========================

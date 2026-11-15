@@ -6,6 +6,7 @@ import {
 } from "react-icons/fi";
 import { api, ApiError, type JsonObject } from "../api/client";
 import { ChatSidebar, type ChatSession } from "../components/Chat/Chat";
+import { MarkdownMessage } from "../components/Chat/MarkdownMessage";
 import { RightPanel, type RightTab } from "../components/RightPanel/RightPanel";
 import { Sidebar } from "../components/Sidebar/Sidebar";
 import { ImageUnderstandingPanel } from "../components/ImageUnderstanding/ImageUnderstandingPanel";
@@ -122,7 +123,7 @@ function renderOutput(output: OutputDescriptor | undefined) {
 	if (output.type === "json") return null;
 	if (output.type === "text") {
 		return output.content?.trim()
-			? <div className="assistant-message">{output.content}</div>
+			? <div className="assistant-message"><MarkdownMessage content={output.content} /></div>
 			: null;
 	}
 	if (output.type === "code") {
@@ -132,7 +133,7 @@ function renderOutput(output: OutputDescriptor | undefined) {
 	}
 	if (output.type === "document") {
 		return output.content?.trim()
-			? <article className="assistant-document-output"><pre>{output.content}</pre></article>
+			? <article className="assistant-document-output"><MarkdownMessage content={output.content} /></article>
 			: output.url ? <a className="text-link" href={output.url} target="_blank" rel="noreferrer">Open document</a> : null;
 	}
 	const source = output.url;
@@ -1209,6 +1210,7 @@ function MainLayout() {
 	async function startVoiceRecording() {
 		if (voiceBusy || voiceRecording) return;
 		setVoiceRecordingError("");
+		if (!confirm("Allow Lumira to access your microphone and capture this voice idea? Recording will not be uploaded until you confirm storage.")) return;
 		if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
 			setVoiceRecordingError("Microphone recording is not supported in this browser. Attach an audio file instead.");
 			return;
@@ -1272,10 +1274,17 @@ function MainLayout() {
 
 	async function uploadVoice(file?: File) {
 		if (!file || voiceBusy) return;
+		if (!window.confirm("I authorize Lumira to store this audio recording as an artifact. The selected retention is until I delete it.")) return;
+		const allowTranscription = confirm("May Lumira send this recording to the configured transcription provider to create a transcript? Choose Cancel to store audio without transcription.");
 		setVoiceBusy(true);
 		setActionNotice(null);
 		try {
-			const upload = await api.uploadVoice(file);
+			const upload = await api.uploadVoice(file, {
+				voice_capture_consent: true,
+				audio_storage_consent: true,
+				transcription_consent: allowTranscription,
+				retention_mode: "until_deleted",
+			});
 			const artifact = object(object(upload).data).artifact;
 			const artifactId = stringValue(object(artifact).artifact_id);
 			if (!artifactId) throw new Error("Audio upload returned no artifact identifier.");
@@ -1283,6 +1292,7 @@ function MainLayout() {
 			let displayedText = "";
 			let transcriptArtifactId = "";
 			let summaryArtifactId = "";
+			if (allowTranscription) {
 			try {
 				const pipeline = await api.processVoiceCapture(artifactId, true);
 				const transcription = object(pipeline.transcription);
@@ -1319,6 +1329,9 @@ function MainLayout() {
 			} catch (error) {
 				result = { ...result, transcription: formatError(error).response.result };
 				displayedText = `Audio saved. Transcription unavailable: ${formatError(error).message}`;
+			}
+			} else {
+				displayedText = "Audio saved. Transcription was not authorized and was not attempted.";
 			}
 			if (session?.session_id) {
 				try {
@@ -2225,7 +2238,7 @@ async function runArtifactVoiceAction(artifactId: string, action: "process" | "t
 							return <article className="message-run" key={message.id}>
 								{message.prompt && <div className="user-message">{message.prompt}</div>}
 								{message.transcript && <div className="assistant-message">{message.transcript}</div>}
-								{message.response && typeof response.message === "string" && response.message.trim() && <div className="assistant-message">{response.message}</div>}
+								{message.response && typeof response.message === "string" && response.message.trim() && <div className="assistant-message"><MarkdownMessage content={response.message} /></div>}
 								{message.response && renderOutput(response.output)}
 								{Array.isArray(response.attachments) && response.attachments.filter((item) => item.artifact_id !== response.output?.artifact_id).map((item) => <div key={item.artifact_id}>
 									{item.kind === "image" && <img className="assistant-output-media" src={item.url} alt={item.title ?? "Lumira generated image"} />}

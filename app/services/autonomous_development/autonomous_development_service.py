@@ -11,6 +11,7 @@ from app.services.work_items.work_item_service import WorkItemService
 from app.services.sessions.session_manager_service import redact_sensitive_text
 from app.services.autonomy.autonomy_permission_service import AutonomyPermissionService
 from app.services.persistence.atomic_json_store import PersistenceIntegrityError
+from app.services.brain.workflow_execution_gate import preflight_workflow_execution
 
 from app.services.autonomous_development.autonomous_development_loop import (
     AutonomousDevelopmentLoop,
@@ -87,6 +88,43 @@ class AutonomousDevelopmentService:
         self.task_planner = DevelopmentTaskPlanner(self.backlog)
         self.progress = DevelopmentProgressService(self.backlog)
         self.autonomy = autonomy_service or AutonomyPermissionService()
+
+    def _resume_preflight(
+        self,
+        run_id: str,
+        run: dict[str, Any],
+        source: str,
+    ) -> dict[str, Any]:
+        plan = run.get("plan")
+        project_id = plan.get("project_id") if isinstance(plan, dict) else None
+        return preflight_workflow_execution(
+            run.get("goal", ""),
+            session_id=run.get("session_id"),
+            project_id=project_id,
+            workspace=str(self.workspace),
+            source=source,
+            run_id=run_id,
+        )
+
+    @staticmethod
+    def _preflight_rejection(
+        run_id: str,
+        approval: Any,
+    ) -> dict[str, Any] | None:
+        if isinstance(approval, dict) and approval.get("allowed") is True:
+            return None
+        if not isinstance(approval, dict):
+            approval = {}
+        return {
+            "success": False,
+            "state": approval.get("state", "failed"),
+            "code": approval.get("code", "brain_preflight_failed"),
+            "message": approval.get(
+                "message",
+                "Lumira Brain could not verify this request for workflow recovery.",
+            ),
+            "run_id": run_id,
+        }
 
     def create_development_workflow(
         self,
@@ -2017,7 +2055,14 @@ class AutonomousDevelopmentService:
 
         plan = run.get("plan", {})
         if not isinstance(plan, dict) or not plan.get("autonomous_development"):
-            return self.workflow_engine.resume(run_id)
+            return self.workflow_engine.resume(
+                run_id,
+                before_resume=lambda persisted_run: self._resume_preflight(
+                    run_id,
+                    persisted_run,
+                    "autonomous_development_workflow_resume",
+                ),
+            )
 
         if run.get("status") == "completed":
             return {
@@ -2078,6 +2123,16 @@ class AutonomousDevelopmentService:
                     "code": "work_item_workflow_missing",
                     "run_id": run_id,
                 }
+            rejection = self._preflight_rejection(
+                run_id,
+                self._resume_preflight(
+                    run_id,
+                    run,
+                    "autonomous_development_resume",
+                ),
+            )
+            if rejection is not None:
+                return rejection
             try:
                 self.recovery.update(run_id, "resume")
             except ValueError as exc:
@@ -2148,6 +2203,17 @@ class AutonomousDevelopmentService:
                 "code": "apply_checkpoint_invalid",
                 "run_id": run_id,
             }
+
+        rejection = self._preflight_rejection(
+            run_id,
+            self._resume_preflight(
+                run_id,
+                run,
+                "autonomous_development_resume",
+            ),
+        )
+        if rejection is not None:
+            return rejection
 
         try:
             self.recovery.update(run_id, "resume")

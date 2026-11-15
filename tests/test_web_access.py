@@ -257,11 +257,10 @@ def test_fetch_redacts_secret_query_values_from_response(monkeypatch):
 
 
 def test_validate_url_rejects_hostname_with_no_resolved_addresses(monkeypatch):
-    service = WebResourceService()
     monkeypatch.setattr(socket, "getaddrinfo", lambda *_args, **_kwargs: [])
 
     try:
-        service.validate_url("https://example.com")
+        WebResourceService._resolve_public_addresses("example.com", 443)
     except WebResourceError as exc:
         assert "did not resolve" in str(exc)
     else:
@@ -269,7 +268,6 @@ def test_validate_url_rejects_hostname_with_no_resolved_addresses(monkeypatch):
 
 
 def test_validate_url_rejects_shared_non_global_address(monkeypatch):
-    service = WebResourceService()
     monkeypatch.setattr(
         socket,
         "getaddrinfo",
@@ -279,7 +277,7 @@ def test_validate_url_rejects_shared_non_global_address(monkeypatch):
     )
 
     try:
-        service.validate_url("https://example.com")
+        WebResourceService._resolve_public_addresses("example.com", 443)
     except WebResourceError as exc:
         assert "Private or special-purpose" in str(exc)
     else:
@@ -452,7 +450,7 @@ def test_fetch_sanitizes_html_links_before_returning(monkeypatch):
 
 def test_connect_time_dns_rebinding_is_blocked_before_socket_connect(monkeypatch):
     from app.services.web.web_resource_service import _PublicAddressPinnedBackend
-    from httpcore._backends.auto import AutoBackend
+    from httpcore import AnyIOBackend
 
     service = WebResourceService()
     answers = iter([
@@ -460,7 +458,7 @@ def test_connect_time_dns_rebinding_is_blocked_before_socket_connect(monkeypatch
         [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 0))],
     ])
     monkeypatch.setattr(socket, "getaddrinfo", lambda *_args, **_kwargs: next(answers))
-    service.validate_url("https://example.com/resource")
+    assert WebResourceService._resolve_public_addresses("example.com", 443) == ["93.184.216.34"]
 
     connected = {"called": False}
 
@@ -468,7 +466,7 @@ def test_connect_time_dns_rebinding_is_blocked_before_socket_connect(monkeypatch
         connected["called"] = True
         return object()
 
-    monkeypatch.setattr(AutoBackend, "connect_tcp", fake_connect)
+    monkeypatch.setattr(AnyIOBackend, "connect_tcp", fake_connect)
     try:
         asyncio.run(_PublicAddressPinnedBackend().connect_tcp("example.com", 443))
     except Exception as exc:
@@ -480,7 +478,7 @@ def test_connect_time_dns_rebinding_is_blocked_before_socket_connect(monkeypatch
 
 def test_connect_uses_the_validated_public_ip_not_the_hostname(monkeypatch):
     from app.services.web.web_resource_service import _PublicAddressPinnedBackend
-    from httpcore._backends.auto import AutoBackend
+    from httpcore import AnyIOBackend
 
     monkeypatch.setattr(
         socket,
@@ -496,7 +494,7 @@ def test_connect_uses_the_validated_public_ip_not_the_hostname(monkeypatch):
         captured["port"] = port
         return object()
 
-    monkeypatch.setattr(AutoBackend, "connect_tcp", fake_connect)
+    monkeypatch.setattr(AnyIOBackend, "connect_tcp", fake_connect)
     result = asyncio.run(
         _PublicAddressPinnedBackend().connect_tcp("example.com", 443, timeout=3.0)
     )

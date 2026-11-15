@@ -1,4 +1,5 @@
 import json
+import re
 from app.services.artifacts.artifact_manager_service import ArtifactManagerService
 from app.services.projects.project_discovery_service import ProjectDiscoveryService
 from app.services.projects.project_writer import ProjectWriter
@@ -77,6 +78,89 @@ from app.services.personal.personal_capability_service import (
 
 
 class CapabilityRouterService:
+
+    CAPABILITY_FEATURE_REQUIREMENTS = {
+        "activate_feature": "capability_system",
+        "activate_feature_with_dependencies": "capability_system",
+        "feature_dependency_plan": "capability_system",
+        "deactivate_feature": "capability_system",
+        "feature_status": "capability_system",
+        "list_features": "capability_system",
+        "planning": "planner",
+        "daily_planning": "planner",
+        "goals": "goals",
+        "agents": "agents",
+        "workflow_automation": "workflows",
+        "recovery": "recovery",
+        "project_engineering": "projects",
+        "project_generation": "projects",
+        "project_versioning": "projects",
+        "project_pipeline": "autonomous_development",
+        "code_generation": "code",
+        "debugging": "code",
+        "scripts": "code",
+        "project_preview": "project_preview",
+        "artifact_manager": "artifact_manager",
+        "personal_context": "memory",
+        "notes": "notepad",
+        "search": "unified_search",
+        "knowledge_retrieval": "unified_search",
+        "web_research": "research",
+        "document_research": "research",
+        "technical_research": "research",
+        "market_research": "research",
+        "comparison": "research",
+        "evidence_gathering": "research",
+        "research_summaries": "research",
+        "knowledge_extraction": "research",
+        "generate_image": "image_generation",
+        "image_generation": "image_generation",
+        "video_generation": "video_generation",
+        "growth_strategy": "growth",
+        "business_plan": "growth",
+        "market_analysis": "growth",
+        "product_improvement": "growth",
+        "revenue_analysis": "growth",
+        "user_growth": "growth",
+        "competitive_analysis": "growth",
+        "optimization": "growth",
+        "business_operations": "operations",
+        "business_process_management": "operations",
+        "process_optimization": "operations",
+        "file_automation": "operations",
+        "automated_reports": "observability",
+        "monitoring": "observability",
+        "system_monitoring": "observability",
+        "operational_dashboards": "observability",
+        "content_planning": "creator",
+        "document_generation": "creator",
+        "marketing_assets": "creator",
+        "posters": "creator",
+        "presentations": "creator",
+        "storyboards": "creator",
+        "thumbnails": "creator",
+        "ui_design": "creator",
+        "architecture_diagrams": "generator",
+        "blueprint_generation": "generator",
+        "diagram_generation": "generator",
+        "flowcharts": "generator",
+        "industrial_design": "generator",
+        "product_concepts": "generator",
+        "schematic_generation": "generator",
+        "ui_concepts": "generator",
+        "general_conversation": "assistant",
+        "email": "assistant",
+        "email_automation": "assistant",
+        "personal_organization": "personal",
+        "calendar": "scheduler",
+        "recurring_jobs": "scheduler",
+        "reminders": "scheduler",
+        "scheduled_tasks": "scheduler",
+        "scheduling": "scheduler",
+        "tasks": "scheduler",
+        "notifications": "operations",
+        "voice": "voice_input",
+    }
 
     def __init__(self):
 
@@ -169,6 +253,64 @@ class CapabilityRouterService:
 
         return output
 
+    def _feature_gate(self, capability: str, mode_state=None):
+        feature_id = self.CAPABILITY_FEATURE_REQUIREMENTS.get(capability)
+        if feature_id is None:
+            return None
+
+        try:
+            readiness = self.features.status(feature_id)
+        except Exception:
+            readiness = None
+        if not isinstance(readiness, dict) or readiness.get("success") is not True:
+            return self._with_mode(
+                {
+                    "success": False,
+                    "status": "blocked",
+                    "code": "feature_state_unavailable",
+                    "feature": feature_id,
+                    "message": "Feature readiness could not be verified; the capability was blocked.",
+                },
+                mode_state,
+            )
+
+        metadata = readiness.get("metadata")
+        if not isinstance(metadata, dict):
+            return self._with_mode(
+                {
+                    "success": False,
+                    "status": "blocked",
+                    "code": "feature_state_unavailable",
+                    "feature": feature_id,
+                    "message": "Feature readiness could not be verified; the capability was blocked.",
+                },
+                mode_state,
+            )
+        if metadata.get("enabled") is not True:
+            return self._with_mode(
+                {
+                    "success": False,
+                    "status": "blocked",
+                    "code": "feature_not_enabled",
+                    "feature": feature_id,
+                    "message": f"Activate the '{feature_id}' feature before using this capability.",
+                },
+                mode_state,
+            )
+        if readiness.get("can_enable") is not True:
+            return self._with_mode(
+                {
+                    "success": False,
+                    "status": "blocked",
+                    "code": "feature_not_ready",
+                    "feature": feature_id,
+                    "blockers": readiness.get("blockers", []),
+                    "message": f"The '{feature_id}' feature is not ready for use.",
+                },
+                mode_state,
+            )
+        return None
+
 
 
     def execute(
@@ -178,11 +320,23 @@ class CapabilityRouterService:
         mode_state: ModeState = None,
     ):
 
-        payload = payload or {}
+        if not isinstance(capability, str) or not capability.strip() or len(capability) > 80:
+            return {"success": False, "status": "reject", "error": {"code": "invalid_capability", "message": "Capability must contain 1 to 80 characters."}}
+        capability = capability.strip().lower()
+        if re.fullmatch(r"[a-z][a-z0-9_]{0,79}", capability) is None:
+            return {"success": False, "status": "reject", "error": {"code": "invalid_capability", "message": "Capability name contains unsupported characters."}}
 
+        if payload is None:
+            payload = {}
         if not isinstance(payload, dict):
             return {"success": False, "status": "reject", "error": {"code": "validation_error", "message": "Capability payload must be an object."}}
-        for input_key in ("idea", "request", "command", "query"):
+        try:
+            payload_bytes = len(json.dumps(payload, ensure_ascii=False, allow_nan=False).encode("utf-8"))
+        except (TypeError, ValueError, RecursionError):
+            return {"success": False, "status": "reject", "error": {"code": "invalid_payload", "message": "Capability payload must contain JSON-safe values."}}
+        if payload_bytes > 64_000:
+            return {"success": False, "status": "reject", "error": {"code": "payload_too_large", "message": "Capability payload exceeds the 64000-byte limit."}}
+        for input_key in ("idea", "request", "command", "query", "prompt", "goal", "content", "feature"):
             value = payload.get(input_key)
             if value is not None and (not isinstance(value, str) or len(value) > 10000):
                 return {"success": False, "status": "reject", "error": {"code": "validation_error", "message": f"{input_key} must be a string no longer than 10000 characters."}}
@@ -208,13 +362,12 @@ class CapabilityRouterService:
                     "priority": resolution["priority"],
                 }
 
-        capability = (
-            capability
-            .strip()
-            .lower()
-        )
         if "request" not in payload and isinstance(payload.get("content"), str):
             payload["request"] = payload["content"]
+
+        feature_block = self._feature_gate(capability, mode_state)
+        if feature_block is not None:
+            return feature_block
 
         # --------------------------
         # FEATURE ACTIVATION
@@ -255,13 +408,13 @@ class CapabilityRouterService:
             return self._with_mode(PlanExecutorV3().execute(goal), mode_state)
 
         if capability == "activate_feature":
+            return self.features.activate(payload.get("feature"))
 
-            return self.features.activate(
+        if capability == "activate_feature_with_dependencies":
+            return self.features.activate_with_dependencies(payload.get("feature"))
 
-                payload.get(
-                    "feature"
-                )
-            )
+        if capability == "feature_dependency_plan":
+            return self.features.dependency_plan(payload.get("feature"))
 
         if capability == "deactivate_feature":
 

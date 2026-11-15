@@ -3,8 +3,9 @@ import struct
 import wave
 from types import SimpleNamespace
 
-import numpy as np
 import pytest
+
+np = pytest.importorskip("numpy", reason="optional local transcription dependency is not installed")
 
 from app.services.providers.faster_whisper_transcription_provider import (
     FasterWhisperTranscriptionProvider,
@@ -39,6 +40,7 @@ def test_pyav_compat_decoder_resamples_pcm_wave_to_float32_16khz(tmp_path):
 
 
 def test_local_transcription_passes_decoded_waveform_to_model(tmp_path, monkeypatch):
+    pytest.importorskip("av", reason="optional local transcription dependency is not installed")
     path = tmp_path / "speech.wav"
     _write_test_wav(path)
     monkeypatch.setattr(

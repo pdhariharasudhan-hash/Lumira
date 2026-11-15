@@ -30,6 +30,7 @@ FEATURE_PROVIDER_REQUIREMENTS = {
     "image_understanding": ("image_understanding",),
     "image_generation": ("image_generation",),
     "research": ("research",),
+    "video_generation": ("video_generation",),
 }
 
 FEATURE_CATALOG: Dict[str, Dict[str, Any]] = {
@@ -59,6 +60,14 @@ FEATURE_CATALOG: Dict[str, Dict[str, Any]] = {
     "research": {"version": "1.0", "category": "research", "status": "AVAILABLE", "dependencies": ["web_access", "memory", "artifact_manager"], "capabilities": ["research.collect", "research.compare", "research.summarize"], "configuration": {}, "permissions": ["network.public_https", "memory.write"], "health": "healthy", "tests": True},
     "device_management": {"version": "1.0", "category": "devices", "status": "AVAILABLE", "dependencies": ["memory"], "capabilities": ["device.register", "device.status"], "configuration": {}, "permissions": [], "health": "healthy", "tests": True},
     "mode_management": {"version": "1.0", "category": "devices", "status": "AVAILABLE", "dependencies": [], "capabilities": ["mode.select", "mode.status"], "configuration": {}, "permissions": [], "health": "healthy", "tests": True},
+    "growth": {"version": "1.0", "category": "business", "status": "AVAILABLE", "dependencies": ["memory", "research"], "capabilities": ["growth.strategy", "business.plan", "market.analysis", "revenue.analysis", "competitive.analysis"], "configuration": {}, "permissions": ["memory.read", "memory.write", "network.public_https"], "health": "healthy", "tests": True},
+    "operations": {"version": "1.0", "category": "operations", "status": "AVAILABLE", "dependencies": ["memory", "workflows"], "capabilities": ["operations.plan", "operations.optimize", "business.process", "file.automation"], "configuration": {}, "permissions": ["memory.read", "memory.write", "filesystem.project"], "health": "healthy", "tests": True},
+    "creator": {"version": "1.0", "category": "creation", "status": "AVAILABLE", "dependencies": ["memory", "artifact_manager"], "capabilities": ["content.plan", "content.create", "marketing.assets", "presentations", "posters", "storyboards"], "configuration": {}, "permissions": ["memory.read", "memory.write", "filesystem.artifacts"], "health": "healthy", "tests": True},
+    "generator": {"version": "1.0", "category": "generation", "status": "AVAILABLE", "dependencies": ["artifact_manager"], "capabilities": ["diagram.generate", "blueprint.generate", "schematic.generate", "ui.generate", "product.concept"], "configuration": {}, "permissions": ["filesystem.artifacts"], "health": "healthy", "tests": True},
+    "assistant": {"version": "1.0", "category": "assistant", "status": "AVAILABLE", "dependencies": ["memory", "sessions"], "capabilities": ["conversation.general", "email.draft", "assistant.route"], "configuration": {}, "permissions": ["memory.read", "memory.write"], "health": "healthy", "tests": True},
+    "personal": {"version": "1.0", "category": "personal", "status": "AVAILABLE", "dependencies": ["memory", "sessions"], "capabilities": ["personal.context", "personal.organization"], "configuration": {}, "permissions": ["memory.read", "memory.write"], "health": "healthy", "tests": True},
+    "scheduler": {"version": "1.0", "category": "operations", "status": "AVAILABLE", "dependencies": ["memory", "workflows"], "capabilities": ["schedule.once", "schedule.list", "schedule.cancel", "reminders", "calendar"], "configuration": {"max_jobs": 1000}, "permissions": ["memory.read", "memory.write"], "health": "healthy", "tests": True},
+    "video_generation": {"version": "1.0", "category": "multimodal", "status": "AVAILABLE", "dependencies": ["artifact_manager"], "capabilities": ["video.generate", "video.storyboard"], "configuration": {}, "permissions": ["filesystem.artifacts"], "health": "healthy", "tests": True},
     "terminal": {"version": "1.0", "category": "interface", "status": "AVAILABLE", "dependencies": ["projects"], "capabilities": ["terminal.test", "terminal.build"], "configuration": {"max_runs": 20, "timeout_seconds": 120}, "permissions": ["process.bounded"], "health": "healthy", "tests": True},
     "project_preview": {"version": "1.0", "category": "interface", "status": "AVAILABLE", "dependencies": ["projects"], "capabilities": ["preview.register", "preview.start", "preview.stop"], "configuration": {}, "permissions": ["network.localhost"], "health": "healthy", "tests": True},
     "notepad": {"version": "1.0", "category": "interface", "status": "AVAILABLE", "dependencies": ["memory"], "capabilities": ["notes.create", "notes.update", "notes.retrieve"], "configuration": {}, "permissions": ["memory.read", "memory.write"], "health": "healthy", "tests": True},
@@ -103,85 +112,91 @@ class FeatureRegistryService:
         return registry
 
     def _ensure_registry(self) -> None:
-        current = self.store.read(default=None)
-        if current is None:
-            if Path(self.registry_path).exists():
+        """Initialize and repair the catalog inside one serialized transaction."""
+        self.store.read_or_create(self._default_registry())
+        def migrate(current):
+            if current is None:
+                if Path(self.registry_path).exists():
+                    raise PersistenceIntegrityError(
+                        "Feature registry contains JSON null; refusing to reset persisted state"
+                    )
+                return self._default_registry()
+            if not isinstance(current, dict):
                 raise PersistenceIntegrityError(
-                    "Feature registry contains JSON null; refusing to reset persisted state"
+                    "Feature registry must be an object; refusing to reset persisted state"
                 )
-            self.store.write(self._default_registry())
-            return
-        if not isinstance(current, dict):
-            raise PersistenceIntegrityError(
-                "Feature registry must be an object; refusing to reset persisted state"
-            )
-        if len(current) > self.MAX_FEATURES:
-            raise PersistenceIntegrityError("Feature registry exceeds its record limit")
-        changed = False
-        defaults = self._default_registry()
+            if len(current) > self.MAX_FEATURES:
+                raise PersistenceIntegrityError("Feature registry exceeds its record limit")
+            changed = False
+            defaults = self._default_registry()
 
-        # Remove malformed unknown extension records and restore malformed catalog entries.
-        for feature_id in list(current):
-            if isinstance(current.get(feature_id), dict):
-                continue
-            if feature_id in defaults:
-                current[feature_id] = deepcopy(defaults[feature_id])
-            else:
-                del current[feature_id]
-            changed = True
-
-        for feature_id, default in defaults.items():
-            if feature_id not in current or not isinstance(current.get(feature_id), dict):
-                # Repair only the malformed entry; preserve all other persisted feature state.
-                current[feature_id] = deepcopy(default)
+            # Remove malformed unknown extension records and restore malformed catalog entries.
+            for feature_id in list(current):
+                if isinstance(current.get(feature_id), dict):
+                    continue
+                if feature_id in defaults:
+                    current[feature_id] = deepcopy(defaults[feature_id])
+                else:
+                    del current[feature_id]
                 changed = True
-                continue
 
-            item = current[feature_id]
-            for key, value in default.items():
-                if key not in item:
-                    if key == "enabled":
-                        item[key] = item.get("status") == "ENABLED"
-                    else:
-                        item[key] = deepcopy(value)
+            for feature_id, default in defaults.items():
+                if feature_id not in current or not isinstance(current.get(feature_id), dict):
+                    # Repair only the malformed entry; preserve all other persisted feature state.
+                    current[feature_id] = deepcopy(default)
+                    changed = True
+                    continue
+
+                item = current[feature_id]
+                for key, value in default.items():
+                    if key not in item:
+                        if key == "enabled":
+                            item[key] = item.get("status") == "ENABLED"
+                        else:
+                            item[key] = deepcopy(value)
+                        changed = True
+
+                # Normalize structural fields before any dependency or lifecycle operation uses them.
+                for key in ("dependencies", "capabilities", "permissions"):
+                    if not isinstance(item.get(key), list) or not all(
+                        isinstance(value, str) and value.strip() for value in item[key]
+                    ):
+                        item[key] = deepcopy(default[key])
+                        changed = True
+                if not isinstance(item.get("configuration"), dict):
+                    item["configuration"] = deepcopy(default["configuration"])
+                    changed = True
+                status = item.get("status")
+                if not isinstance(status, str) or status not in FEATURE_STATES:
+                    item["status"] = default["status"]
+                    changed = True
+                health = item.get("health")
+                if not isinstance(health, str) or health not in {"healthy", "degraded", "failed"}:
+                    item["health"] = default["health"]
+                    changed = True
+                # A feature that is explicitly unhealthy must never remain enabled
+                # merely because a persisted lifecycle flag is stale or corrupted.
+                if item["health"] == "failed" and item["status"] == "ENABLED":
+                    item["status"] = "FAILED"
+                    changed = True
+                if not isinstance(item.get("enabled"), bool):
+                    item["enabled"] = item["status"] == "ENABLED"
+                    changed = True
+                # Persisted status and enabled flags must describe the same lifecycle state.
+                # Keep status as the source of truth so corrupt data cannot silently activate
+                # an AVAILABLE/FAILED feature or hide one marked ENABLED.
+                expected_enabled = item["status"] == "ENABLED"
+                if item["enabled"] != expected_enabled:
+                    item["enabled"] = expected_enabled
                     changed = True
 
-            # Normalize structural fields before any dependency or lifecycle operation uses them.
-            for key in ("dependencies", "capabilities", "permissions"):
-                if not isinstance(item.get(key), list) or not all(
-                    isinstance(value, str) and value.strip() for value in item[key]
-                ):
-                    item[key] = deepcopy(default[key])
-                    changed = True
-            if not isinstance(item.get("configuration"), dict):
-                item["configuration"] = deepcopy(default["configuration"])
-                changed = True
-            status = item.get("status")
-            if not isinstance(status, str) or status not in FEATURE_STATES:
-                item["status"] = default["status"]
-                changed = True
-            health = item.get("health")
-            if not isinstance(health, str) or health not in {"healthy", "degraded", "failed"}:
-                item["health"] = default["health"]
-                changed = True
-            # A feature that is explicitly unhealthy must never remain enabled
-            # merely because a persisted lifecycle flag is stale or corrupted.
-            if item["health"] == "failed" and item["status"] == "ENABLED":
-                item["status"] = "FAILED"
-                changed = True
-            if not isinstance(item.get("enabled"), bool):
-                item["enabled"] = item["status"] == "ENABLED"
-                changed = True
-            # Persisted status and enabled flags must describe the same lifecycle state.
-            # Keep status as the source of truth so corrupt data cannot silently activate
-            # an AVAILABLE/FAILED feature or hide one marked ENABLED.
-            expected_enabled = item["status"] == "ENABLED"
-            if item["enabled"] != expected_enabled:
-                item["enabled"] = expected_enabled
-                changed = True
+            return current
 
-        if changed:
-            self.store.write(current)
+        self.store.update(
+            migrate,
+            default=self._default_registry(),
+            write_if_changed=True,
+        )
 
     @staticmethod
     def _normalize_name(feature_name: Any) -> str | None:
@@ -342,10 +357,9 @@ class FeatureRegistryService:
         return not blockers, blockers, ordered
 
     def enable_many(self, feature_names: list[str]) -> tuple[bool, list[str], list[str]]:
-        """Preflight and persist a dependency-ordered activation as one registry write."""
+        """Preflight and activate an ordered dependency batch atomically."""
         if not isinstance(feature_names, list) or not feature_names:
             return False, ["activation order must be a non-empty list"], []
-
         ordered = []
         for raw_name in feature_names:
             name = self._normalize_name(raw_name)
@@ -353,106 +367,91 @@ class FeatureRegistryService:
                 return False, ["invalid feature name in activation order"], []
             if name not in ordered:
                 ordered.append(name)
-
-        registry = self._read()
-        selected = set(ordered)
-        completed = set()
-        blockers = []
-
-        for name in ordered:
-            if name == "terminal":
-                blockers.append("verified OS-level sandbox is not currently available; terminal activation is blocked")
-                continue
-            item = registry.get(name)
-            if item is None:
-                blockers.append(f"unknown feature: {name}")
-                continue
-            health = item.get("health")
-            if health not in {"healthy", "degraded"} or item.get("status") == "FAILED":
-                blockers.append(f"feature is not healthy enough to activate: {name}")
-            for provider_name in FEATURE_PROVIDER_REQUIREMENTS.get(name, ()):
-                if ProviderRegistry.get(provider_name) is None:
-                    blockers.append(f"required provider is not configured: {provider_name} (feature: {name})")
-            for dependency in item.get("dependencies", []):
-                dependency_item = registry.get(dependency)
-                if dependency_item is None:
-                    blockers.append(f"unknown feature dependency: {name} -> {dependency}")
-                elif dependency in selected:
-                    if dependency not in completed and dependency_item.get("enabled") is not True:
-                        blockers.append(f"activation order is invalid: {dependency} must precede {name}")
-                elif dependency_item.get("enabled") is not True:
-                    blockers.append(f"dependency is not enabled: {name} -> {dependency}")
-            completed.add(name)
-
-        blockers = list(dict.fromkeys(blockers))
-        if blockers:
-            return False, blockers, []
-
-        activated = []
-        for name in ordered:
-            item = registry[name]
-            if item.get("enabled") is True and item.get("status") == "ENABLED":
-                continue
-            item["enabled"] = True
-            item["status"] = "ENABLED"
-            activated.append(name)
-
-        if activated:
-            self.store.write(registry)
-        return True, [], activated
+        def apply(registry: Dict[str, Any]):
+            if not isinstance(registry, dict):
+                raise PersistenceIntegrityError("Feature registry must be an object")
+            selected, completed, blockers = set(ordered), set(), []
+            for name in ordered:
+                if name == "terminal":
+                    blockers.append("verified OS-level sandbox is not currently available; terminal activation is blocked")
+                    continue
+                item = registry.get(name)
+                if item is None:
+                    blockers.append(f"unknown feature: {name}")
+                    continue
+                if item.get("health") not in {"healthy", "degraded"} or item.get("status") == "FAILED":
+                    blockers.append(f"feature is not healthy enough to activate: {name}")
+                for provider_name in FEATURE_PROVIDER_REQUIREMENTS.get(name, ()):
+                    if ProviderRegistry.get(provider_name) is None:
+                        blockers.append(f"required provider is not configured: {provider_name} (feature: {name})")
+                for dependency in item.get("dependencies", []):
+                    dependency_item = registry.get(dependency)
+                    if dependency_item is None:
+                        blockers.append(f"unknown feature dependency: {name} -> {dependency}")
+                    elif dependency in selected:
+                        if dependency not in completed and dependency_item.get("enabled") is not True:
+                            blockers.append(f"activation order is invalid: {dependency} must precede {name}")
+                    elif dependency_item.get("enabled") is not True:
+                        blockers.append(f"dependency is not enabled: {name} -> {dependency}")
+                completed.add(name)
+            blockers = list(dict.fromkeys(blockers))
+            if blockers:
+                return False, blockers, []
+            activated = []
+            for name in ordered:
+                item = registry[name]
+                if item.get("enabled") is True and item.get("status") == "ENABLED":
+                    continue
+                item["enabled"], item["status"] = True, "ENABLED"
+                activated.append(name)
+            return True, [], activated
+        return self.store.update(apply, default=self._default_registry())
 
     def enable(self, feature_name: str) -> tuple[bool, list[str]]:
+        """Enable one feature against the same persisted snapshot being written."""
         name = self._normalize_name(feature_name)
         if not name:
             return False, ["invalid feature name"]
-        registry = self._read()
-        if name not in registry:
-            return False, [f"unknown feature: {name}"]
-        allowed, blockers = self.can_enable(name)
-        if not allowed:
-            return False, blockers
-        registry[name]["enabled"] = True
-        registry[name]["status"] = "ENABLED"
-        self.store.write(registry)
-        return True, []
+        allowed, blockers, _ = self.enable_many([name])
+        return allowed, blockers
 
     def disable(self, feature_name: str) -> tuple[bool, list[str]]:
+        """Disable only when no enabled dependent exists in the same snapshot."""
         name = self._normalize_name(feature_name)
         if not name:
             return False, ["invalid feature name"]
-        registry = self._read()
-        if name not in registry:
-            return False, [f"unknown feature: {name}"]
-        if name in CORE_FEATURES:
-            return False, [f"{name} is a protected core feature"]
-        dependents = [
-            dependent_name for dependent_name, item in registry.items()
-            if name in item.get("dependencies", []) and item.get("enabled", False)
-        ]
-        if dependents:
-            return False, [f"enabled dependents: {', '.join(sorted(dependents))}"]
-        registry[name]["enabled"] = False
-        registry[name]["status"] = "DISABLED"
-        self.store.write(registry)
-        return True, []
+        def apply(registry: Dict[str, Any]):
+            if not isinstance(registry, dict):
+                raise PersistenceIntegrityError("Feature registry must be an object")
+            if name not in registry:
+                return False, [f"unknown feature: {name}"]
+            if name in CORE_FEATURES:
+                return False, [f"{name} is a protected core feature"]
+            dependents = [key for key, item in registry.items() if isinstance(item, dict) and name in item.get("dependencies", []) and item.get("enabled", False)]
+            if dependents:
+                return False, [f"enabled dependents: {', '.join(sorted(dependents))}"]
+            registry[name]["enabled"], registry[name]["status"] = False, "DISABLED"
+            return True, []
+        return self.store.update(apply, default=self._default_registry())
 
     def update_health(self, feature_name: str, health: str) -> bool:
+        """Persist health changes atomically with the corresponding lifecycle state."""
         if not isinstance(health, str) or health not in {"healthy", "degraded", "failed"}:
             return False
         name = self._normalize_name(feature_name)
         if not name:
             return False
-        registry = self._read()
-        if name not in registry:
-            return False
-        registry[name]["health"] = health
-        if health == "failed":
-            registry[name]["status"] = "FAILED"
-            registry[name]["enabled"] = False
-        self.store.write(registry)
-        return True
+        def apply(registry: Dict[str, Any]) -> bool:
+            if not isinstance(registry, dict) or name not in registry:
+                return False
+            registry[name]["health"] = health
+            if health == "failed":
+                registry[name]["status"], registry[name]["enabled"] = "FAILED", False
+            return True
+        return self.store.update(apply, default=self._default_registry())
 
     def register(self, feature_name: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """Register an extension atomically across registry instances/processes."""
         name = self._normalize_name(feature_name)
         if not name:
             raise ValueError("A non-empty feature name is required")
@@ -506,27 +505,35 @@ class FeatureRegistryService:
         if item["health"] == "failed" and item["status"] == "ENABLED":
             item["status"] = "FAILED"
         item["enabled"] = item["status"] == "ENABLED"
-        registry = self._read()
-        if name in registry:
-            raise ValueError("Feature already exists; registration cannot overwrite existing state")
-        if len(registry) >= self.MAX_FEATURES:
-            raise ValueError("Feature registry capacity reached")
-        unknown_dependencies = [dependency for dependency in item["dependencies"] if dependency not in registry]
-        if unknown_dependencies:
-            raise ValueError(f"Unknown feature dependencies: {', '.join(unknown_dependencies)}")
-        registry[name] = item
-        self.store.write(registry)
-        return item
+
+        def apply(registry: Dict[str, Any]) -> Dict[str, Any]:
+            # This validation runs inside AtomicJsonStore's cross-process
+            # read-modify-write lock, preventing concurrent registrations from
+            # overwriting one another or bypassing dependency validation.
+            if not isinstance(registry, dict):
+                raise PersistenceIntegrityError("Feature registry must be an object")
+            if name in registry:
+                raise ValueError("Feature already exists; registration cannot overwrite existing state")
+            if len(registry) >= self.MAX_FEATURES:
+                raise ValueError("Feature registry capacity reached")
+            unknown_dependencies = [dependency for dependency in item["dependencies"] if dependency not in registry]
+            if unknown_dependencies:
+                raise ValueError(f"Unknown feature dependencies: {', '.join(unknown_dependencies)}")
+            registry[name] = deepcopy(item)
+            return deepcopy(registry[name])
+
+        return self.store.update(apply, default=self._default_registry())
 
     def unregister(self, feature_name: str) -> bool:
+        """Remove an extension atomically, protecting core and active dependents."""
         name = self._normalize_name(feature_name)
         if not name:
             return False
-        registry = self._read()
-        if name not in registry or name in CORE_FEATURES:
-            return False
-        if any(name in item.get("dependencies", []) and item.get("enabled") for item in registry.values()):
-            return False
-        del registry[name]
-        self.store.write(registry)
-        return True
+        def apply(registry: Dict[str, Any]) -> bool:
+            if not isinstance(registry, dict) or name not in registry or name in CORE_FEATURES:
+                return False
+            if any(isinstance(item, dict) and name in item.get("dependencies", []) and item.get("enabled") for item in registry.values()):
+                return False
+            del registry[name]
+            return True
+        return self.store.update(apply, default=self._default_registry())

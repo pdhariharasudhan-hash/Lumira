@@ -28,3 +28,8 @@ def preview_register(project: str, version: str, payload: PreviewRequest):
 @router.post("/projects/{project}/{version}/preview/stop")
 def preview_stop(project: str, version: str):
     return service.stop(project, version)
+
+
+@router.get("/projects/{project}/{version}/preview/health")
+def preview_health(project: str, version: str):
+    return service.probe(project, version)

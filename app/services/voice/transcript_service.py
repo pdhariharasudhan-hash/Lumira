@@ -64,6 +64,14 @@ class TranscriptService:
                 "Artifact is not audio"
             }
 
+        consent = audio_artifact.get("consent")
+        if not isinstance(consent, dict) or consent.get("transcription") is not True:
+            return {
+                "success": False,
+                "code": "transcription_not_consented",
+                "message": "A valid explicit recording, storage and transcription consent receipt is required.",
+            }
+
         try:
             audio_path = self.artifacts.get_artifact_path(audio_artifact_id)
             if audio_path is None or not audio_path.is_file() or audio_path.stat().st_size > self.artifacts.MAX_BINARY_CONTENT_BYTES:
@@ -78,6 +86,34 @@ class TranscriptService:
                 "audio", signature, extension
             ):
                 return {"success": False, "code": "invalid_audio_artifact", "message": "Audio content does not match a supported audio format."}
+            retention = consent.get("retention")
+            if not isinstance(retention, dict):
+                return {
+                    "success": False,
+                    "code": "transcription_consent_invalid",
+                    "message": "The recording has no valid retention consent record.",
+                }
+            from app.services.voice.voice_capture_policy_service import VoiceCapturePolicyService
+            consent_decision = VoiceCapturePolicyService().evaluate(
+                filename=audio_path.name,
+                size_bytes=audio_path.stat().st_size,
+                consent={
+                    "voice_capture": consent.get("voice_capture"),
+                    "audio_storage": consent.get("audio_storage"),
+                    "transcription": consent.get("transcription"),
+                    "receipt_id": consent.get("receipt_id"),
+                    "consented_at": consent.get("consented_at"),
+                    "retention_mode": retention.get("mode"),
+                    "retention_days": retention.get("days"),
+                },
+            )
+            if consent_decision.get("allowed") is not True:
+                return {
+                    "success": False,
+                    "code": "transcription_consent_invalid",
+                    "policy_code": consent_decision.get("code"),
+                    "message": "The recording's consent or retention policy is no longer valid for transcription.",
+                }
         except Exception:
             return {
                 "success": False,

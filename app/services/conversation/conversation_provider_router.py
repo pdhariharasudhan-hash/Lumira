@@ -4,6 +4,8 @@ from app.services.modes.ai_mode_service import AIModeService
 from app.services.providers.ollama_chat_provider import OllamaChatProvider
 from app.services.providers.openai_compatible_chat_provider import OpenAICompatibleChatProvider
 from app.services.providers.provider_access_policy_service import ProviderAccessDenied, ProviderAccessPolicyService
+from app.services.multi_model.model_registry import MultiModelRegistry
+from app.services.multi_model.multi_model_orchestrator import MultiModelIntelligenceOrchestrator
 
 
 class ConversationProviderUnavailable(RuntimeError):
@@ -23,11 +25,15 @@ class ConversationProviderRouter:
         local_provider_factory=None,
         cloud_provider_factory=None,
         provider_policy=None,
+        multi_model_orchestrator=None,
     ):
         self.mode_service = mode_service or AIModeService()
         self.local_provider_factory = local_provider_factory or OllamaChatProvider
         self.cloud_provider_factory = cloud_provider_factory or OpenAICompatibleChatProvider
         self.provider_policy = provider_policy or ProviderAccessPolicyService(self.mode_service)
+        self.multi_model_orchestrator = multi_model_orchestrator or MultiModelIntelligenceOrchestrator(
+            provider_policy=self.provider_policy
+        )
 
     def chat(self, message: str, history=None, context: str | None = None) -> str:
         try:
@@ -38,6 +44,35 @@ class ConversationProviderRouter:
             raise ConversationProviderUnavailable("provider_policy_unavailable", "Provider access is blocked because AI mode settings could not be read safely.") from None
         mode = policy["mode"]
         cloud_enabled = policy["cloud_enabled"]
+
+        # When explicitly configured chat models exist, use the shared RAM-aware
+        # orchestrator. ProviderAccessPolicyService still authorizes every model
+        # before invocation; a failed orchestrated request is not retried through
+        # a second provider path, avoiding duplicate cloud charges or side effects.
+        registered_models = MultiModelRegistry.list()
+        if registered_models:
+            if mode == "cloud" and cloud_enabled is not True:
+                raise ConversationProviderUnavailable(
+                    "cloud_consent_required",
+                    "Cloud mode is selected, but cloud providers are disabled. Enable cloud use explicitly in Lumira settings first.",
+                )
+            orchestration_mode = "offline" if mode == "offline" else "smart"
+            result = self.multi_model_orchestrator.run(
+                prompt=message,
+                task_type="reply",
+                mode=orchestration_mode,
+                context={
+                    "history": history if isinstance(history, list) else [],
+                    "conversation_context": context if isinstance(context, str) else "",
+                },
+            )
+            if result.get("success") is True and isinstance(result.get("response"), str):
+                return self._validated_chat(result["response"])
+            code = result.get("code", "multi_model_unavailable")
+            raise ConversationProviderUnavailable(
+                str(code),
+                "Configured chat models could not complete this request under the current provider and resource policies.",
+            )
 
         if mode == "cloud":
             if not cloud_enabled:

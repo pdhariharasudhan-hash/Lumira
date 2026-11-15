@@ -71,3 +71,20 @@ def test_cloud_consent_update_does_not_silently_rewrite_corrupt_mode(tmp_path):
     else:
         raise AssertionError("cloud consent must not silently rewrite a corrupt mode")
     assert json.loads(path.read_text(encoding="utf-8")) == original
+
+
+def test_mode_and_cloud_consent_survive_service_restart(tmp_path):
+    path = tmp_path / "ai_mode.json"
+    first_process = AIModeService(path)
+    first_process.set("hybrid")
+    first_process.set_cloud_enabled(True)
+
+    restarted_process = AIModeService(path)
+
+    assert restarted_process.get() == {
+        "mode": "hybrid",
+        "cloud_enabled": True,
+        "local_providers_allowed": True,
+        "network_allowed": True,
+        "external_providers_allowed": True,
+    }

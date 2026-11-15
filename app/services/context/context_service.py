@@ -141,8 +141,9 @@ class ContextService:
         self,
         text: str,
     ) -> str:
+        text = text.lower()
 
-        if "python" in text:
+        if "python" in text or any(term in text for term in ("fastapi", "flask", "django")):
             return "Python"
 
         if "javascript" in text:

@@ -102,7 +102,86 @@ class SystemHealthService:
                 "success": not missing and not mismatched,
             }
 
+        def event_bus_probe():
+            from app.services.system.event_bus_service import EventBusService
+            result = EventBusService().list_events(limit=1)
+            if result.get("success") is not True:
+                return {"success": False, "code": result.get("code", "event_bus_unavailable")}
+            return {"stored_event_count_sample": len(result.get("events", []))}
+
+        def queue_probe():
+            from app.services.system.message_queue_service import MessageQueueService
+            result = MessageQueueService().list(limit=1)
+            if result.get("success") is not True:
+                return {"success": False, "code": result.get("code", "queue_unavailable")}
+            return {"stored_message_count_sample": len(result.get("messages", []))}
+
+        def scheduler_probe():
+            from app.services.system.task_scheduler_service import TaskSchedulerService
+            result = TaskSchedulerService().list(limit=1)
+            if result.get("success") is not True:
+                return {"success": False, "code": result.get("code", "scheduler_unavailable")}
+            return {"stored_job_count_sample": len(result.get("jobs", []))}
+
+        def project_preview_probe():
+            from app.services.workspace.project_preview_service import ProjectPreviewService
+            service = ProjectPreviewService()
+            records = service._require_records(service.store.read([]))
+            return {
+                "registered_previews": sum(1 for item in records if item.get("status") == "registered"),
+                "stopped_previews": sum(1 for item in records if item.get("status") == "stopped"),
+                "indexed_previews": len(records),
+            }
+
+        def background_task_probe():
+            from app.services.background_tasks.background_agent_task_service import BackgroundAgentTaskService
+            result = BackgroundAgentTaskService().list(limit=1)
+            if result.get("success") is not True:
+                return {"success": False, "code": result.get("code", "background_tasks_unavailable")}
+            return {"stored_task_count_sample": len(result.get("tasks", []))}
+
+        def agent_lease_probe():
+            from app.services.system.agent_execution_lease_service import AgentExecutionLeaseService
+            result = AgentExecutionLeaseService().snapshot()
+            if result.get("success") is not True:
+                return {"success": False, "code": result.get("code", "agent_lease_store_unavailable")}
+            return {
+                "active_leases": result.get("active_count", 0),
+                "max_concurrent_agents": result.get("max_concurrent_agents", 1),
+                "resource_pressure": result.get("resource_pressure", "unknown"),
+            }
+
+        def resource_probe():
+            from app.services.resources.resource_budget_service import ResourceBudgetService
+            result = ResourceBudgetService().snapshot()
+            memory = result.get("memory", {})
+            return {
+                "resource_pressure": result.get("resource_pressure", "unknown"),
+                "available_gib": memory.get("available_gib"),
+                "profile": result.get("policy", {}).get("profile", "unknown"),
+                "max_concurrent_agents": result.get("policy", {}).get("max_concurrent_agents", 1),
+            }
+
+        def model_health_probe():
+            from app.services.multi_model.model_health_service import ModelHealthService
+            result = ModelHealthService().snapshot()
+            if result.get("success") is not True:
+                return {"success": False, "code": result.get("code", "model_health_unavailable")}
+            records = result.get("models", {})
+            return {
+                "tracked_models": result.get("count", 0),
+                "open_circuits": sum(1 for item in records.values() if isinstance(item, dict) and item.get("circuit_open") is True),
+            }
+
         checks["core_events"] = self._check("core_events", events_probe)
+        checks["event_bus"] = self._check("event_bus", event_bus_probe)
+        checks["message_queue"] = self._check("message_queue", queue_probe)
+        checks["task_scheduler"] = self._check("task_scheduler", scheduler_probe)
+        checks["project_previews"] = self._check("project_previews", project_preview_probe)
+        checks["background_tasks"] = self._check("background_tasks", background_task_probe)
+        checks["agent_execution_leases"] = self._check("agent_execution_leases", agent_lease_probe)
+        checks["resource_budget"] = self._check("resource_budget", resource_probe)
+        checks["model_health"] = self._check("model_health", model_health_probe)
         checks["notifications"] = self._check("notifications", notification_probe)
         checks["cognitive_memory"] = self._check("cognitive_memory", memory_probe)
         checks["workflows"] = self._check("workflows", workflow_probe)

@@ -2,6 +2,19 @@
 __pycache__/
 *.pyc
 .env
+# Personal runtime state and generated user content. Keep local copies, but do
+# not add these directories or files to source control.
+/memory/
+/data/
+/artifacts/
+/generated/
+/app.db
+/project_memory.json
+/final-audit-result.json
+/.agents/memory/
+# Local credentials may use named environment files as well as .env.
+/.env.*
+!/.env.example
 # Lumira runtime history
 memory/activity_feed.json
 memory/command_history.json

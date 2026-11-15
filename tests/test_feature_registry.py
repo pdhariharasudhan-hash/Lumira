@@ -357,3 +357,24 @@ def test_image_understanding_readiness_mentions_local_and_remote_provider_option
     assert allowed is False
     assert any("LUMIRA_VISION_API_KEY" in blocker for blocker in blockers)
     assert any("LUMIRA_OLLAMA_VISION_ENABLED" in blocker for blocker in blockers)
+
+
+def test_concurrent_extension_registration_across_registry_instances_is_atomic(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+
+    registry_path = tmp_path / "shared-feature-registry.json"
+    services = [FeatureRegistryService(str(registry_path)) for _ in range(8)]
+
+    def register(index):
+        return services[index].register(
+            f"extension-{index}",
+            {"category": "test", "dependencies": ["memory"]},
+        )
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        results = list(executor.map(register, range(8)))
+
+    final_registry = FeatureRegistryService(str(registry_path)).get_all()
+    assert len(results) == 8
+    assert all(f"extension_{index}" in final_registry for index in range(8))
+    assert all(final_registry[f"extension_{index}"]["dependencies"] == ["memory"] for index in range(8))

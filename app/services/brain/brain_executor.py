@@ -285,9 +285,17 @@ class BrainExecutor:
         ]
 
 
-    def resume(self, state, start_order):
+    def resume(
+        self,
+        state,
+        start_order,
+        control: BrainExecutionControl | None = None,
+    ):
         """
         Resume deterministic execution from the specified stage order.
+
+        When a control is supplied, resumed work observes the same cooperative
+        deadline and cancellation boundary as a normal execution.
 
         Stages before start_order are not executed.
 
@@ -354,6 +362,15 @@ class BrainExecutor:
                 )
 
             while True:
+                if control is not None:
+                    try:
+                        control.check()
+                    except BrainExecutionInterrupted as interrupted:
+                        state.status = interrupted.status
+                        state.current_stage = ""
+                        self.last_recovery_state = recovery_state
+                        return state
+
                 total_attempts += 1
                 if total_attempts > 36:
                     state.status = "failed"
@@ -380,7 +397,21 @@ class BrainExecutor:
                         state.current_stage = ""
                         self.last_recovery_state = recovery_state
                         return state
+                    if control is not None:
+                        try:
+                            control.check()
+                        except BrainExecutionInterrupted as interrupted:
+                            state.status = interrupted.status
+                            state.current_stage = ""
+                            self.last_recovery_state = recovery_state
+                            return state
                     break
+
+                except BrainExecutionInterrupted as interrupted:
+                    state.status = interrupted.status
+                    state.current_stage = ""
+                    self.last_recovery_state = recovery_state
+                    return state
 
                 except Exception as exc:
 

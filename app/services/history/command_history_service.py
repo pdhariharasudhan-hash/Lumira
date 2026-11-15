@@ -19,14 +19,16 @@ class CommandHistoryService:
         )
 
         self.store = AtomicJsonStore(self.history_file)
-        if not self.history_file.exists():
-            self.store.write([])
+        self.store.update(self._validate_history, [])
+
+    @staticmethod
+    def _validate_history(records):
+        if not isinstance(records, list) or any(not isinstance(item, dict) for item in records):
+            raise PersistenceIntegrityError("Command history must be a list of records")
+        return records
 
     def _read(self):
-        records = self.store.read([])
-        if not isinstance(records, list):
-            raise PersistenceIntegrityError("Command history must be a list")
-        return records
+        return self._validate_history(self.store.read([]))
 
     def _write(self, data):
         if not isinstance(data, list):
@@ -80,7 +82,7 @@ class CommandHistoryService:
         return len(self._read())
 
     def clear(self):
-        self._write([])
+        self.store.update(lambda records: records.clear(), [])
 
         return {
             "success": True

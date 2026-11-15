@@ -1,7 +1,7 @@
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool
 
 from app.services.devices.device_gateway_service import DeviceGatewayService
 from app.services.devices.device_registry_service import DeviceRegistryService
@@ -39,6 +39,7 @@ class DeviceCommandRequest(BaseModel):
     device_type: str = Field(min_length=1, max_length=32)
     action: str = Field(min_length=1, max_length=100)
     payload: dict[str, Any] = Field(default_factory=dict)
+    autonomous: StrictBool = False
 
 
 @router.post("/devices/register")
@@ -152,7 +153,13 @@ def send_device_command(device_id: str, request: DeviceCommandRequest):
         raise HTTPException(status_code=403, detail="Device has not granted the permission required by this capability")
     if registered.get("status") != "online" or not fresh_heartbeat:
         raise HTTPException(status_code=409, detail="Device has no fresh heartbeat/message within 120 seconds; command was not sent")
-    result = DeviceGatewayService().send_command(device_id, request.device_type, request.action, request.payload)
+    result = DeviceGatewayService().send_command(
+        device_id,
+        request.device_type,
+        request.action,
+        request.payload,
+        autonomous=request.autonomous,
+    )
     if not result["success"] and result.get("code") == "provider_unavailable":
         raise HTTPException(status_code=501, detail=result)
     if not result["success"] and result.get("code") in {"external_provider_consent_required", "local_provider_blocked"}:

@@ -299,7 +299,13 @@ def run_ready_workflow_tasks(workflow_id: str, request: WorkflowAgentRunRequest)
             f"Project context: {workflow.get('project_id') or 'not specified'}"
         )
         try:
-            outcome = orchestrator.execute(agent_prompt, agent_name=None if request.agent_mode == "auto" else request.agent_mode, project_id=workflow.get("project_id"), goal_id=workflow.get("goal_id"))
+            outcome = orchestrator.execute(
+                agent_prompt,
+                agent_name=None if request.agent_mode == "auto" else request.agent_mode,
+                project_id=workflow.get("project_id"),
+                goal_id=workflow.get("goal_id"),
+                autonomous=request.autonomous,
+            )
         except Exception as exc:
             # Persist infrastructure failures instead of leaving tasks stuck in progress.
             outcome = {"success": False, "state": "failed", "code": "agent_dispatch_exception",
@@ -358,7 +364,23 @@ def run_ready_workflow_tasks(workflow_id: str, request: WorkflowAgentRunRequest)
     except (KeyError, WorkItemValidationError, PersistenceIntegrityError) as exc:
         raise HTTPException(status_code=503, detail="Workflow progress could not be retrieved") from exc
     if request.autonomous:
-        autonomy.record_state("workflow.run", "completed" if all(item.get("success") for item in outcomes) else "failed", run_id=run_id, detail=stop_reason)
+        try:
+            autonomy.record_state(
+                "workflow.run",
+                "completed" if outcomes and all(item.get("success") is True for item in outcomes) else "failed",
+                run_id=run_id,
+                detail=stop_reason,
+            )
+        except Exception as exc:
+            return {
+                "success": False,
+                "workflow_id": workflow_id,
+                "executed_count": len(outcomes),
+                "stop_reason": "autonomy_state_persistence_failed",
+                "outcomes": outcomes,
+                "side_effects_may_have_occurred": bool(outcomes),
+                "error_type": type(exc).__name__,
+            }
     return {
         "success": bool(outcomes) and all(item.get("success") is True for item in outcomes),
         "workflow_id": workflow_id,

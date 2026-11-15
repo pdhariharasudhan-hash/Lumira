@@ -3,7 +3,7 @@ import json
 import math
 import re
 from pathlib import Path
-from app.services.persistence.atomic_json_store import AtomicJsonStore
+from app.services.persistence.atomic_json_store import AtomicJsonStore, PersistenceIntegrityError
 
 
 class DeviceProfileService:
@@ -18,8 +18,25 @@ class DeviceProfileService:
     def __init__(self, path: str | Path = "memory/device_profiles.json"):
         self.store = AtomicJsonStore(path)
         self.path = Path(path)
-        if not self.path.exists():
-            self.store.write({"schema_version": 1, "profiles": {}})
+        self.store.read_or_create({"schema_version": 1, "profiles": {}})
+
+    @classmethod
+    def _normalize_store(cls, data):
+        if not isinstance(data, dict) or not isinstance(data.get("profiles"), dict):
+            raise PersistenceIntegrityError("device profile store has an invalid schema")
+        schema_version = data.get("schema_version", 0)
+        if (
+            isinstance(schema_version, bool)
+            or not isinstance(schema_version, int)
+            or schema_version not in {0, 1}
+        ):
+            raise PersistenceIntegrityError("device profile store has an unsupported schema version")
+        if schema_version == 0:
+            # Version zero is the original unversioned {profiles: {...}}
+            # document. Preserve all unknown legacy fields while adding the
+            # version marker; writes persist this migration atomically.
+            data["schema_version"] = 1
+        return data
 
     @classmethod
     def _validate_metadata(cls, metadata):
@@ -64,15 +81,12 @@ class DeviceProfileService:
         profile_id = profile_id.strip()
         profile = {"profile_id": profile_id, "device_type": device_type, "metadata": metadata, "connection": "unverified"}
         def update(data):
-            if not isinstance(data, dict) or not isinstance(data.get("profiles", {}), dict):
-                raise ValueError("device profile store is invalid")
-            data.setdefault("schema_version", 1)
-            data.setdefault("profiles", {})[profile_id] = profile
+            data = self._normalize_store(data)
+            data["profiles"][profile_id] = profile
             return dict(profile)
         return self.store.update(update, {"schema_version": 1, "profiles": {}})
 
     def list(self) -> list[dict]:
         data = self.store.read({"schema_version": 1, "profiles": {}})
-        if not isinstance(data, dict) or not isinstance(data.get("profiles"), dict):
-            raise ValueError("device profile store is invalid")
+        data = self._normalize_store(data)
         return [dict(x) for x in data["profiles"].values() if isinstance(x, dict)]

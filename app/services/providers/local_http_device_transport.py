@@ -16,7 +16,13 @@ class LocalHttpDeviceTransport:
 
     def __init__(self, profiles=None, timeout=(1.5, 3.0)):
         self.profiles = profiles or DeviceProfileService()
-        self.timeout = timeout
+        if (
+            not isinstance(timeout, tuple)
+            or len(timeout) != 2
+            or any(not isinstance(value, (int, float)) or isinstance(value, bool) or not 0.1 <= value <= 10 for value in timeout)
+        ):
+            raise ValueError("Device transport timeouts must be a two-value tuple between 0.1 and 10 seconds")
+        self.timeout = (float(timeout[0]), float(timeout[1]))
 
     @staticmethod
     def _endpoint(value: object) -> str:
@@ -30,8 +36,15 @@ class LocalHttpDeviceTransport:
             port = parsed.port or (443 if parsed.scheme == "https" else 80)
         except ValueError:
             raise ValueError("Device endpoint must use a literal private or loopback IP address and a valid port") from None
-        if not (address.is_private or address.is_loopback) or address.is_multicast or address.is_unspecified or not 1 <= port <= 65535:
-            raise ValueError("Device endpoint must use a private or loopback IP address")
+        if (
+            not (address.is_private or address.is_loopback)
+            or address.is_link_local
+            or address.is_multicast
+            or address.is_unspecified
+            or address.is_reserved
+            or not 1 <= port <= 65535
+        ):
+            raise ValueError("Device endpoint must use a private or loopback IP address and must not target link-local, reserved or special-use ranges")
         if parsed.path not in {"", "/"}:
             raise ValueError("Device endpoint base path must be empty")
         return value.rstrip("/")

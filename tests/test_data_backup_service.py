@@ -51,6 +51,26 @@ def test_restore_rejects_tampered_content_without_overwriting_existing_data(tmp_
     assert existing.read_text(encoding="utf-8") == '{"old":true}'
 
 
+def test_restore_rejects_existing_targets_before_writing_any_backup_file(tmp_path):
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "new.json").write_text('{"new":true}', encoding="utf-8")
+    (source / "existing.json").write_text('{"backup":true}', encoding="utf-8")
+    backup = tmp_path / "backup.zip"
+    DataBackupService(source).export_backup(backup)
+
+    target = tmp_path / "target"
+    target.mkdir()
+    existing = target / "existing.json"
+    existing.write_text('{"user":"keep"}', encoding="utf-8")
+
+    with pytest.raises(BackupIntegrityError, match="already exists"):
+        DataBackupService(target).restore_backup(backup)
+
+    assert existing.read_text(encoding="utf-8") == '{"user":"keep"}'
+    assert not (target / "new.json").exists()
+
+
 def test_restore_rejects_path_traversal(tmp_path):
     backup = tmp_path / "unsafe.zip"
     manifest = {

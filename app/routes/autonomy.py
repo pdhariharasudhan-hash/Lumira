@@ -30,6 +30,15 @@ def update_autonomy_permission(operation: str, request: PermissionUpdate):
     if operation not in AUTONOMY_OPERATIONS:
         raise HTTPException(status_code=404, detail="unsupported autonomous operation")
     try:
-        return service.set_permission(operation, request.enabled, request.reason)
+        result = service.set_permission(operation, request.enabled, request.reason)
+        if result.get("success") is not True:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "code": result.get("code", "permission_update_audit_failed"),
+                    "side_effect_may_have_occurred": result.get("side_effect_may_have_occurred", False),
+                },
+            )
+        return result
     except (ValueError, PersistenceIntegrityError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

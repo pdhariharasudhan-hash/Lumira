@@ -24,6 +24,9 @@ class UnifiedSearchService:
     }
     TEXT_EXTENSIONS = {".py", ".md", ".txt", ".json", ".ts", ".tsx", ".js", ".jsx", ".html", ".css", ".toml", ".yaml", ".yml"}
     CODE_EXTENSIONS = {".py", ".ts", ".tsx", ".js", ".jsx", ".html", ".css"}
+    MAX_SCAN_FILES = 1_000
+    MAX_SCAN_RECORDS = 10_000
+    MAX_RESULTS_PER_CATEGORY = 200
 
     def __init__(self):
         self.projects = ProjectDiscoveryService()
@@ -70,11 +73,17 @@ class UnifiedSearchService:
 
     def search_project_versions(self, query: str) -> list[dict]:
         results = []
+        scanned = 0
         for project in self.projects.get_projects():
+            if not isinstance(project, dict) or not isinstance(project.get("project"), str):
+                continue
             for version in self.projects.get_versions(project["project"]):
-                if self._matches(json.dumps(version, ensure_ascii=False), query):
+                scanned += 1
+                if scanned > self.MAX_SCAN_RECORDS:
+                    return results
+                if isinstance(version, dict) and self._matches(json.dumps(version, ensure_ascii=False), query):
                     results.append({"project": project["project"], **version})
-                    if len(results) >= 200:
+                    if len(results) >= self.MAX_RESULTS_PER_CATEGORY:
                         return results
         return results
 
@@ -84,9 +93,11 @@ class UnifiedSearchService:
         results = []
         if not root.exists():
             return results
+        scanned = 0
         try:
             for path in root.glob("*/v*/*"):
-                if len(results) >= 200:
+                scanned += 1
+                if scanned > self.MAX_SCAN_FILES or len(results) >= self.MAX_RESULTS_PER_CATEGORY:
                     break
                 if path.suffix.lower() not in self.TEXT_EXTENSIONS or path.name.lower() in {".env", "secrets.json", "credentials.json"}:
                     continue
@@ -172,8 +183,10 @@ class UnifiedSearchService:
         if not root.exists():
             return results
         resolved_root = root.resolve()
+        scanned = 0
         for path in root.rglob("*.md"):
-            if len(results) >= 200:
+            scanned += 1
+            if scanned > self.MAX_SCAN_FILES or len(results) >= self.MAX_RESULTS_PER_CATEGORY:
                 break
             resolved = path.resolve()
             if resolved_root not in resolved.parents:
@@ -185,8 +198,13 @@ class UnifiedSearchService:
 
     def search_artifacts(self, query: str) -> list[dict]:
         results = []
-        for artifact in self.artifacts.get_all_artifacts():
-            if artifact.get("archived", False):
+        records = self.artifacts.get_all_artifacts()
+        if not isinstance(records, list):
+            return results
+        for index, artifact in enumerate(records):
+            if index >= self.MAX_SCAN_RECORDS or len(results) >= self.MAX_RESULTS_PER_CATEGORY:
+                break
+            if not isinstance(artifact, dict) or artifact.get("archived", False):
                 continue
             # The persisted file path is an implementation detail, not searchable
             # user metadata. Keep it available only for the guarded content read.
@@ -208,7 +226,7 @@ class UnifiedSearchService:
                 if text:
                     result["snippet"] = self._safe_snippet(text)
                 results.append(result)
-                if len(results) >= 200:
+                if len(results) >= self.MAX_RESULTS_PER_CATEGORY:
                     break
         return results
 

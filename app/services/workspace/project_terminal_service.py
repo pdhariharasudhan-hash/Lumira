@@ -7,7 +7,7 @@ from typing import Any
 
 from app.services.persistence.atomic_json_store import AtomicJsonStore, PersistenceIntegrityError
 from app.services.projects.project_paths import resolve_project_path
-from app.services.workspace.container_sandbox_provider import ContainerSandboxProvider
+from app.services.workspace.sandbox_provider_factory import create_sandbox_provider
 
 
 class ProjectTerminalService:
@@ -20,7 +20,7 @@ class ProjectTerminalService:
     def __init__(self, root: str | Path = "memory/project_terminal_runs.json", sandbox=None):
         self.store = AtomicJsonStore(root)
         self._sandbox_explicit = sandbox is not None
-        self.sandbox = sandbox or ContainerSandboxProvider()
+        self.sandbox = sandbox if sandbox is not None else create_sandbox_provider()
 
     def _os_sandbox_verified(self) -> bool:
         """Execution is enabled only when a concrete isolation provider verifies itself."""

@@ -184,3 +184,20 @@ def test_external_provider_constructors_reject_malformed_ports():
     for factory in factories:
         with pytest.raises(ValueError):
             factory()
+
+
+def test_invalid_provider_enable_flag_fails_closed(monkeypatch):
+    previous = {name: ProviderRegistry.get(name) for name in PROVIDER_STATUS_NAMES}
+    try:
+        for key, value in PROVIDER_ENV.items():
+            monkeypatch.setenv(key, value)
+        monkeypatch.setenv("LUMIRA_TRANSCRIPTION_ENABLED", "sometimes")
+        monkeypatch.setenv("LUMIRA_TRANSCRIPTION_API_KEY", "test-only")
+        _clear_optional_providers()
+        register_configured_providers()
+        assert ProviderRegistry.get("transcription") is None
+    finally:
+        _clear_optional_providers()
+        for name, provider in previous.items():
+            if provider is not None:
+                ProviderRegistry.register(name, provider)

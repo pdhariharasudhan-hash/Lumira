@@ -25,13 +25,13 @@ class NotepadService:
         return datetime.now(UTC).isoformat()
 
     def _ensure_store(self) -> None:
-        current = self.store.read(default=None)
-        if current is None:
-            if Path(self.path).exists():
-                raise PersistenceIntegrityError("Notepad store is corrupt; refusing to reset it")
-            self.store.write({"schema_version": 1, "notes": []})
-            return
-        self._validate_document(current)
+        def validate_or_initialize(document):
+            self._validate_document(document)
+            return document
+        self.store.update(
+            validate_or_initialize,
+            default={"schema_version": 1, "notes": []},
+        )
 
     @staticmethod
     def _validate_document(document: Any) -> None:
@@ -108,36 +108,39 @@ class NotepadService:
             "created_at": now,
             "updated_at": now,
         }
-        document = self._read()
-        document["notes"].append(note)
-        self.store.write(document)
-        return deepcopy(note)
+        def insert(document):
+            self._validate_document(document)
+            document["notes"].append(note)
+            return deepcopy(note)
+        return self.store.update(insert, default={"schema_version": 1, "notes": []})
 
     def update_note(self, note_id: str, *, title: str | None = None, content: str | None = None) -> dict[str, Any]:
         if not isinstance(note_id, str) or not note_id.strip():
             raise NotepadValidationError("note_id is invalid")
-        document = self._read()
-        for note in document["notes"]:
-            if note["note_id"] != note_id:
-                continue
-            if title is None and content is None:
-                raise NotepadValidationError("At least one field must be supplied")
-            if title is not None:
-                note["title"] = self._text(title, "title", 200)
-            if content is not None:
-                note["content"] = self._text(content, "content", 20000, allow_empty=True)
-            note["updated_at"] = self._now()
-            self.store.write(document)
-            return deepcopy(note)
-        raise KeyError(note_id)
+        if title is None and content is None:
+            raise NotepadValidationError("At least one field must be supplied")
+        def update(document):
+            self._validate_document(document)
+            for note in document["notes"]:
+                if note["note_id"] != note_id:
+                    continue
+                if title is not None:
+                    note["title"] = self._text(title, "title", 200)
+                if content is not None:
+                    note["content"] = self._text(content, "content", 20000, allow_empty=True)
+                note["updated_at"] = self._now()
+                return deepcopy(note)
+            raise KeyError(note_id)
+        return self.store.update(update, default={"schema_version": 1, "notes": []})
 
     def delete_note(self, note_id: str) -> bool:
         if not isinstance(note_id, str) or not note_id.strip():
             raise NotepadValidationError("note_id is invalid")
-        document = self._read()
-        remaining = [note for note in document["notes"] if note["note_id"] != note_id]
-        if len(remaining) == len(document["notes"]):
-            raise KeyError(note_id)
-        document["notes"] = remaining
-        self.store.write(document)
-        return True
+        def delete(document):
+            self._validate_document(document)
+            remaining = [note for note in document["notes"] if note["note_id"] != note_id]
+            if len(remaining) == len(document["notes"]):
+                raise KeyError(note_id)
+            document["notes"] = remaining
+            return True
+        return self.store.update(delete, default={"schema_version": 1, "notes": []})

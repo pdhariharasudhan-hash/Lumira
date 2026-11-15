@@ -115,61 +115,100 @@ class DataBackupService:
                 if info.flag_bits & 0x1:
                     raise BackupIntegrityError("encrypted backup entries are not supported")
 
-            temporary_files: list[tuple[Path, Path]] = []
+            staged_files: list[tuple[Path, bytes]] = []
             total_bytes = 0
             seen_paths: set[str] = set()
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    raise BackupIntegrityError("backup manifest entry is invalid")
+                relative = self._safe_relative_path(entry.get("path"))
+                relative_name = relative.as_posix()
+                if relative_name in seen_paths:
+                    raise BackupIntegrityError("backup manifest contains duplicate paths")
+                seen_paths.add(relative_name)
+                declared_bytes = entry.get("bytes")
+                digest = entry.get("sha256")
+                if (
+                    isinstance(declared_bytes, bool)
+                    or not isinstance(declared_bytes, int)
+                    or declared_bytes < 0
+                    or not isinstance(digest, str)
+                    or len(digest) != 64
+                    or any(char not in "0123456789abcdef" for char in digest)
+                ):
+                    raise BackupIntegrityError("backup manifest metadata is invalid")
+                info = archive.getinfo(relative_name)
+                if info.file_size > self.MAX_FILE_BYTES:
+                    raise BackupIntegrityError("backup file exceeds the size limit")
+                if info.file_size != declared_bytes:
+                    raise BackupIntegrityError("backup checksum or manifest size verification failed")
+                total_bytes += info.file_size
+                if total_bytes > self.MAX_TOTAL_BYTES:
+                    raise BackupIntegrityError("backup exceeds the total size limit")
+                content = archive.read(info)
+                if hashlib.sha256(content).hexdigest() != digest:
+                    raise BackupIntegrityError("backup checksum verification failed")
+                target = self.data_root / relative
+                root = self.data_root.resolve()
+                parent = target.parent.resolve()
+                if parent != root and root not in parent.parents:
+                    raise BackupIntegrityError("backup target resolves outside the data directory")
+                if target.is_symlink():
+                    raise BackupIntegrityError("backup target is a symbolic link")
+                if target.exists():
+                    raise BackupIntegrityError("backup restore target already exists")
+                staged_files.append((target, content))
+
+            if total_bytes != manifest.get("total_bytes"):
+                raise BackupIntegrityError("backup manifest total size verification failed")
+
+            temporary_files: list[tuple[Path, Path, str, os.stat_result]] = []
+            installed_targets: list[tuple[Path, os.stat_result, str]] = []
             try:
-                for entry in entries:
-                    if not isinstance(entry, dict):
-                        raise BackupIntegrityError("backup manifest entry is invalid")
-                    relative = self._safe_relative_path(entry.get("path"))
-                    relative_name = relative.as_posix()
-                    if relative_name in seen_paths:
-                        raise BackupIntegrityError("backup manifest contains duplicate paths")
-                    seen_paths.add(relative_name)
-                    declared_bytes = entry.get("bytes")
-                    digest = entry.get("sha256")
-                    if (
-                        isinstance(declared_bytes, bool)
-                        or not isinstance(declared_bytes, int)
-                        or declared_bytes < 0
-                        or not isinstance(digest, str)
-                        or len(digest) != 64
-                        or any(char not in "0123456789abcdef" for char in digest)
-                    ):
-                        raise BackupIntegrityError("backup manifest metadata is invalid")
-                    info = archive.getinfo(relative_name)
-                    if info.file_size > self.MAX_FILE_BYTES:
-                        raise BackupIntegrityError("backup file exceeds the size limit")
-                    if info.file_size != declared_bytes:
-                        raise BackupIntegrityError("backup checksum or manifest size verification failed")
-                    total_bytes += info.file_size
-                    if total_bytes > self.MAX_TOTAL_BYTES:
-                        raise BackupIntegrityError("backup exceeds the total size limit")
-                    content = archive.read(info)
-                    if hashlib.sha256(content).hexdigest() != digest:
-                        raise BackupIntegrityError("backup checksum verification failed")
-                    target = self.data_root / relative
+                for target, content in staged_files:
                     target.parent.mkdir(parents=True, exist_ok=True)
                     root = self.data_root.resolve()
                     parent = target.parent.resolve()
                     if parent != root and root not in parent.parents:
                         raise BackupIntegrityError("backup target resolves outside the data directory")
-                    if target.is_symlink():
-                        raise BackupIntegrityError("backup target is a symbolic link")
                     with tempfile.NamedTemporaryFile(
                         mode="wb", dir=parent, delete=False
                     ) as temporary:
                         temporary.write(content)
                         temporary.flush()
                         os.fsync(temporary.fileno())
-                        temporary_files.append((Path(temporary.name), target))
-                if total_bytes != manifest.get("total_bytes"):
-                    raise BackupIntegrityError("backup manifest total size verification failed")
-                for temporary, target in temporary_files:
-                    os.replace(temporary, target)
+                        temporary_path = Path(temporary.name)
+                        temporary_files.append(
+                            (
+                                temporary_path,
+                                target,
+                                hashlib.sha256(content).hexdigest(),
+                                temporary_path.stat(),
+                            )
+                        )
+
+                # Hard-link installation is atomic and refuses to overwrite a
+                # destination created after validation. Both paths are staged
+                # in the target directory, so they share a filesystem.
+                for temporary, target, content_digest, staged_stat in temporary_files:
+                    if target.exists() or target.is_symlink():
+                        raise BackupIntegrityError("backup restore target already exists")
+                    os.link(temporary, target)
+                    installed_targets.append((target, staged_stat, content_digest))
+            except Exception:
+                for target, installed_stat, expected_digest in reversed(installed_targets):
+                    try:
+                        current_stat = target.stat(follow_symlinks=False)
+                        if (
+                            os.path.samestat(installed_stat, current_stat)
+                            and hashlib.sha256(target.read_bytes()).hexdigest() == expected_digest
+                        ):
+                            target.unlink()
+                    except OSError:
+                        pass
+                raise
             finally:
-                for temporary, _ in temporary_files:
+                for temporary, _, _, _ in temporary_files:
                     if temporary.exists():
                         temporary.unlink()
         return {"success": True, "file_count": len(entries), "total_bytes": total_bytes}

@@ -67,8 +67,9 @@ def test_resume_endpoint_invokes_guarded_workflow_engine(tmp_path, monkeypatch):
         def __init__(self, recovery):
             observed["recovery"] = recovery
 
-        def resume(self, run_id):
+        def resume(self, run_id, before_resume=None):
             observed["run_id"] = run_id
+            observed["before_resume"] = before_resume
             return {"success": True, "state": "completed", "run_id": run_id}
 
     monkeypatch.setattr("app.routes.recovery.WorkflowEngine", FakeWorkflowEngine)
@@ -76,6 +77,7 @@ def test_resume_endpoint_invokes_guarded_workflow_engine(tmp_path, monkeypatch):
     assert response.status_code == 200
     assert response.json()["success"] is True
     assert observed["run_id"] == run["run_id"]
+    assert callable(observed["before_resume"])
     assert isinstance(observed["recovery"], RunRecoveryService)
 
 

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import asyncio
+
 import ipaddress
 import re
 import socket
+import ssl
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit, urlunsplit
@@ -11,18 +14,17 @@ from app.services.artifacts.artifact_manager_service import ArtifactManagerServi
 
 import httpcore
 import httpx
-from httpcore._backends.auto import AutoBackend
 
 
 class WebResourceError(ValueError):
     """Raised when a web resource cannot be safely accessed."""
 
 
-class _PublicAddressPinnedBackend(AutoBackend):
-    """Resolve and validate a public address at connect time, then connect to that IP.
+class _PublicAddressPinnedBackend(httpcore.AnyIOBackend):
+    """Resolve and validate public addresses, then connect to a literal IP.
 
-    The URL hostname remains unchanged in httpcore, so HTTP Host and TLS certificate/SNI
-    validation continue to use the requested hostname while TCP connects to the pinned IP.
+    The request URL keeps its hostname for HTTP Host and TLS SNI. The network
+    backend receives only an IP literal after checking every DNS answer.
     """
 
     async def connect_tcp(
@@ -33,19 +35,27 @@ class _PublicAddressPinnedBackend(AutoBackend):
         local_address: str | None = None,
         socket_options=None,
     ):
+        loop = asyncio.get_running_loop()
+        connect_timeout = timeout if timeout is not None else WebResourceService.DNS_TIMEOUT
+        deadline = loop.time() + max(0.0, connect_timeout)
         try:
-            addresses = WebResourceService._resolve_public_addresses(host, port)
+            addresses = await WebResourceService._resolve_public_addresses_bounded(
+                host, port, timeout=max(0.0, deadline - loop.time())
+            )
         except WebResourceError as exc:
             raise httpcore.ConnectError("Hostname did not resolve to a safe public address") from exc
         if not addresses:
             raise httpcore.ConnectError("Hostname did not resolve to a safe public address")
         last_error = None
         for address in addresses:
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                raise httpcore.ConnectTimeout("Connection deadline exceeded") from last_error
             try:
                 return await super().connect_tcp(
                     address,
                     port,
-                    timeout=timeout,
+                    timeout=remaining,
                     local_address=local_address,
                     socket_options=socket_options,
                 )
@@ -54,16 +64,58 @@ class _PublicAddressPinnedBackend(AutoBackend):
         raise httpcore.ConnectError("Unable to connect to a validated public address") from last_error
 
 
-class _PinnedDNSHTTPTransport(httpx.AsyncHTTPTransport):
-    """HTTPX transport that prevents a second, unvalidated DNS lookup at connect time."""
+class _HTTPcoreAsyncByteStream(httpx.AsyncByteStream):
+    """Adapt an HTTPcore response stream to HTTPX's public stream interface."""
+
+    def __init__(self, stream):
+        self._stream = stream
+
+    async def __aiter__(self):
+        async for chunk in self._stream:
+            yield chunk
+
+    async def aclose(self):
+        await self._stream.aclose()
+
+
+class _PinnedDNSHTTPTransport(httpx.AsyncBaseTransport):
+    """HTTPX transport using HTTPcore's public network-backend injection point."""
 
     def __init__(self):
-        super().__init__(trust_env=False, retries=0)
-        # HTTPX 0.28.x constructs this pool for a direct transport (no proxy).
-        # Fail closed if a future HTTPX/httpcore change alters the expected shape.
-        if not isinstance(self._pool, httpcore.AsyncConnectionPool):
-            raise RuntimeError("Pinned DNS transport requires a direct HTTP connection pool")
-        self._pool._network_backend = _PublicAddressPinnedBackend()
+        self._pool = httpcore.AsyncConnectionPool(
+            ssl_context=ssl.create_default_context(),
+            max_connections=10,
+            max_keepalive_connections=5,
+            keepalive_expiry=5.0,
+            http1=True,
+            http2=False,
+            retries=0,
+            network_backend=_PublicAddressPinnedBackend(),
+        )
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        core_request = httpcore.Request(
+            method=request.method,
+            url=httpcore.URL(
+                scheme=request.url.raw_scheme,
+                host=request.url.raw_host,
+                port=request.url.port,
+                target=request.url.raw_path,
+            ),
+            headers=request.headers.raw,
+            content=request.stream,
+            extensions=request.extensions,
+        )
+        response = await self._pool.handle_async_request(core_request)
+        return httpx.Response(
+            status_code=response.status,
+            headers=response.headers,
+            stream=_HTTPcoreAsyncByteStream(response.stream),
+            extensions=response.extensions,
+        )
+
+    async def aclose(self):
+        await self._pool.aclose()
 
 
 class _HTMLTextParser(HTMLParser):
@@ -96,6 +148,7 @@ class WebResourceService:
     ALLOWED_SCHEMES = {"http", "https"}
     MAX_BYTES = 10 * 1024 * 1024
     MAX_REDIRECTS = 5
+    DNS_TIMEOUT = 3.0
     TIMEOUT = httpx.Timeout(15.0, connect=5.0)
     USER_AGENT = "Lumira/1.0 UniversalWebAccess"
 
@@ -105,23 +158,42 @@ class WebResourceService:
     def validate_url(self, url: str) -> str:
         if not isinstance(url, str) or not url.strip():
             raise WebResourceError("A URL is required.")
-        value = url.strip()
-        if len(value) > 4096:
+        if len(url) > 4096:
             raise WebResourceError("The URL exceeds Lumira's safe length limit.")
+        if url != url.strip() or any(
+            character.isspace() or ord(character) < 0x20 or ord(character) == 0x7F
+            for character in url
+        ):
+            raise WebResourceError("The URL is malformed.")
         try:
-            parsed = urlsplit(value)
+            parsed = urlsplit(url)
             # Accessing .port forces urllib to reject malformed/non-numeric ports.
             _ = parsed.port
-        except ValueError as exc:
+            request_url = httpx.URL(url)
+        except (ValueError, httpx.InvalidURL) as exc:
             raise WebResourceError("The URL is malformed.") from exc
         if parsed.scheme.lower() not in self.ALLOWED_SCHEMES:
             raise WebResourceError("Only HTTP and HTTPS URLs are allowed.")
-        if parsed.username or parsed.password:
+        if "@" in parsed.netloc or parsed.username is not None or parsed.password is not None:
             raise WebResourceError("URLs containing credentials are not allowed.")
-        if not parsed.hostname:
+        if "%" in parsed.netloc or "\\" in parsed.netloc:
+            raise WebResourceError("The URL authority is malformed.")
+        if not parsed.hostname or not request_url.host:
             raise WebResourceError("The URL must include a hostname.")
-        self._validate_hostname(parsed.hostname)
-        return value
+
+        try:
+            urllib_host = parsed.hostname.encode("idna").decode("ascii").lower()
+        except UnicodeError as exc:
+            raise WebResourceError("The URL hostname is malformed.") from exc
+        transport_host = request_url.host.lower()
+        if urllib_host.rstrip(".") != transport_host.rstrip("."):
+            raise WebResourceError("The URL hostname is ambiguous.")
+
+        self._validate_hostname(transport_host)
+        # Return exactly the normalized URL whose host was validated and that
+        # HTTPX will send, preventing parser differentials between validation
+        # and transport.
+        return str(request_url)
 
     @staticmethod
     def _safe_display_url(url: str) -> str:
@@ -177,6 +249,9 @@ class WebResourceService:
             if (
                 parsed.scheme.lower() not in cls.ALLOWED_SCHEMES
                 or not hostname
+                or "@" in parsed.netloc
+                or "%" in parsed.netloc
+                or "\\" in parsed.netloc
                 or parsed.username is not None
                 or parsed.password is not None
                 or hostname in {"localhost", "localhost.localdomain"}
@@ -188,7 +263,7 @@ class WebResourceService:
                 address = ipaddress.ip_address(hostname)
             except ValueError:
                 address = None
-            if address is not None and not address.is_global:
+            if address is not None and not cls._is_safe_public_address(address):
                 continue
             # Browsers and URL stacks may interpret legacy numeric host forms
             # such as 127.1, 2130706433, or 0x7f000001 as IPv4 addresses.
@@ -213,12 +288,76 @@ class WebResourceService:
         return safe
 
     @staticmethod
-    def _resolve_public_addresses(hostname: str, port: int | None) -> list[str]:
-        lowered = hostname.rstrip(".").lower()
-        if lowered in {"localhost", "localhost.localdomain"}:
-            raise WebResourceError("Localhost targets are not allowed.")
+    def _is_safe_public_address(address: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+        if (
+            not address.is_global
+            or address.is_private
+            or address.is_loopback
+            or address.is_link_local
+            or address.is_multicast
+            or address.is_reserved
+            or address.is_unspecified
+        ):
+            return False
+        if isinstance(address, ipaddress.IPv6Address):
+            # These translation/tunneling forms can carry private IPv4 targets
+            # through an otherwise globally classified IPv6 address.
+            if address.ipv4_mapped is not None or address.sixtofour is not None or address.teredo is not None:
+                return False
+            if address in ipaddress.IPv6Network("64:ff9b::/96"):
+                return False
+            if address in ipaddress.IPv6Network("64:ff9b:1::/48"):
+                return False
+        return True
+
+    @staticmethod
+    def _normalize_hostname(
+        hostname: str,
+    ) -> tuple[str, ipaddress.IPv4Address | ipaddress.IPv6Address | None]:
+        """Validate a host without doing blocking DNS on the request thread."""
+        if not isinstance(hostname, str) or not hostname or hostname.endswith(".."):
+            raise WebResourceError("The hostname is malformed.")
+        lowered = hostname[:-1].lower() if hostname.endswith(".") else hostname.lower()
+        if lowered in {"localhost", "localhost.localdomain"} or lowered.endswith(
+            (".localhost", ".local", ".internal", ".test", ".invalid")
+        ):
+            raise WebResourceError("Local network hostnames are not allowed.")
+
         try:
-            records = socket.getaddrinfo(lowered, port, type=socket.SOCK_STREAM)
+            literal = ipaddress.ip_address(lowered)
+        except ValueError:
+            literal = None
+        if literal is not None:
+            if not WebResourceService._is_safe_public_address(literal):
+                raise WebResourceError("Private or special-purpose network targets are not allowed.")
+            return str(literal), literal
+
+        if re.fullmatch(r"(?:0x[0-9a-f]+|[0-9]+)(?:\.(?:0x[0-9a-f]+|[0-9]+))*", lowered, re.IGNORECASE):
+            raise WebResourceError("Non-canonical IP address forms are not allowed.")
+        try:
+            ascii_hostname = lowered.encode("idna").decode("ascii")
+        except UnicodeError as exc:
+            raise WebResourceError("The hostname is malformed.") from exc
+        labels = ascii_hostname.split(".")
+        label_pattern = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", re.IGNORECASE)
+        if (
+            len(ascii_hostname) > 253
+            or len(labels) < 2
+            or any(not label or len(label) > 63 or not label_pattern.fullmatch(label) for label in labels)
+        ):
+            raise WebResourceError("A fully qualified DNS hostname is required.")
+        return ascii_hostname, None
+
+    @staticmethod
+    def _resolve_public_addresses(hostname: str, port: int | None) -> list[str]:
+        ascii_hostname, literal = WebResourceService._normalize_hostname(hostname)
+        if literal is not None:
+            return [str(literal)]
+
+        try:
+            # The final dot prevents resolver search-domain expansion to a
+            # machine-local hostname.
+            records = socket.getaddrinfo(ascii_hostname + ".", port, type=socket.SOCK_STREAM)
         except socket.gaierror as exc:
             raise WebResourceError("The hostname could not be resolved safely.") from exc
         if not records:
@@ -228,21 +367,41 @@ class WebResourceService:
         seen: set[str] = set()
         for item in records:
             address = item[4][0]
-            if address in seen:
-                continue
-            seen.add(address)
+            if not isinstance(address, str) or "%" in address:
+                raise WebResourceError("The hostname resolved to an invalid network address.")
             try:
-                ip = ipaddress.ip_address(address.split("%", 1)[0])
+                ip = ipaddress.ip_address(address)
             except ValueError as exc:
                 raise WebResourceError("The hostname resolved to an invalid network address.") from exc
-            # Reject the whole answer if even one result is private or special-purpose.
-            if not ip.is_global:
+            canonical_address = str(ip)
+            if canonical_address in seen:
+                continue
+            seen.add(canonical_address)
+            # Reject the whole answer if even one result is private, special,
+            # multicast, reserved, or can encode a private IPv4 destination.
+            if not WebResourceService._is_safe_public_address(ip):
                 raise WebResourceError("Private or special-purpose network targets are not allowed.")
-            public_addresses.append(str(ip))
+            public_addresses.append(canonical_address)
         return public_addresses
 
     def _validate_hostname(self, hostname: str) -> None:
-        self._resolve_public_addresses(hostname, None)
+        self._normalize_hostname(hostname)
+
+    @classmethod
+    async def _resolve_public_addresses_bounded(
+        cls, hostname: str, port: int | None, *, timeout: float
+    ) -> list[str]:
+        """Bound OS name resolution so it cannot bypass the connection timeout."""
+        bounded_timeout = min(cls.DNS_TIMEOUT, max(0.0, timeout))
+        if bounded_timeout <= 0:
+            raise httpcore.ConnectTimeout("DNS resolution exceeded the connection deadline")
+        try:
+            return await asyncio.wait_for(
+                asyncio.to_thread(cls._resolve_public_addresses, hostname, port),
+                timeout=bounded_timeout,
+            )
+        except asyncio.TimeoutError as exc:
+            raise httpcore.ConnectTimeout("DNS resolution exceeded the connection deadline") from exc
 
     def _validate_redirect(self, current_url: str, location: str) -> str:
         return self.validate_url(urljoin(current_url, location))
@@ -361,6 +520,6 @@ class WebResourceService:
                             "retrieved_at": datetime.now(timezone.utc).isoformat(),
                             "binary": text is None,
                         }
-                except httpx.HTTPError as exc:
+                except (httpx.HTTPError, httpcore.NetworkError, httpcore.TimeoutException, httpcore.ProtocolError, httpcore.ProxyError) as exc:
                     # Avoid echoing request URLs, which may contain sensitive query parameters.
                     raise WebResourceError("Unable to access the requested resource.") from exc

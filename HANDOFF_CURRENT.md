@@ -1170,3 +1170,609 @@ Deployment remains pending:
 - Focused regression after tightening result validation: **33 passed** across Windows Sandbox, Docker sandbox, terminal feature-gate, and project-capability tests. Python compilation passed. `git diff --check` exited 0; Git emitted only LF-to-CRLF working-copy notices.
 - This is a verified provider-level live test, not yet the complete Lumira terminal integration. `ProjectTerminalService` remains hard-disabled by default and does not select this provider automatically; the feature activation/readiness path still needs to be wired to the platform-specific provider and tested end-to-end. Do not promote the Phase D security/isolation row or Phase C OS-isolated execution criterion yet.
 - Host memory after guest shutdown: approximately **2.39 GiB free / 7.70 GiB total**. No original project or user data was modified by this smoke test.
+
+
+## 2026-11-12 — G04 `/run` Brain verification gate
+
+- Added a Brain preflight to the `/run` endpoint. Workflow execution now proceeds only when `LumiraCore.understand()` returns `success is True` and `state.verification_result.ready_for_execution is True` as an explicit boolean. Missing or malformed verification, rejected Brain results, and preflight exceptions fail closed before `WorkflowEngine.execute()`.
+- Kept `WorkflowEngine` in charge of durable run history, stage checkpoints, cancellation, and recovery. The successful `/run` response envelope is unchanged. Brain failures return a sanitized failure body; the exception log records only the exception class.
+- Forwarded the request workspace and project to Brain and project to workflow execution. `LumiraCore.understand()` now accepts an optional workspace argument while preserving the existing default.
+- TDD evidence: the new gate regressions first failed against the original route (**4 failed, 1 passed**); after implementation, `tests/test_run_brain_gate.py` passed **7/7**.
+- Focused regression command:
+
+  ```text
+  python -m pytest -q --basetemp=.pytest-run-g04-20261112 tests/test_core.py tests/test_brain_execution_coordinator.py tests/test_capability_feature_gate.py tests/test_command_conversation_routing.py tests/test_memory_lifecycle.py tests/test_memory_evolution_route.py tests/test_conversation_context_service.py tests/test_image_generation_route.py tests/test_research.py tests/test_research_library_service.py tests/test_research_library_routes.py tests/test_run_brain_gate.py tests/test_run_recovery.py tests/test_lumira_core_brain.py tests/test_pipeline_guard.py
+  ```
+
+  Result: **129 passed, 1 skipped in 53.77 seconds**. The skip is an environment/resource-gated test.
+- Remaining: trace `LumiraCore.plan/build/execute/generate` and workflow step routes for the same verification bypass; build complete requirement-level machine-readable traceability; run broader regression and external acceptance suites. Project terminal remains disabled pending complete integrated sandbox acceptance.
+- Repository safety: work continued on `codex/lumira-full-implementation`; no reset, cleanup, commit, or push. Existing owner changes and data deletions were not altered by this slice.
+
+
+## 2026-11-12 — G04 workflow resume Brain verification gate
+
+- Traced `/run`, `/runs/{run_id}/resume`, `/recovery/runs/{run_id}/resume`, workflow task dispatch, `WorkflowStepRouter`, and the `/builder`, `/execute`, and `/code` endpoints. The latter are planning/code-generation surfaces and do not execute generated code or save projects. Workflow task dispatch already passes through `BrainAgentOrchestrator`.
+- Added the shared `preflight_workflow_execution()` gate and applied it to both public resume routes. `WorkflowEngine.resume()` accepts an optional internal pre-resume callback and invokes it only after persisted plan, session, resume-budget, and uncertain-side-effect checks, but before updating retry state or executing another stage. A rejected or malformed gate response leaves the retry count unchanged and executes no stage.
+- `/run` now uses the shared gate as well. The successful route response contract remains unchanged; Brain provider details are not returned to clients or logged.
+- Added `tests/test_workflow_execution_gate.py` and resume-route coverage in `tests/test_run_brain_gate.py`. The focused Brain, workflow, recovery, memory, research, and core regression set passed **137 tests in 26.66 seconds**. The targeted gate/run/recovery selection passed **48 tests in 17.29 seconds**.
+- Remaining: requirement-level machine-readable traceability; audit internal `WorkflowEngine` callers that do not supply an API-edge callback, including `AutonomousDevelopmentService`; complete remaining capability/security acceptance and external hardware/provider tests. The project terminal stays disabled pending integrated sandbox acceptance.
+- Safety: no reset, cleanup, commit, or push. Existing owner changes and runtime data deletions remain untouched.
+
+
+## 2026-11-12 — Internal autonomous-development resume Brain gate
+
+- Audited `AutonomousDevelopmentService.resume()`, including its generic `WorkflowEngine.resume()` delegation and both autonomous recovery checkpoints (`generate_changes` and `validate`). This service is not registered as an HTTP route in the current router map, but its internal resume path still existed as a direct execution boundary.
+- Routed generic workflow recovery through `WorkflowEngine.resume(before_resume=...)` and applied the shared Brain preflight to autonomous recovery before resume-count mutation, code generation, or validation. Brain must return the shared gate's explicit `allowed is True`; rejected, failing, and malformed results stop without changing the checkpoint.
+- Added regression coverage for Brain rejection and malformed responses, asserting unchanged recovery status, resume count, and stage records, and no validation command execution.
+- Verification: `python -m pytest -q --basetemp .pytest-tmp-lumira tests/test_autonomous_development.py tests/test_workflow_execution_gate.py` passed **47 tests in 66.58 seconds**. After the final fail-closed malformed-response adjustment, the targeted rejection cases and workflow gate suite passed **8 tests in 6.56 seconds**. The first pytest attempt used the inaccessible default temp root (11 passed, 36 setup errors); no product assertion failed in that attempt.
+- Full prompt-to-code-to-test machine-readable traceability remains open. Historical sources report 30 approved feature areas and 99 capability records; the checked-in registry at HEAD has 32 entries, while `app/memory/feature_registry.json` has 6 static entries. Preserve all records and reconcile the mismatch rather than overwriting either source.
+- Safety: no reset, cleanup, commit, or push. Existing staged runtime-data deletions and unrelated worktree edits remain untouched. Pytest's workspace-local `.pytest-tmp-lumira/` directory was created for the successful run and remains untracked; no cleanup was performed.
+
+
+## 2026-11-12 — Master requirement inventory seed
+
+- Added `docs/lumira_master_requirement_inventory.json` as the working machine-readable ledger. It preserves 99 legacy capability records, all 30 approved product areas, the 32 registry IDs read from `HEAD`, and the 6 static app-registry IDs. The discrepancy with older references to 28 registry entries is recorded rather than resolved by deleting or replacing data.
+- Added one individually traced and verified workflow-resume security slice (`SEC-WF-RESUME-001`). It is supported by the focused rejection/malformed-response tests recorded above.
+- The ledger is explicitly `IN_PROGRESS`; prompt subrequirements across the full specification are **not yet individually itemized**. Imported catalog statuses were not promoted to `VERIFIED`. Do not use the 130 seed records as a count of all prompt requirements.
+- No user data or pre-existing staged deletions were changed while creating the inventory. No commit was made.
+
+## 2026-11-12 - Core health status integration
+
+- Replaced `SystemStatus`'s unconditional `healthy` value with aggregation from the bounded `SystemHealthService` snapshot. Existing `services`, `service_count`, and `health` fields remain; checks, degraded subsystem names, and probe timestamp are now exposed. Probe exceptions or malformed snapshots fail closed with a sanitized degraded result.
+- `LumiraCore` passes its existing service registry into `SystemStatus`, avoiding a second service-registry instance.
+- TDD evidence: the degraded-health regression first failed because `SystemStatus` did not accept injected dependencies; a malformed-snapshot regression then exposed an unhashable status escaping validation. After both fixes, `python -m pytest -q --basetemp .pytest-tmp-lumira tests/test_core.py tests/test_health.py tests/test_task_completion_and_system_health.py` passed **12 tests in 3.90 seconds**. Coverage includes healthy behavior, degraded aggregation, sanitized probe failure, malformed snapshots, and shared registry wiring.
+- `docs/lumira_master_requirement_inventory.json` now lists process and acceptance-gate sections in the unitemized remainder and records the implementation/test evidence under `PROMPT-04-21`. Overall scope mapping and section-wide acceptance remain open; no section-4 health requirement is marked `VERIFIED`.
+- No commit, reset, cleanup, or staging was performed. Existing owner changes and staged runtime-data deletions remain untouched; `.pytest-tmp-lumira/` remains untracked.
+
+## 2026-11-13 — Final scope mapping and build-only baseline
+- Created `docs/lumira_sections_4_10_detailed_mapping_2026-11-13.md` with requirement groups, source/test surfaces, evidence, gaps and acceptance for sections 4–10.
+- Created `docs/lumira_full_scope_mapping_audit_2026-11-13.md` mapping all 42 top-level areas, including sections 1–3 and 11–42.
+- Created `docs/lumira_external_machinery_mapping_2026-11-13.md` for host, audio, embedded, robotics, network, runtimes, providers and protocols.
+- Created `docs/lumira_final_build_only_baseline_2026-11-13.md` with evidence-separated build status, blockers and dependency-ordered next work.
+- These are scope-level mappings, not a claim of 100% implementation. The 173 prompt rows in sections 4–10 remain IN_PROGRESS; atomic dependencies/security classifications and test traceability are still incomplete. The existing JSON ledger was not rewritten to avoid inventing row-level evidence.
+- Hardware audit: HP 250R G9, 7.7 GB total RAM, less than 1 GB free at audit time. CPU/GPU/disk/peripherals were not reliably enumerated. No full tests, model inference, external API calls, installer build or hardware actuation were run.
+- Repository state was preserved: no reset/clean/stash/commit/push/staging or deletion. Existing dirty worktree and staged deletions remain untouched.
+
+## 2026-11-13 — Six-step build execution follow-up
+- Updated `docs/lumira_master_requirement_inventory.json`: 349 total records, including 173 atomic prompt rows for sections 4–10 and 46 section-parent records. All 173 atomic rows remain IN_PROGRESS; dependency/security mapping is explicitly PROVISIONAL.
+- Added two ledger backups: `docs/lumira_master_requirement_inventory.pre_mapping_2026-11-13.json` and `docs/lumira_master_requirement_inventory.pre_section_scope_2026-11-13.json`.
+- Exact nested master prompt text for sections 1–3 and 11–42 plus GATE/PROCESS/FREEZE/REPORT is not present in the repository; those 46 sections are scope parents only, not atomic decomposition.
+- Integrated platform provider injection in `app/routes/project_terminal.py` by passing `create_sandbox_provider()` to `ProjectTerminalService`. Execution remains hard-disabled by default; do not set `OS_SANDBOX_ENABLED=True` yet.
+- Host Windows Sandbox status probe returned available=True / windows_sandbox / verified. This is a host feature probe, not live ProjectTerminalService-to-guest acceptance.
+- Added terminal provider integration contract tests. Final focused sandbox set: 30 passed in 5.77s.
+- Full backend, desktop and external/hardware acceptance NOT RUN. Host free RAM was approximately 0.94 GB; live guest requires 2 GB minimum and was not launched.
+- Release status: NOT READY. See `docs/lumira_build_execution_status_2026-11-13.md` for evidence and blockers.
+- No reset/clean/stash/branch switch/commit/push/staging/deletion.
+
+
+## 2026-11-13 — Phase 1 Core Correctness continuation
+- Recovered the Phase 1 definition from the earlier project handoff: Main Brain execution architecture; validation/execution pipeline; deadlines; session cancellation; safe retry/recovery; provider authorization; normal response rendering; Electron desktop API integration; settings persistence; missing-provider/error handling; Brain reliability.
+- Extended `BrainExecutor.resume()` with an optional `BrainExecutionControl`. Resumed runs now check deadlines/cancellation before a stage and after a stage before advancing. Interruptions are terminal states, not retryable stage failures. Existing callers remain compatible.
+- Added tests for expired resumed work and cancellation between resumed stages.
+- Added a service-restart persistence test for AI mode and explicit cloud consent.
+- Added a safe bounded Markdown renderer in `lumira_desktop/src/components/Chat/MarkdownMessage.tsx`, wired to assistant response text and text/document output. Supports common headings, paragraphs, inline formatting/code, fenced code, lists, blockquotes, horizontal rules and HTTP(S) links. Raw HTML is text. This is not full CommonMark.
+- Added frontend tests for Markdown structure, fenced-code safety and unsafe link protocols.
+- Backend focused verification: `tests/test_ai_mode_service.py`, `tests/test_brain_execution_control.py`, `tests/test_conversation_provider_router.py`, `tests/test_provider_access_policy.py` — **38 passed in 8.49s**. Separate targeted resume selection — **4 passed in 1.13s**.
+- Frontend Markdown tests could not run because `lumira_desktop/node_modules` is absent and Vitest is unavailable. No dependencies were installed and no network install was attempted.
+- Phase 1 remains IN_PROGRESS. Full backend regression, desktop tests/build, Electron packaged smoke test, real provider validation and end-to-end rendering acceptance remain outstanding.
+- No reset/clean/stash/branch switch/commit/push/bulk staging/deletion. Existing staged runtime-data deletions and unrelated worktree changes remain preserved.
+- Detailed status: `docs/phase1_core_correctness_status_2026-11-13.md`.
+
+
+## 2026-11-13 — Phase 1 Electron bridge continuation
+- Expanded `lumira_desktop/electron-api-proxy.cjs` API roots to cover all literal route roots used by `src/api/client.ts`; prior allowlist omitted agents, background-tasks, creator, data, device-profiles, market and system.
+- Hardened proxy: validates loopback upstream port; rejects non-loopback absolute-form request targets; allowlists HTTP methods; strips hop-by-hop headers; returns sanitized errors; adds bounded upstream inactivity timeout.
+- Added `backend-health.cjs`; Electron startup now validates Lumira's actual health JSON contract rather than trusting any 2xx response on localhost port 8000. Packaged Electron file list includes the helper.
+- Added Node runtime tests covering proxy forwarding, query/body/header preservation, unknown route rejection, method rejection, unavailable backend, invalid ports, non-loopback request target, dynamic API-root extraction from the desktop client, and health-contract validation.
+- `npm run test:runtime`: **12 passed, 0 failed**.
+- Broader focused backend Phase 1 regression group: **89 passed in 24.67s** across 14 test files.
+- Node syntax checks for Electron main, API proxy and health helper passed.
+- Frontend Vitest/build/lint and actual Electron packaged startup remain unverified because desktop `node_modules` is absent. No dependency install attempted. No end-to-end Electron-to-FastAPI smoke test was run.
+- Phase 1 remains IN_PROGRESS. Detailed status appended to `docs/phase1_core_correctness_status_2026-11-13.md`.
+- Preserve all existing staged deletions and unrelated worktree changes. No reset/clean/stash/branch switch/commit/push/staging/deletion.
+
+
+## 2026-11-13 — Phase 1 Brain cancellation lifecycle correction
+- Found that BrainService released its active execution-control registry entry immediately after cognitive stages, before final validation and requested capability dispatch. Session cancellation could miss a long capability operation.
+- Refactored post-pipeline completion into a helper and kept the active control registered through final validation/capability dispatch, releasing in `finally`.
+- Added cancellation/deadline checks after pipeline, after final validation before side effects, after capability return, and before success persistence.
+- Added regression coverage for a session cancellation triggered during a capability call; capability success is not reported after cancellation, failure is persisted, and registry cleanup is verified.
+- Final validation failures now set state status to failed instead of leaving a completed-looking state.
+- Latest focused backend Phase 1 regression group: **90 passed in 22.91s** across 14 test files.
+- Latest Electron Node runtime suite: **13 passed, 0 failed**; package test confirms helper/proxy files included in Electron build files.
+- Remaining: full backend suite; frontend Vitest/build/lint; actual Electron GUI/packaged startup; end-to-end Electron-to-FastAPI test; provider and hardware acceptance. Desktop dependencies are absent; no install attempted.
+- Capability calls are only cancellable at their boundaries unless their own implementation supports cooperative cancellation.
+- Phase 1 remains IN_PROGRESS. See `docs/phase1_core_correctness_status_2026-11-13.md`.
+
+
+## 2026-11-13 — Phase 1 final validation addendum
+- After the last Brain final-state failure correction, Brain execution-control and Brain route regression subset: **17 passed in 8.80s**.
+- Python compilation, package JSON parse, Node syntax checks and full `git diff --check` passed. Git emitted only LF-to-CRLF normalization warnings.
+- No commits or repository cleanup; all existing staged deletions and unrelated worktree changes remain intact.
+
+## 2026-11-13 — Phase 1 continuation verification refresh
+
+- Closed the Brain execution-control lifetime gap: session cancellation/deadline remains registered through final validation and capability dispatch; terminal failure is persisted and success is not reported after a cancellation/deadline boundary. Cancellation inside a synchronous capability remains cooperative and cannot preempt the call.
+- Added safe bounded Markdown rendering for assistant text/document outputs. Raw HTML remains text; links are restricted to HTTP(S). Added component tests.
+- Hardened the shared Electron/Vite API proxy, expanded its allowlist from literal API-client route roots, added method/target/header/timeout/error protections, and added a backend-health identity check with a bounded response body.
+- Added Electron Node runtime tests for proxy forwarding/rejection and health identity.
+- Backend focused Phase 1 regression matrix: **90 passed** across 14 test files. Additional final Brain lifecycle subset: **17 passed**.
+- Electron Node runtime tests: **13 passed**. Node syntax checks and Python compilation passed.
+- Desktop component suite: **43 passed across 7 files** when run with one worker and file parallelism disabled. This resource-constrained invocation avoids the worker-start timeout observed in the parallel run.
+- Desktop lint: **0 warnings, 0 errors** after correcting the Markdown test fixture's unnecessary escapes. TypeScript/Vite production build passed.
+- node_modules was installed from the local npm cache using npm ci --offline --ignore-scripts; Electron's install script/binary was not installed. No network dependency fetch was required.
+- git diff --check passed in the earlier final lifecycle pass. Existing user data and staged/untracked changes were preserved; no reset, clean, stash, commit, push or bulk staging was performed.
+
+### Remaining Phase 1 acceptance blockers
+
+- Full repository backend suite was not rerun; the 90-test matrix is focused evidence, not a complete backend regression.
+- Electron GUI/packaged executable and real Electron-to-running-FastAPI end-to-end smoke test remain unverified because the Electron binary install script was intentionally skipped.
+- Live local/cloud provider inference, real provider outage/timeout behavior, real audio devices, wake-word hardware, and live image provider acceptance remain unverified.
+- Visual inspection and packaged install/upgrade/user-data-preservation acceptance remain open.
+- Generated-project terminal execution remains disabled until per-run OS isolation is integrated and independently verified.
+
+**Verdict: Phase 1 implementation and focused backend/desktop verification are substantially complete. Phase 1 is NOT release-accepted; do not mark VERIFIED/release-ready until the blockers above are closed.**
+
+## Additional Phase 1 acceptance check — live FastAPI proxy smoke
+
+- Started the actual FastAPI application on loopback port 8000 and exercised the shared Electron API proxy handler from a separate Node HTTP server.
+- GET /health traversed the proxy and reached FastAPI: HTTP **200**; the Electron backend-health validator accepted the real Lumira health payload; validate, builder, execute, code and memory service flags were all true; 9 provider status entries were returned.
+- The temporary FastAPI process was stopped and port 8000 was confirmed no longer listening.
+- This verifies the shared proxy-to-FastAPI HTTP bridge and real health contract. It does **not** prove Electron GUI startup or packaged Electron runtime behavior.
+- Additional focused backend check: **25 passed** across health, Brain execution-control and AI-mode tests.
+- Full backend suite remains deferred: the constrained host has about 1 GB free RAM, and broad suite execution includes tests outside the Phase 1 safe focused matrix, including generated-project execution boundaries. Do not bypass terminal isolation guards to inflate test counts.
+
+
+## Additional Phase 1 regression pass — 2026-11-13
+
+- Ran an additional safe backend regression group covering user-output adaptation, Brain execute route, local authentication boundary, conversation context, safe links, summary-provider registry integration, provider startup registration, and launch security.
+- Result: **55 passed, 0 failed in 13.40 seconds**.
+- This extends focused evidence; it is not the full repository backend suite.
+- Current machine free RAM was approximately 1.65 GB immediately before this pass. Electron executable remains absent because npm installation used `--ignore-scripts`; no Electron GUI or packaged-app smoke was possible.
+- Remaining Phase 1 acceptance blockers are unchanged: full safe backend regression, Electron binary/GUI and packaged install acceptance, real configured provider inference/outage behavior, real audio/wake-word/image hardware/provider checks, visual desktop sign-off, and verified OS isolation before enabling generated-project execution.
+- No user data, staged deletions, or unrelated working-tree changes were altered. No reset, clean, stash, branch switch, commit, push, or bulk staging was performed.
+
+**Verdict: Phase 1 remains IN PROGRESS and is not release-accepted.**
+
+## Phase 1 continuation — 2026-11-13 (reconnected desktop)
+
+- Wispr Flow was found running after reconnect (including helper processes). Closed the identified Wispr Flow processes only; Chrome was left running. A follow-up process query found no Wispr Flow processes.
+- Free physical RAM was approximately 2.62 GB before the next regression batch and 2.39 GB after the subsequent checks. This is a point-in-time reading, not a capacity guarantee.
+- Additional safe backend regression batch: `tests/test_brain_execution_coordinator.py`, `tests/test_command_conversation_routing.py`, `tests/test_data_backup_service.py`, `tests/test_memory_lifecycle.py`, `tests/test_pipeline_guard.py`, `tests/test_terminal_feature_gate.py`, and `tests/test_web_access.py`: **77 passed, 0 failed in 30.11 seconds**.
+- Additional core and image-route contract tests: `tests/test_core.py` and `tests/test_image_generation_route.py`: **10 passed, 0 failed in 5.63 seconds**.
+- These are additional focused tests, not a full repository backend regression. Generated-project validation remains blocked unless per-run OS isolation is independently verified. Electron GUI/package and real provider/hardware acceptance remain open.
+- The active worktree remains `C:\Users\Administrator\AppData\Local\Temp\lumira-full-implementation`; its previously observed 375 Git status entries were preserved. No reset, clean, stash, branch switch, commit, push, bulk staging, or deletion was performed.
+
+**Verdict: Phase 1 remains IN_PROGRESS and is not release-accepted.**
+
+- Autonomous-development safety/recovery regression: `tests/test_autonomous_development.py`: **44 passed, 0 failed in 53.50 seconds**. This suite uses temporary workspaces and mocked validation command execution; it does not verify real OS-isolated guest execution. Production generated-project validation remains blocked without verified OS isolation.
+
+## Phase 1 full backend regression and defect corrections — 2026-11-13
+
+- Full repository backend test run: `python -m pytest -q --maxfail=1` — **1044 passed, 2 skipped, 0 failed in 396.83 seconds**. One optional local faster-whisper test module was skipped because its optional NumPy dependency is not installed. The suite emitted one Pydantic serializer warning from the test that deliberately corrupts a typed state after construction; it did not fail.
+- Corrected a real capability-scope defect: programming language/framework requirements are now execution blockers only for code-producing capabilities. Reports, research, media, and other non-code capabilities no longer inherit irrelevant programming-stack blockers. Legacy direct ConstraintService calls without capability metadata retain their previous behavior.
+- Corrected deterministic context inference: FastAPI, Flask, and Django imply Python, avoiding a false missing-language blocker for common Python frameworks. Explicit JavaScript and TypeScript detection remains intact.
+- Corrected goal identity across Brain/capability dispatch: the Brain persists its goal before dispatch and passes that same goal ID to goal-aware capabilities, preventing duplicate goals and keeping the session/workflow/artifact links consistent.
+- Updated the recovery-route test double to accept and assert the guarded `before_resume` callback now passed by the route.
+- Added capability-scope and context-inference regression coverage. Focused defect verification passed: **28 passed** for the constraint/report/core/Brain slice; **21 passed** for goal-link, report, constraint and Brain lifecycle slice; **18 passed** for context inference, command route, core and constraint slice; **8 passed** for recovery and related route regressions.
+- Python compileall passed. `git diff --check` and `git diff --cached --check` passed; Git emitted only existing LF-to-CRLF normalization notices.
+- The last post-suite RAM reading was approximately **0.99 GB free**. Wispr Flow was not present in the final process query. No further resource-heavy tests were started.
+- Full backend regression is now covered. Phase 1 is still not release-accepted: Electron binary/GUI and packaged install acceptance, live configured provider inference/outage checks, real audio/wake-word and image-provider acceptance, visual desktop sign-off, and independently verified per-run OS isolation remain open. Generated-project terminal execution stays disabled until isolation is proven.
+
+**Verdict: backend implementation and full backend regression are verified to the extent described above. Overall Phase 1 remains IN_PROGRESS, not release-accepted.**
+
+## 2026-11-13 — User-supplied scope prompt recovery and crosswalk
+
+- Reconnected to the authorized Windows development laptop and confirmed the active worktree remains `C:\\Users\\Administrator\\AppData\\Local\\Temp\\lumira-full-implementation`, branch `codex/lumira-full-implementation`, HEAD `745be3c5643d09d96ae9227f9e995c5616f886bb`.
+- Confirmed all three mandatory handoff inputs exist: `HANDOFF_CURRENT.md`, `docs/lumira_final_build_baseline_2026-11-12.md`, and `docs/lumira_master_requirement_inventory.json`.
+- Preserved the existing worktree exactly. It contains extensive modified/untracked work and 284 staged deletions affecting runtime data, artifacts, generated projects, memory and other owner data. No reset, clean, stash, checkout, stage, commit, push, or deletion was performed.
+- Current ledger remains 349 records: 99 legacy capability records, 30 approved feature areas, 173 atomic prompt rows, 46 section-scope parents, and 1 separately verified security slice. All 173 atomic prompt rows remain IN_PROGRESS; full_scope_reconciled=false.
+- Recovered the user-supplied master prompt's approved scope section 9 A–U and counted 428 atomic bullet statements across 21 domains. Added `docs/lumira_user_scope_prompt_crosswalk_2026-11-13.md` mapping these source domains to candidate PART-1–PART-42 scope parents.
+- The 428 source statements are NOT yet added as canonical requirements. Duplicate/alias reconciliation against the 99 legacy rows, 30 area rows and 173 existing atomic rows is still required. Candidate PART links are scope crosswalks, not verified dependency edges.
+- Host RAM at audit time: approximately 1.57 GB free of 7.7 GB. No full test suite or resource-heavy operation was started in this continuation.
+- Existing reported full backend run remains 1044 passed, 2 skipped, 0 failed, but it is historical evidence from earlier on 2026-11-13, not rerun during this continuation.
+- Next: reconcile the 428 source bullets against existing canonical records; resolve aliases/duplicates; map remaining PART-1–PART-42 rows to code, tests, dependencies, external requirements, security and acceptance criteria. Only then proceed to implementation in dependency order.
+- No building-only completion percentage is recalculated; the denominator is still not fully reconciled. Overall release status remains NOT READY.
+
+## 2026-11-13 — ServiceRegistry implementation continuation
+
+- Desktop Commander device `lap` is online; continued in the existing worktree `C:\Users\Administrator\AppData\Local\Temp\lumira-full-implementation\`, branch `codex/lumira-full-implementation`, HEAD `745be3c5643d09d96ae9227f9e995c5616f886bb`.
+- Recovered the exact current scope source from Library file `Pasted text(20261113-124835).txt`. Section 9 contains 428 dash-bullet requirements across domains A–U; a direct parse confirmed the previously recorded per-domain counts. The crosswalk document now records the source and the older Parts 4–42 relationship. These 428 bullets are source scope, not 428 proven unique canonical requirements.
+- Implemented the missing generic lifecycle/dependency-injection contract in `app/core/service_registry.py`: preserve seven default services, injectable custom mappings without default construction, validated service names, None rejection, duplicate rejection, explicit replacement, unregister/return, and RLock-protected operations.
+- Added `tests/test_service_registry.py` with dedicated tests for defaults, injection, register, duplicate/replacement, invalid input, unregister, default conflicts and concurrent registration/lookup.
+- Focused integration verification: `python -m pytest -q tests/test_service_registry.py tests/test_core.py tests/test_health.py tests/test_lumira_core_brain.py tests/test_router_registry.py` — **24 passed, 0 failed in 5.53s**. An initial concurrency assertion incorrectly assumed deterministic insertion order; it was corrected to assert membership/count and the complete rerun passed.
+- Updated canonical ledger row `PROMPT-04-03` to IMPLEMENTED, added requirement-specific acceptance criteria, test locations/results and evidence. It remains short of VERIFIED because dependency mapping and row-level security review remain provisional. Ledger remains 349 rows: IMPLEMENTED 59, IN_PROGRESS 261, BLOCKED 27, NOT_STARTED 1, VERIFIED 1.
+- Created `docs/lumira_master_requirement_inventory.pre_service_registry_2026-11-13.json` as a pre-edit backup before changing the canonical ledger.
+- Current RAM before the focused test run was approximately 1.7 GB free / 7.7 GB total. No full suite, external provider call, hardware test or live sandbox run was attempted in this continuation.
+- No commit, push, reset, clean, stash, branch switch, bulk stage, or cleanup was performed. Existing staged deletions and unrelated worktree changes remain protected.
+- Next implementation target: audit and extend the next highest-value missing core capability without enabling terminal execution or weakening provider/resource/security gates. Continue updating requirement-level evidence after each tested increment.
+
+
+## 2026-11-13 ? MultiModelRegistry implementation and combined regression
+
+- Implemented `app/services/multi_model/model_registry.py` with validated immutable model profiles, normalized metadata, provider `generate` contract validation, duplicate rejection by default, explicit replacement, lookup/removal, deterministic listing, capability eligibility filtering, and lock-protected access.
+- Added `tests/test_multi_model_registry.py` covering normalization, invalid profiles/provider contracts, duplicate/replacement behavior, lookup/removal, eligibility and deterministic ordering.
+- Focused verification: **15 passed, 0 failed** across `tests/test_multi_model_registry.py` and `tests/test_multi_model_orchestrator.py`.
+- Combined regression subsequently completed: **39 passed, 0 failed in 675.45 seconds** across the ServiceRegistry, core, health, Lumira Brain, router registry, MultiModelRegistry and multi-model orchestrator test files.
+- `compileall` passed for both changed implementation/test pairs. `git diff --check` and `git diff --cached --check` passed; Git emitted only LF-to-CRLF normalization notices.
+- Canonical ledger row `PROMPT-06-08` is IMPLEMENTED, not VERIFIED. Dependency/security review and live configured-provider inference remain open. Ledger validation confirms 349 records: 60 IMPLEMENTED, 260 IN_PROGRESS, 27 BLOCKED, 1 NOT_STARTED and 1 VERIFIED.
+- Current free RAM after verification was approximately 1.6 GB of 7.7 GB. No additional resource-heavy suite was started.
+- Existing worktree changes and staged deletions remain untouched. No reset, clean, stash, branch switch, commit, push, stage or cleanup was performed.
+- Next: continue with a narrow P1 foundational increment, first reviewing existing persistence/health/resource-budget contracts and available tests; do not enable terminal execution or weaken security gates.
+
+
+## 2026-11-13 ? Brain module registry implementation
+
+- Extended `app/services/brain/brain_registry.py` while preserving the default twelve-stage cognitive pipeline and the legacy `get_modules`, `get_module_names` and `count` APIs.
+- Added validated custom module injection, explicit replacement, unique module-name and execution-order checks, deterministic ordering, lookup, removal, snapshot retrieval and thread-safe registry access. The registry enforces the existing BrainExecutor limit of twelve modules.
+- Added `tests/test_brain_registry.py` for default order, custom injection, registration, duplicate/replacement rules, invalid modules, execution-order collisions, module limit, removal and snapshot isolation.
+- Focused Brain integration verification: **27 passed, 0 failed in 5.15s** across the dedicated registry, Brain execution-control and Lumira Brain tests.
+- Canonical ledger row `PROMPT-04-04` is now IMPLEMENTED, not VERIFIED. The dependency edge and security classification still require row-level review. Ledger remains 349 records: 61 IMPLEMENTED, 259 IN_PROGRESS, 27 BLOCKED, 1 NOT_STARTED and 1 VERIFIED.
+- A pre-edit inventory backup is retained at `docs/lumira_master_requirement_inventory.pre_brain_registry_2026-11-13.json`.
+- No provider, OS, terminal or hardware permissions were expanded. Existing staged deletions and unrelated worktree changes remain preserved.
+
+
+## 2026-11-13 ? Brain configuration manager implementation
+
+- Implemented app/services/brain/brain_config.py as a read-only configuration manager for the LUMIRA_ namespace. It supports injected environment mappings, process-environment snapshots, explicit reload, strict boolean and integer parsing, required values, secret-specific access and default diagnostic redaction.
+- Integrated optional provider startup in app/services/providers/startup_registration.py with the manager. Malformed provider enable flags fail closed; credential values are never included in startup warnings.
+- Added tests/test_brain_config.py and a malformed-flag regression in tests/test_provider_startup_registration.py.
+- Focused verification after the change: 58 passed, 0 failed in 7.81s, covering configuration, provider registration/lazy imports, ServiceRegistry, MultiModelRegistry and BrainRegistry.
+- Canonical ledger row PROMPT-04-07 is IMPLEMENTED, not VERIFIED. File-based configuration and whole-application migration of remaining direct environment reads are not claimed complete; application-wide precedence and row-level security review remain open.
+- A pre-edit ledger backup is retained at docs/lumira_master_requirement_inventory.pre_brain_config_2026-11-13.json.
+- Ledger totals: 349 records; 62 IMPLEMENTED, 258 IN_PROGRESS, 27 BLOCKED, 1 NOT_STARTED and 1 VERIFIED.
+
+
+## 2026-11-13 ? Brain environment manager implementation
+
+- Added app/services/brain/brain_environment_manager.py with supported environments (development, testing, staging, production), short aliases, request/config/default precedence, validation and fresh per-execution context creation.
+- Integrated the manager into BrainService.create_state. Every Brain request now receives a validated, independent BrainContext; the manager does not mutate process-wide environment variables.
+- Added tests/test_brain_environment_manager.py, including integration checks that the Brain service propagates request metadata and rejects unsupported environments.
+- Focused Brain environment/execution/core verification: 31 passed, 0 failed in 10.40s.
+- Canonical ledger row PROMPT-04-08 is IMPLEMENTED, not VERIFIED. This does not claim every external subsystem has full production/staging isolation; that broader review remains open.
+- A pre-edit ledger backup is retained at docs/lumira_master_requirement_inventory.pre_environment_manager_2026-11-13.json.
+- Ledger totals remain 349 records: 63 IMPLEMENTED, 257 IN_PROGRESS, 27 BLOCKED, 1 NOT_STARTED and 1 VERIFIED.
+
+## 2026-11-13 ? Brain configuration manager implementation
+
+- Implemented app/services/brain/brain_config.py as a read-only manager for the LUMIRA_ namespace, with environment snapshots, explicit reload, strict boolean/integer parsing, required values, secret-specific access and default diagnostic redaction.
+- Integrated optional provider startup with BrainConfig. Malformed provider enable flags fail closed; credential values are not included in startup warnings.
+- Added tests/test_brain_config.py and a malformed-flag regression in tests/test_provider_startup_registration.py.
+- Focused verification: 58 passed, 0 failed in 7.81s, covering configuration, provider registration/lazy imports and registry regression tests.
+- Canonical ledger row PROMPT-04-07 is IMPLEMENTED, not VERIFIED. File-based configuration, whole-application migration of remaining direct environment reads, application-wide precedence and row-level security review remain open.
+- A pre-edit ledger backup is retained at docs/lumira_master_requirement_inventory.pre_brain_config_2026-11-13.json.
+- Ledger totals: 349 records; 63 IMPLEMENTED, 257 IN_PROGRESS, 27 BLOCKED, 1 NOT_STARTED and 1 VERIFIED.
+
+
+## Environment/configuration verification follow-up
+
+- Corrected BrainService environment precedence so an omitted BrainRequest.environment uses LUMIRA_ENVIRONMENT, while an explicitly supplied request value takes precedence. Added a dedicated integration test.
+- Combined focused verification across environment manager, Brain execution/core, BrainConfig, provider registration and lazy imports: **57 passed, 0 failed in 13.17s**.
+- Updated PROMPT-04-08 evidence/test mapping to reflect this combined run. It remains IMPLEMENTED, not VERIFIED; whole-system production isolation and security review remain open.
+
+
+## 2026-11-13 ? Application lifecycle manager implementation
+
+- Added app/services/system/application_lifecycle_service.py with ordered named hooks, sync/async callback support, idempotent startup, reverse-order shutdown, partial-startup rollback, restart after clean shutdown and safe error reporting.
+- Integrated the manager into app/main.py through FastAPI lifespan. Optional provider registration now occurs during app startup rather than as an import-time side effect.
+- Added tests/test_application_lifecycle.py and tests/test_app_lifespan.py.
+- Focused lifecycle/startup/health/auth verification: **28 passed, 0 failed in 12.14s** across lifecycle manager, FastAPI lifespan, provider startup/lazy import, health and local auth tests.
+- Canonical ledger row PROMPT-04-09 is IMPLEMENTED, not VERIFIED. Draining in-flight Brain/background work and cleaning every provider-owned resource remain open before a full shutdown claim.
+- A pre-edit ledger backup is retained at docs/lumira_master_requirement_inventory.pre_application_lifecycle_2026-11-13.json.
+- Ledger totals: 349 records; 64 IMPLEMENTED, 256 IN_PROGRESS, 27 BLOCKED, 1 NOT_STARTED and 1 VERIFIED.
+
+
+### Application lifecycle drain extension ? 2026-11-13
+- Added track_work() to count in-flight work and reject admission unless lifecycle state is running.
+- Shutdown now moves to stopping, waits for active work to drain, enforces a bounded timeout, and leaves a retryable stopping state if the timeout expires.
+- Added explicit restart(timeout_seconds=...); FastAPI middleware now tracks active HTTP requests across the app lifespan.
+- Added drain, timeout/retry, restart and request middleware regression coverage.
+- Validation: 60 focused lifecycle/foundation/plugin/workflow/Brain tests passed; a related lifecycle/provider/auth regression batch passed 123 tests. compileall, git diff --check, and git diff --cached --check passed.
+- Scope remains IMPLEMENTED, not VERIFIED: background-job/Brain execution draining, provider-owned resource cleanup, and row-level dependency/security review remain open.
+
+
+### Tool policy and bounded async executor ? 2026-11-13
+- Hardened schema validation to reject unknown keywords rather than silently ignore constraints; added enum, object-property, array uniqueness and numeric-bound validation. Regex patterns are intentionally unsupported to avoid unbounded regex execution.
+- Added an async tool executor for explicitly registered async handlers, capability permissions, one-time session/tool/argument-bound approvals, call/payload/time/result budgets, result-size bounds and sanitized handler failures.
+- Validation: 34 focused tool-policy/executor/foundation/workflow tests passed after final schema hardening; an earlier broader 51-test batch passed before final validation-only refinements. Static compilation and unstaged/staged diff checks passed.
+- This remains a partial backend primitive, not a completed agent-tool system. It is not yet integrated into BrainExecutionCoordinator/agent orchestration; owner identity at the approval boundary, durable audit, and end-to-end side-effect tests remain open. Ledger statuses remain IN_PROGRESS.
+
+
+## Source-scope reconciliation candidate pass ? 2026-11-13
+- Captured all 428 exact user-supplied section-9 bullets across domains A?U in a separate source-record JSON file.
+- Generated candidate mappings against the existing 349-row ledger: 49 exact normalized-name candidates, 361 lexical review candidates, 18 no-strong-candidate items. Similarity is not semantic equivalence.
+- No automatic duplicate decisions, canonical row merges, status changes or completion percentages were applied.
+- Domain U remains external machinery and must be separated from software build-only effort; physical hardware and live hardware acceptance cannot be claimed from source mapping.
+- Full canonical reconciliation, detailed mapping for Parts 1?3 and 11?42, and acceptance/security evidence remain outstanding.
+
+
+## Full master prompt source recovery and crosswalk ? 2026-11-13
+- Recovered the 42-part master prompt from Library file Pasted text(20261112-150057).txt; two copies were found and the PART-4?PART-42 numbered lists matched exactly.
+- Extracted 727 numbered build requirements, 9 specialist-agent subitems and 97 governance/process/acceptance items into separate machine-readable source files.
+- Matched existing 173 atomic ledger rows to the 727 requirements: 162 exact unique matches confirmed and attached as source aliases; 11 rows remain unresolved.
+- Matched newer section-9 A?U scope to the 727 requirements: 148 exact wording matches, 129 strong lexical candidates, 136 possible candidates and 15 no-strong candidates. Exact wording matches are alias candidates, not implementation evidence.
+- The canonical ledger remains 349 rows with internally consistent counts: 64 IMPLEMENTED, 256 IN_PROGRESS, 27 BLOCKED, 1 NOT_STARTED and 1 VERIFIED. No status was changed by source mapping.
+- Semantic reconciliation across the 727 requirements, 428 newer bullets, 99 catalog entries, 30 feature areas and 46 parent records remains incomplete; denominator and build-only weights are not frozen.
+
+
+## Atomic source-ledger expansion ? 2026-11-13
+- Added all **727** numbered build requirements from the recovered PART-4?PART-42 master prompt to the authoritative ledger.
+- Reused **162** exact unique matches from the prior 173 atomic prompt rows; created **565** new source-backed atomic rows. The remaining **11** pre-existing prompt rows are retained as additional obligations pending semantic review.
+- Added **148** exact aliases from the newer section-9 A?U scope to their corresponding canonical ledger rows.
+- Linked each PART-4?PART-42 parent to its atomic child IDs. Source capture is complete; implementation, dependencies, tests, external prerequisites, security classification and acceptance remain to be audited for the new rows.
+- Added tests/test_lumira_requirement_inventory.py; **6 passed in 0.46s**. The tests validate source counts, canonical row coverage, parent-child links, exact aliases, ledger counts and the explicit not-reconciled state.
+- Current ledger: **914 records** ? 64 IMPLEMENTED, 821 IN_PROGRESS, 27 BLOCKED, 1 NOT_STARTED, 1 VERIFIED. The 727 source requirements are represented, but the unique denominator is not frozen because the 99 legacy capability entries, 30 approved feature areas, 46 parent records and 428 newer scope statements still need semantic deduplication.
+- No implementation status was promoted by the source-ledger expansion. No overall or building-only completion percentage is asserted.
+
+
+## Continuation checkpoint ? 2026-11-13 19:40 IST
+- Recovered and atomized the full 42-part prompt: 727 numbered build requirements, 9 specialist coverage subitems, and 97 governance/process/acceptance items.
+- Expanded the authoritative ledger to 914 records. It contains all 727 numbered requirements (162 reused from prior atomic rows, 565 new source-backed rows), 11 additional unmatched prompt rows, 99 legacy catalog records, 30 approved areas, 46 section parents and 1 separate security slice.
+- Exact source crosswalks: 162/173 old atomic rows matched to the 727-part source; 148/428 newer A?U bullets attached as exact aliases to the 727 requirements. Remaining fuzzy/possible candidates and 99/30 legacy/area duplicate reconciliation remain open.
+- Inventory integrity tests: 6 passed in 0.46s. Source JSON, ledger counts, parent-child links and alias counts validated. Python compileall and staged/unstaged git diff checks passed.
+- Current ledger status: 64 IMPLEMENTED, 821 IN_PROGRESS, 27 BLOCKED, 1 NOT_STARTED, 1 VERIFIED. Only 6 prompt-level atomic rows are marked IMPLEMENTED; none of the 727 source requirements is VERIFIED. No overall/build-only percentage is asserted.
+- Repository safety: branch codex/lumira-full-implementation, HEAD 745be3c5643d09d96ae9227f9e995c5616f886bb. Git status currently shows 440 entries: 284 staged deletions, 68 modified tracked paths, 88 untracked paths. Existing staged deletions and owner changes preserved; no stage/reset/clean/stash/checkout/commit/push was performed.
+- Host resources at checkpoint: approximately 2.26 GB free RAM and 24.5 GB free C: space. Desktop Commander online.
+- Next dependency-ordered work: semantic reconciliation of legacy catalog/feature-area records against the 727 source rows; then row-level implementation/test/dependency/security mapping; then continue code implementation in safe dependency order. Keep project-terminal execution disabled until genuine per-run OS isolation is live-tested.
+
+
+## 2026-11-14 — Legacy catalog and feature-area candidate crosswalk
+- Generated `docs/lumira_legacy_catalog_and_feature_area_crosswalk_candidates_2026-11-14.json` against the 727 numbered master-prompt requirements.
+- Covered all 99 legacy capability catalog records and all 30 approved feature areas. Best-match tiers: legacy catalog 46 normalized-exact, 32 strong lexical, 21 possible lexical; feature areas 1 normalized-exact, 14 strong lexical, 12 possible lexical, 1 weak lexical, 2 with no lexical candidate.
+- Candidate scores are lexical retrieval hints only, not semantic equivalence. Feature areas are broad groupings and may map to many requirements.
+- Updated ledger reconciliation metadata and added an integrity test. No rows merged/deleted, no implementation statuses changed, no denominator frozen; full_scope_reconciled remains false.
+- Next: human semantic review of legacy candidates, full many-to-many mapping of 30 feature areas, then reconcile remaining 428 scope bullets and 97 governance items before denominator freeze.
+- Device online. Repository branch/HEAD unchanged; 440 pre-existing status entries preserved. RAM at initial check was approximately 0.57 GB free and later recovered to approximately 1.56 GB; disk check was not re-run. Avoid full-suite tests/builds until memory headroom is adequate. Keep project-terminal execution disabled pending real per-run OS isolation acceptance.
+
+
+### 2026-11-14 — Exact legacy alias review
+- Tightened the candidate classifier: exact means case/punctuation-normalized phrase equality only; synonyms, stopword removal and token similarity cannot confirm an alias.
+- Confirmed 44/99 legacy catalog entries as exact text aliases to 44 unique master-prompt canonical rows. Attached source aliases and per-record reconciliation annotations; original 99 legacy records remain present.
+- Remaining legacy records for semantic review: 55. All 30 approved feature areas still require many-to-many coverage review.
+- Updated the focused integrity test and report. No canonical rows merged/deleted; implementation statuses unchanged; denominator not frozen.
+
+- Final focused source-ledger verification after alias attachment: `python -m pytest -q tests/test_lumira_requirement_inventory.py` — **7 passed in 0.53s**. `compileall` passed for the test module; `git diff --check` and `git diff --cached --check` passed with existing LF-to-CRLF notices only.
+- Latest Git snapshot: branch `codex/lumira-full-implementation`, HEAD `745be3c5643d09d96ae9227f9e995c5616f886bb`; status groups: 284 staged deletions, 68 modified tracked paths, 90 untracked paths. Existing owner changes remain preserved; no reset/clean/stash/checkout/stage/commit/push.
+
+
+## 2026-11-14 — Lumira consolidated into E Hari Personal AI Core
+- User directed that all Lumira-related development continue in the original project `E:\Hari\personal_ai_core`.
+- Confirmed both checkouts share base commit `745be3c5643d09d96ae9227f9e995c5616f886bb`; E: was clean on `main`, and C: was a linked implementation worktree on `codex/lumira-full-implementation`.
+- Created destination branch `codex/lumira-personal-ai-core-consolidation-2026-11-14` in E:.
+- Transferred 156 changed/new source, tests, desktop and documentation files (68 modified tracked + 88 new; 24,019,068 bytes). Every copied file passed SHA-256 verification. Manifest: `docs/lumira_transfer_manifest_2026-11-14.json`.
+- Deliberately did not transfer the 284 staged deletions from the temporary worktree. Those deletions included runtime memory, artifacts, generated projects, database and project state; the original E: checkout already retains these files. Temporary pytest output/cache folders were excluded. Source C: worktree remains intact.
+- Destination test: `tests/test_lumira_requirement_inventory.py` — **7 passed in 0.53s**. Destination has 68 modified tracked paths and 88 new paths from the transfer; no deletions were introduced.
+- Continue development from `E:\Hari\personal_ai_core` on the consolidation branch. Do not switch to main, remove the source worktree, commit or push without an explicit request.
+- Resource constraint at transfer: approximately 0.89 GB free RAM; defer full suite, desktop build and live Windows Sandbox execution. Keep project terminal disabled until real per-run isolation is verified.
+
+- Additional destination regression after consolidation: **106 passed in 5.87s** across ServiceRegistry, BrainRegistry, BrainConfig, BrainEnvironmentManager, ApplicationLifecycle, tool policy/executor, plugin architecture and source-ledger integrity. This is a focused regression batch, not the full backend suite.
+## 2026-11-14 continuation — atomic feature extension registration
+
+- Found a lost-update race in `FeatureRegistryService.register`: it previously read the persisted registry, mutated a private snapshot, then wrote the whole snapshot in a separate operation. Concurrent requests from separate service instances could overwrite each other's newly registered extensions.
+- Changed registration to use `AtomicJsonStore.update`, so duplicate checks, capacity checks, dependency validation and insertion occur inside the store's serialized read-modify-write operation.
+- Added `test_concurrent_extension_registration_across_registry_instances_is_atomic`, which registers eight distinct extensions concurrently through eight registry instances sharing one persisted registry file.
+- Verification: the new regression passed; focused feature registry/API/dependency bridge suite: **30 passed in 4.91s**.
+- `git diff --check` passed (Git emitted only existing LF-to-CRLF normalization warnings).
+- Scope limitation: this increment makes extension registration atomic. Other feature lifecycle mutators still require a separate audit/refactor for the same read-modify-write race; this increment does not claim the entire feature registry is concurrency-safe.
+- No live providers, desktop build, full backend suite, sandbox VM, or hardware tests were run. No files were staged, committed, pushed, reset, or deleted.
+
+## 2026-11-14 — Persistence and state-integrity continuation
+
+Continued the Lumira build in the E Hari Personal AI Core consolidation checkout. Added cross-process-safe `AtomicJsonStore.read_or_create()` and write-if-changed transactions, then applied atomic lifecycle updates to the feature registry, memory schema normalization, background agent tasks, notepad, personal TODOs, command/pipeline history, artifact index initialization, and local API signing-key initialization. Artifact registration now enforces the index retention limit inside its locked update.
+
+Static Python AST parsing completed for 10 changed modules and `git diff --check` passed (line-ending warnings only). No tests were executed, following the owner's instruction. This is a persistence-hardening increment only; it does not change the overall Lumira completion status. Remaining high-risk items include multi-store artifact reconciliation, live OS sandbox acceptance, full requirement mapping, owner-approval integration, provider and hardware acceptance, desktop release validation, and the full acceptance programme.
+
+### 2026-11-14 — Artifact index / memory mirror consistency build
+- Added `ArtifactMemoryConsistencyService`; canonical artifact index is explicitly authoritative and `MemoryService.artifacts` is treated as a derived mirror.
+- Added bounded, idempotent reconciliation with a read-only default preview, detection for missing/stale/mismatched/duplicate IDs, and explicit internal repair support. Canonical duplicate IDs fail closed instead of guessing which record to keep.
+- Added read-only `GET /artifacts/consistency`; no unauthenticated mutation endpoint was exposed. Response omits filesystem paths and reports bounded affected IDs, counts and repair failures.
+- Documented cross-store crash limitations and the need for a durable outbox/journal plus owner-authenticated maintenance controls.
+- No tests were run, per owner instruction. This increment does not change the global completion percentage or imply the full artifact subsystem is complete.
+
+
+## 2026-11-14 — Voice retention, plugin lifecycle, and data integrity continuation
+- Added explicit, consent-bound audio retention preview and owner-confirmed expiry routes. Expired audio is eligible only when a valid consent receipt and retention expiry are present; `until_deleted` recordings and unknown metadata are preserved. Transcripts and summaries are not deleted by this audio-retention workflow.
+- Added atomic removal of deleted artifact IDs from cognitive memory experiences, and corrected expiry reporting for partial failures after an audio file has already been deleted.
+- Added an owner-configured, preview-only memory retention endpoint. No memory deletion operation was introduced.
+- Added a plugin manifest/permission lifecycle API for registration, approval, revocation, disablement, and approved-capability discovery. Plugin registry remains metadata-only; no dynamic plugin code is loaded or executed.
+- Added explicit owner-confirmed artifact mirror repair with durable audit events; canonical artifact index remains authoritative. Added namespace-aware sensitive permission checks for device capabilities.
+- Static validation only: `python -m compileall -q app` and `git diff --check` passed after the changes. No tests were run, as instructed. No provider, sandbox, or hardware execution was performed.
+- This increment does not justify a 50% or 100% completion claim. The last recorded ledger remains 914 records: 64 IMPLEMENTED, 821 IN_PROGRESS, 27 BLOCKED, 1 NOT_STARTED and 1 VERIFIED; source-to-feature semantic reconciliation remains incomplete.
+- No stage, commit, push, reset, clean, stash, checkout, or runtime-data deletion was performed.
+
+
+### 2026-11-14 — Trusted plugin runtime and bounded tool concurrency
+- Added `PluginRuntimeService` to bind approved plugin manifests to explicitly registered async handlers supplied by trusted application code. Each call rechecks approval and required permissions and delegates schema validation, one-time session/argument-bound approval, budgets, and durable audit to the existing tool execution service. No plugin package is dynamically imported or installed.
+- Initialized the runtime per FastAPI app instance. Plugin-registry initialization failure disables plugin runtime only; it does not prevent the core app from starting.
+- Added session-checked plugin handler discovery, one-time execution approval, and capability invocation routes. High-risk invocations remain blocked without an exact matching, unexpired, single-use approval.
+- Added a process-wide one-at-a-time tool execution lock for the low-memory desktop profile; concurrent calls are deferred and the lock is released in all normal, failure, timeout and cancellation paths.
+- Bounded memory retention preview output to 500 records per category with total counts and truncation flags. No deletion path was added.
+- No tests were run. No live provider, sandbox, or hardware execution occurred.
+
+- Final static pass after the plugin runtime API, session binding, resource gate and retention-output bounding: `python -m compileall -q app` passed and `git diff --check` passed (LF/CRLF notices only). No test command was invoked.
+
+- Final post-edit static compile and diff check after the latest plugin-runtime failure mapping: `python -m compileall -q app` and `git diff --check` passed. Git reports 0 staged files; no tests were run.
+
+
+## 2026-11-14 — Core event bus, message queue, scheduler
+- Added a bounded durable event bus with redacted JSON-safe payloads, atomic event history, cursor listing and process-local synchronous subscribers. Async consumers are directed to the durable queue.
+- Replaced the core event log's silent-corruption fallback and direct file writes with strict validation and atomic persistence while preserving its public response shape.
+- Added a durable message queue with deduplication, atomic claim/ack, worker leases, retry delays, attempt limits, dead-letter handling and sensitive-value redaction. Added audited management routes; no arbitrary code execution is attached to queue messages.
+- Added one-shot timezone-aware task scheduling with explicit owner approval, atomic due-job claims, abandoned-claim recovery, completion and confirmed cancellation. A managed dispatcher is still outstanding; jobs are not executed automatically.
+- Added core runtime APIs and system-health probes. Updated traceability for PROMPT-04-12/13/14 while preserving their IN_PROGRESS status because full event delivery, queue workers and scheduled dispatch remain unfinished.
+- Static checks only: compileall, targeted AST parsing of seven changed core files and git diff --check passed. No tests were run.
+- Ledger count/status unchanged at 914: 64 IMPLEMENTED, 821 IN_PROGRESS, 27 BLOCKED, 1 NOT_STARTED, 1 VERIFIED. No 50%/100% completion claim.
+
+
+## Scheduled dispatch handoff
+- Added `ScheduledTaskDispatchService` to connect due one-shot schedules to the durable background-agent task queue. Dispatch requires an explicit owner-confirmed API request and a current `agent.dispatch` autonomy grant; it does not bypass the Brain verification gate in the agent worker.
+- Added schedule-scoped idempotency keys to `BackgroundAgentTaskService.create()`. Repeated dispatch attempts return the existing background task rather than creating duplicates.
+- Added scheduler state `dispatched`, background-task linkage, and a result synchronizer that maps completed/failed/interrupted background task states back to the schedule record.
+- Added `POST /core/schedule/dispatch-due` and `POST /core/schedule/sync-results`. Dispatch queues work for the existing agent worker; it does not execute arbitrary tasks inline and no unattended scheduler loop is enabled.
+- Static compile, targeted AST parsing of nine changed core files and `git diff --check` passed after these changes. No tests were run.
+
+## Background task lifecycle and memory cleanup hardening ? 2026-11-14
+- Fixed startup recovery so constructing a BackgroundAgentTaskService no longer changes durable work. Queued jobs remain queued; only running jobs are marked interrupted during explicit application-startup recovery.
+- Added explicit owner-confirmed retry for failed/interrupted jobs with a three-retry ceiling and a fresh autonomy-permission check for autonomous work.
+- Added explicit cancellation for queued jobs. Task capacity now evicts only terminal records and refuses insertion if every stored task is active, rather than silently deleting queued/running work.
+- Added optional API idempotency keys, duplicate-safe dispatch, retry and cancel endpoints, and a cancelled status filter.
+- Added MemoryService.remove_artifact_references() to remove expired audio references from cognitive experiences and mark matching legacy artifact-index records deleted. Voice retention cleanup can now invoke the memory cleanup operation instead of leaving dangling references.
+- Application lifespan performs abandoned-running-task recovery once at startup. This is not a background scheduler or a recurring autonomous loop.
+- Static Python compilation and git diff --check passed. No tests were run.
+
+## Device command boundary hardening ? 2026-11-14
+- Tightened the local HTTP device transport to reject link-local, reserved and special-use IP ranges in addition to requiring literal private/loopback IP addresses. This blocks metadata/link-local targets and DNS-based endpoint ambiguity.
+- Bounded connect/read timeout configuration to 0.1?10 seconds.
+- Device command authorization now fails closed when a stored permission or capability record is not a list of strings.
+- Expanded capability-to-permission mapping for file operations and shell/process/terminal/system command namespaces. Unknown file operations require the stronger files.write permission.
+- Device ecosystem readiness planning now uses the same permission mapping as the command gateway, avoiding conflicting eligibility decisions.
+- Physical discovery and hardware execution remain dependent on a configured trusted transport and explicitly registered devices. No hardware commands were sent.
+
+## Operational health integration ? 2026-11-14
+- System health now reports durable background-task storage, active agent execution leases, and the live RAM/resource profile alongside the event bus, queue and scheduler.
+- Health probes are read-only and bounded; provider registration is still not represented as proof of remote reachability.
+
+## Privacy and scheduled-worker integration ? 2026-11-14
+- Scheduled task descriptions and metadata, and background-agent task descriptions, are now redacted before durable storage to avoid persisting API keys, passwords, bearer tokens and similar secrets embedded in task text or metadata.
+- Scheduled jobs dispatched through the API now run through the RAM-aware background worker and automatically synchronize their final background-task outcome into the schedule record with preflight/completion audit events.
+- Updated source traceability for PROMPT-04-14 and PROMPT-04-15; both remain IN_PROGRESS pending operational acceptance and broader worker recovery/dispatcher coverage.
+
+## Owner-controlled queued-task recovery ? 2026-11-14
+- Added `POST /background-tasks/dispatch-queued` to resume durable queued jobs after a restart or resource-pressure deferral.
+- Recovery requires explicit owner confirmation, is bounded to five tasks per request, writes preflight/completion audit events, and routes each task through the RAM-aware worker lease.
+- If the host is still under pressure, the worker leaves the task queued; this endpoint does not bypass autonomy permission or Brain verification.
+
+## Memory cleanup and audio capability alignment ? 2026-11-14
+- Voice-retention cleanup now removes deleted audio records from the legacy artifact mirror as well as unlinking artifact IDs from cognitive experiences; this avoids leaving tombstoned IDs that could still appear in broad memory queries.
+- Device permission mapping now distinguishes audio playback/speech synthesis from microphone capture/transcription and fails toward the capture permission for unknown audio operations.
+
+## Queue claim ownership ? 2026-11-14
+- Message queue claims now issue cryptographically random lease tokens. Acknowledgements require the matching token and use constant-time comparison, preventing another local caller from completing or failing a message it did not claim.
+- Expired and legacy running leases are recovered back to queued/dead-letter state with the token cleared. Queue records remain bounded and all state changes remain atomic.
+
+- Queue list responses now omit worker lease tokens. The token is disclosed only in the atomic claim response and is required for acknowledgement.
+
+## Capability router consolidation ? 2026-11-14
+- Expanded deterministic feature gating across planning, goals, agents, workflows, recovery, projects, code generation, artifacts, memory, unified search, research, image generation, observability and voice capabilities. Feature state and provider readiness are checked before dispatch.
+- Capability names are now normalized and validated before mode resolution, preventing malformed/non-string names from raising or bypassing normalized mode checks.
+- Payloads must be JSON-safe and are bounded to 64 KB; known text fields have a 10,000-character ceiling. Missing payload remains an empty object, while malformed non-object payloads are rejected rather than silently coerced.
+
+## Feature catalog expansion ? 2026-11-14
+- Added explicit feature domains for growth/business planning, operations, creator workflows, technical generation, assistant, personal organization, scheduling, and provider-gated video generation.
+- Extended the capability-to-feature matrix so supported capabilities are blocked when their feature is not activated, dependencies are unavailable, or required providers are missing.
+- Feature records were added without enabling them or changing existing feature state. Dependencies and provider readiness remain the activation gate.
+- Updated traceability for AREA-26 and PROMPT-04-06; both remain IN_PROGRESS.
+
+- Added explicit capability-router operations for dependency planning and atomic dependency-bridge activation, alongside direct single-feature activation. Feature IDs are included in the same bounded input validation.
+
+## Multi-model orchestration safety ? 2026-11-14
+- Reworked the multi-model orchestrator to authorize every provider through the persisted local/cloud access policy before invoking it. Unknown provider scopes default to external and require explicit cloud consent.
+- Integrated RAM-aware fan-out caps: constrained/unknown hosts use a maximum of two candidates (one when resource telemetry is unavailable), local providers run sequentially, and normal hosts cap parallel candidate calls at four.
+- Prompt, context and model output are bounded; sensitive values are redacted from prompts, context, outputs and provider metadata before they are passed through or returned.
+- Model provider failures and policy denials are isolated per candidate; no untrusted provider exception text is exposed.
+
+## Persistent model health and circuit breaker ? 2026-11-14
+- Added a bounded atomic model-health ledger with success/failure counts, rolling average latency, last outcome and a circuit breaker after three consecutive provider failures.
+- Multi-model selection skips models with open circuits and exposes health in model listings. Provider policy denials do not count as provider failures.
+- Added a read-only GET /multi-model/health status endpoint. Circuit reset requires explicit owner confirmation at the service boundary.
+
+- Added the persistent model-health circuit-breaker state to system health reporting, including tracked model count and currently open circuits.
+- Updated traceability for CAT-system-02.capability-01 and PROMPT-05-19; both remain IN_PROGRESS.
+
+- Added an owner-confirmed, preflight/completion-audited model circuit reset endpoint. The automatic cooldown remains the default recovery path; manual reset is an explicit owner action.
+
+## Background task audit completion ? 2026-11-14
+- Added preflight and completion security-audit records for background task creation, retry, cancellation and queued-task dispatch. If the audit store is unavailable, new state changes are blocked; post-mutation audit failures are reported with possible-side-effect metadata.
+- Startup recovery now returns its recovered-task count, and capacity management recognizes cancelled tasks as safely evictable terminal records.
+
+## Tamil / English / mixed intent recognition ? 2026-11-14
+- Reworked deterministic intent classification to recognize bounded Tamil-script phrases, romanized Tamil phrases, English command prefixes and parser-derived capability intents.
+- Added a backward-compatible detailed classifier result with detected language, confidence and classification source. Existing callers of \`classify()\` still receive the original intent string.
+- Updated traceability for SRC42-PART-13-012 and SRC42-PART-39-004; both remain IN_PROGRESS pending voice and language acceptance.
+
+## Language API surface ? 2026-11-14
+- Registered \`/language/capabilities\`, \`/language/detect\`, \`/language/detect-many\`, \`/language/classify\` and \`/language/classify-many\` APIs for bounded Tamil, English, romanized Tamil and mixed-language input.
+- Documented that transliteration recognition is lexicon-based and lower-confidence than native Tamil script; no claim of general-purpose translation was added.
+
+## Feature lifecycle audit boundary ? 2026-11-14
+- Feature activation, dependency-bridge activation and deactivation now write preflight and completion/blocked security audit records. Mutations are blocked when preflight audit storage is unavailable; post-mutation audit failures report possible side effects.
+- Updated traceability for AREA-26 and PROMPT-04-06; both remain IN_PROGRESS.
+
+## Configured chat model startup integration ? 2026-11-14
+- Added an adapter that exposes existing local Ollama and OpenAI-compatible chat providers through the multi-model registry interface.
+- Application startup registers only providers whose explicit feature flags are enabled. Cloud registration additionally requires a configured model and API key; provider access still passes through the persisted AI-mode/cloud-consent policy before every request.
+- Startup performs no provider network calls. Local Ollama has higher selection priority; the cloud model is a fallback candidate only when configured and permitted. Registration failures are isolated and do not expose exception details or credentials.
+- Configuration flags: \`LUMIRA_OLLAMA_CHAT_ENABLED\` and \`LUMIRA_CLOUD_CHAT_ENABLED\`; local model settings use \`LUMIRA_OLLAMA_BASE_URL\` and \`LUMIRA_OLLAMA_CHAT_MODEL\`; cloud settings use \`LUMIRA_CLOUD_CHAT_BASE_URL\`, \`LUMIRA_CLOUD_CHAT_MODEL\`, and \`LUMIRA_CLOUD_CHAT_API_KEY\`.
+- Updated traceability for CAT-system-02.capability-01 and PROMPT-05-19; both remain IN_PROGRESS.
+
+- Integrated the multi-model orchestrator into the normal Brain conversation provider route. When configured models exist, ordinary chat now uses the same RAM-aware selection, model health and provider consent gates instead of bypassing the orchestration layer. Failed orchestration is returned directly rather than triggering a second provider call.
+
+## Voice capture quality and retention consistency ? 2026-11-14
+- WAV recordings now receive bounded local audio-quality diagnostics (level, silence, clipping and format) before storage; analysis retains no audio samples and does not send audio to a provider.
+- Explicit retention cleanup now removes durable memory references before deleting the audio binary. If memory cleanup fails, deletion is skipped so the artifact remains available for retry; if deletion fails after unlinking, the remaining artifact is reported with the reference-cleanup outcome.
+
+## Fixed-interval recurring schedules ? 2026-11-14
+- Added owner-approved recurring schedules at \`POST /core/schedule/interval\` with bounded intervals (1 minute to 1 year) and bounded run counts (1 to 1000).
+- Occurrence count increments atomically when a due job is claimed. Successful completion re-arms the next occurrence; missed intervals are skipped rather than dispatched in a burst. Failed occurrences stop the series.
+- Every occurrence still uses the explicit owner-confirmed dispatch endpoint, current autonomy permission, idempotent background-task creation and RAM-aware worker. No unattended scheduler loop or hidden execution was enabled.
+
+- Corrected recurring dispatch idempotency to use a unique schedule-occurrence key rather than a schedule-wide key. Each approved occurrence can now create exactly one distinct durable background task, while retries of that same occurrence reuse the existing task.
+
+- Updated the background worker's schedule completion bridge to parse both legacy one-shot idempotency keys and the new per-occurrence recurring keys, so completion re-arms the correct recurring schedule record.
+
+
+## Opt-in managed scheduled worker ? 2026-11-14
+- Added a lifecycle-managed scheduled worker, disabled by default. It starts only when LUMIRA_SCHEDULED_WORKER_ENABLED=true is explicitly configured.
+- The worker dispatches at most one due schedule per cycle through ScheduledTaskDispatchService, which re-checks persisted agent.dispatch autonomy permission and audit preflight. Scheduler claims remain atomic and jobs must already carry explicit owner approval.
+- It executes only background-task IDs linked from dispatched scheduler records; it does not sweep or consume unrelated interactive queue items. Work runs through the existing RAM-aware lease and background worker, preserving task completion and recurring-schedule synchronization.
+- Poll interval is bounded to 5?300 seconds via LUMIRA_SCHEDULED_WORKER_INTERVAL_SECONDS (default 15). Work is sequential, the loop is lifecycle-owned, and shutdown requests a graceful stop with a bounded wait.
+- No scheduler worker was started in this build session. Default behavior remains disabled; enabling it is an explicit local owner configuration decision. No tests were run.
+
+
+## Preview health and scheduled-worker permission recheck ? 2026-11-14
+- Added GET /projects/{project}/{version}/preview/health, a bounded TCP listener probe for registered preview endpoints. It resolves and verifies loopback-only addresses, connects with a short timeout, and reports reachability/latency without launching code, following redirects, or contacting public hosts.
+- The managed scheduled worker now re-checks agent.dispatch autonomy permission immediately before executing an already-dispatched task, closing the permission-revocation gap between queue dispatch and execution.
+- No tests run; static compilation and diff checks only.
+
+
+## Worker shutdown observability hardening ? 2026-11-14
+- Worker shutdown now shields its active asyncio task rather than cancelling a to-thread operation that cannot actually stop its underlying synchronous worker thread. If a cycle exceeds the graceful wait, the worker remains explicitly reported as stop-requested instead of being falsely marked stopped.
+- System health now includes the lifecycle-managed worker state and reports a degraded subsystem if graceful shutdown has not completed.
+- No tests run; static compilation and diff checks only.
+
+
+## Artifact mutation audit boundary ? 2026-11-14
+- Added fail-closed security audit preflight and outcome records for text/binary artifact creation, archive, restore and deletion routes.
+- Audit details contain only the artifact type or ID and error class; artifact content, binary payloads and local filesystem paths are not written to the audit log.
+- A post-mutation audit failure reports that the side effect may already have occurred.
+- No tests run; static compilation and diff checks only.
+
+
+## Project preview health integration ? 2026-11-14
+- System health now validates the project preview index and reports registered, stopped and total preview counts. This is a read-only storage/index check; actual listener reachability remains available through the per-preview loopback health endpoint.
+- No tests run; static compilation and diff checks only.
+
+
+## Retryable artifact deletion consistency ? 2026-11-14
+- Reworked artifact deletion into a durable tombstone sequence: mark deletion pending, validate and unlink only a regular file within the artifact root, remove the memory reference, then finalize the index removal.
+- Filesystem or memory failures leave the indexed tombstone in place so the same delete operation can be retried without losing the record or silently orphaning a binary.
+- Added strict validation for deletion state and request timestamp metadata. No tests run.
+
+
+## Artifact deletion recovery operations ? 2026-11-14
+- Added a bounded read-only listing for deletion tombstones and an explicit-confirmation recovery endpoint that retries only artifacts already marked deletion-pending.
+- Recovery is capped at 100 records per request (default 25), records aggregate outcomes in the security audit log, and preserves per-artifact failure metadata without exposing filesystem paths or content.
+- No tests run.
+
+
+## Unified search resource bounds ? 2026-11-14
+- Added explicit scan budgets for project versions, generated project files, documentation and artifact records, in addition to existing per-category result caps.
+- Hardened project/version and artifact iteration against malformed records so a corrupt metadata entry cannot abort the entire search pass.
+- Search remains local, read-only and path-redacted at the API boundary. No tests run.
+
+## Artifact path-safety and deletion recovery hardening ? 2026-11-15
+- Added a centralized artifact path resolver that normalizes indexed paths, enforces containment beneath the artifact root, rejects symbolic links and junctions in path components, and revalidates immediately before file deletion.
+- Pending-deletion metadata no longer probes arbitrary paths from a corrupt index; unsafe paths are reported as unavailable and remain eligible for safe manual investigation.
+- Recovery truncation is now calculated from the full pending set rather than a separately capped 100-item listing, so the response correctly reports when more tombstones remain than the requested batch.
+- Existing tombstone ordering and retry semantics are preserved. No artifact files were deleted during this code change.
+- Static Python compilation and `git diff --check` passed for the changed service. No test suites were run, as requested.

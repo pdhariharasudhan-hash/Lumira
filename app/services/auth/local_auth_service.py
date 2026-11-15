@@ -31,15 +31,13 @@ class LocalAuthService:
         return base64.b64decode(encoded, altchars=b"-_", validate=True)
 
     def _signing_key(self) -> bytes:
-        if not self.key_path.exists():
-            key = secrets.token_bytes(32)
-            self.store.write({"schema_version": 1, "key": self._encode(key)})
-            try:
-                os.chmod(self.key_path, 0o600)
-            except OSError:
-                pass
-        document = self.store.read()
-        if not isinstance(document, dict) or document.get("schema_version") != 1 or not isinstance(document.get("key"), str):
+        candidate = {"schema_version": 1, "key": self._encode(secrets.token_bytes(32))}
+        document = self.store.read_or_create(candidate)
+        if (
+            not isinstance(document, dict)
+            or document.get("schema_version") != 1
+            or not isinstance(document.get("key"), str)
+        ):
             raise PersistenceIntegrityError("Local API signing key is invalid")
         try:
             key = self._decode(document["key"])
@@ -47,6 +45,11 @@ class LocalAuthService:
             raise PersistenceIntegrityError("Local API signing key is invalid") from exc
         if len(key) < 32:
             raise PersistenceIntegrityError("Local API signing key is too short")
+        try:
+            os.chmod(self.key_path, 0o600)
+        except OSError:
+            # Windows ACLs are managed by the local installation boundary.
+            pass
         return key
 
     def issue_local_token(self) -> dict:

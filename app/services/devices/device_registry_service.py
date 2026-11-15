@@ -32,13 +32,23 @@ class DeviceRegistryService:
     def __init__(self, path: str | Path = "memory/devices.json"):
         self.path = Path(path)
         self.store = AtomicJsonStore(path)
-        if not self.path.exists():
-            self.store.write({"schema_version": self.SCHEMA_VERSION, "devices": []})
+        self.store.read_or_create({"schema_version": self.SCHEMA_VERSION, "devices": []})
 
     @classmethod
     def _validate_store(cls, value: object) -> dict:
-        if not isinstance(value, dict) or value.get("schema_version") != cls.SCHEMA_VERSION:
+        if not isinstance(value, dict):
             raise PersistenceIntegrityError("Device registry schema is invalid")
+        schema_version = value.get("schema_version", 0)
+        if (
+            isinstance(schema_version, bool)
+            or not isinstance(schema_version, int)
+            or schema_version not in {0, cls.SCHEMA_VERSION}
+        ):
+            raise PersistenceIntegrityError("Device registry schema is invalid")
+        if schema_version == 0:
+            # Legacy records remain readable as-is; persist the marker only on
+            # a validated AtomicJsonStore update.
+            value["schema_version"] = cls.SCHEMA_VERSION
         devices = value.get("devices")
         if not isinstance(devices, list) or len(devices) > cls.MAX_DEVICES:
             raise PersistenceIntegrityError("Device registry list is invalid")

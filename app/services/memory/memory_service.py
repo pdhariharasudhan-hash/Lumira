@@ -320,61 +320,54 @@ class MemoryService:
     def _ensure_file(self) -> None:
         self.file_path.parent.mkdir(parents=True, exist_ok=True)
         if not self.file_path.exists():
-            self._write_memory(self._default_memory())
+            # The store lock makes concurrent first-run initialization safe:
+            # a second process reads the first process's persisted document.
+            self.store.update(lambda document: document, self._default_memory())
 
     def _read_memory(self) -> Dict[str, Any]:
         self._ensure_file()
-
         try:
-            data = self.store.read()
+            def normalize(data):
+                if not isinstance(data, dict):
+                    raise PersistenceIntegrityError("Memory store root must be an object")
 
-            if not isinstance(data, dict):
-                raise PersistenceIntegrityError("Memory store root must be an object")
+                schema_version = data.get("schema_version", 0)
+                if schema_version == 0:
+                    data.update(self._migrate_memory_v0_to_v1(data))
+                elif schema_version != 1:
+                    raise PersistenceIntegrityError(
+                        f"Unsupported memory schema version: {schema_version!r}"
+                    )
 
-            schema_version = data.get("schema_version", 0)
-            if schema_version == 0:
-                data = self._migrate_memory_v0_to_v1(data)
-                self._write_memory(data)
-            elif schema_version != 1:
-                raise PersistenceIntegrityError(
-                    f"Unsupported memory schema version: {schema_version!r}"
+                data.setdefault("project_name", "Personal AI Core")
+                data.setdefault("artifacts", [])
+                data.setdefault("feature_history", [])
+                for key in ("goals", "decisions", "experiences", "learning_records"):
+                    data.setdefault(key, [])
+
+                pipeline_runs = data.setdefault("pipeline_runs", [])
+                if not isinstance(pipeline_runs, list):
+                    raise MemoryValidationError("pipeline_runs must be a list")
+                if any(not isinstance(run, dict) for run in pipeline_runs):
+                    raise MemoryValidationError("pipeline_runs contains an invalid record")
+                data["pipeline_runs"] = [
+                    self._validate_pipeline_run(self._normalize_pipeline_run(run))
+                    for run in pipeline_runs
+                ]
+
+                latest_pipeline_run = data.get("latest_pipeline_run")
+                if latest_pipeline_run is not None and not isinstance(latest_pipeline_run, dict):
+                    raise MemoryValidationError("latest_pipeline_run must be an object or null")
+                data["latest_pipeline_run"] = self._validate_pipeline_run(
+                    self._normalize_pipeline_run(latest_pipeline_run)
                 )
+                return data
 
-            data.setdefault("project_name", "Personal AI Core")
-
-            data.setdefault(
-                "artifacts",
-                []
+            return self.store.update(
+                normalize,
+                self._default_memory(),
+                write_if_changed=True,
             )
-
-            data.setdefault(
-                "feature_history",
-                []
-            )
-            for key in ("goals", "decisions", "experiences", "learning_records"):
-                data.setdefault(key, [])
-
-            if "pipeline_runs" not in data:
-                data["pipeline_runs"] = []
-            pipeline_runs = data.get("pipeline_runs")
-            if not isinstance(pipeline_runs, list):
-                raise MemoryValidationError("pipeline_runs must be a list")
-            if any(not isinstance(run, dict) for run in pipeline_runs):
-                raise MemoryValidationError("pipeline_runs contains an invalid record")
-            data["pipeline_runs"] = [
-                self._validate_pipeline_run(self._normalize_pipeline_run(run))
-                for run in pipeline_runs
-            ]
-
-            latest_pipeline_run = data.get("latest_pipeline_run")
-            if latest_pipeline_run is not None and not isinstance(latest_pipeline_run, dict):
-                raise MemoryValidationError("latest_pipeline_run must be an object or null")
-            data["latest_pipeline_run"] = self._validate_pipeline_run(
-                self._normalize_pipeline_run(latest_pipeline_run)
-            )
-
-            return data
-
         except (json.JSONDecodeError, PersistenceIntegrityError) as exc:
             raise MemoryValidationError(str(exc)) from exc
 
@@ -741,6 +734,67 @@ class MemoryService:
         except PersistenceIntegrityError as exc:
             raise MemoryValidationError(str(exc)) from exc
 
+    def remove_artifact_references(self, artifact_id: str) -> int:
+        """Remove one deleted artifact ID from cognitive and legacy memory indexes."""
+        artifact_id = self._bounded_text(artifact_id, "artifact_id", 128)
+        removed = {"cognitive": 0, "legacy": 0}
+
+        def unlink_cognitive(memory):
+            if not isinstance(memory, dict) or memory.get("schema_version") != 1:
+                raise MemoryValidationError("unsupported cognitive memory schema version")
+            experiences = memory.get("experiences")
+            if not isinstance(experiences, list):
+                raise MemoryValidationError("experiences must be a list")
+            for record in experiences:
+                if not isinstance(record, dict):
+                    raise MemoryValidationError("experiences contains an invalid record")
+                ids = record.get("artifact_ids", [])
+                if not isinstance(ids, list):
+                    raise MemoryValidationError("experience artifact_ids must be a list")
+                kept = [value for value in ids if value != artifact_id]
+                removed["cognitive"] += len(ids) - len(kept)
+                if len(kept) != len(ids):
+                    record["artifact_ids"] = kept
+                    record["updated_at"] = datetime.now(UTC).isoformat()
+            return removed["cognitive"]
+
+        try:
+            self.cognitive_store.update(unlink_cognitive, self._default_cognitive_memory())
+        except PersistenceIntegrityError as exc:
+            raise MemoryValidationError(str(exc)) from exc
+
+        def unlink_legacy(memory):
+            if not isinstance(memory, dict):
+                raise MemoryValidationError("legacy memory root must be an object")
+            for key in ("artifacts", "experiences"):
+                records = memory.get(key, [])
+                if not isinstance(records, list):
+                    raise MemoryValidationError(f"{key} must be a list")
+                if key == "artifacts":
+                    kept_records = [
+                        record for record in records
+                        if not isinstance(record, dict) or record.get("artifact_id") != artifact_id
+                    ]
+                    removed["legacy"] += len(records) - len(kept_records)
+                    memory[key] = kept_records
+                    continue
+                for record in records:
+                    if not isinstance(record, dict):
+                        continue
+                    ids = record.get("artifact_ids", [])
+                    if isinstance(ids, list):
+                        kept = [value for value in ids if value != artifact_id]
+                        removed["legacy"] += len(ids) - len(kept)
+                        if len(kept) != len(ids):
+                            record["artifact_ids"] = kept
+            return removed["legacy"]
+
+        try:
+            self.store.update(unlink_legacy, self._default_memory())
+        except PersistenceIntegrityError as exc:
+            raise MemoryValidationError(str(exc)) from exc
+        return removed["cognitive"] + removed["legacy"]
+
     def verify_experience(self, experience_id: str) -> dict:
         """Explicitly verify a persisted experience, then consolidate eligible learning."""
         experience_id = self._bounded_text(experience_id, "experience_id", 128)
@@ -826,12 +880,21 @@ class MemoryService:
         for collection in ("goals", "decisions", "experiences", "learning_records"):
             ranked = []
             for record in memory.get(collection, []):
+                if record.get("archived") is True:
+                    continue
                 record_project = record.get("project_id", record.get("source_project"))
                 if record_project and record_project != project_id:
                     continue
                 if goal_id and record.get("goal_id") not in {None, goal_id}:
                     continue
-                searchable = json.dumps(record, ensure_ascii=False).lower()
+                # Superseded values remain in the persisted record for audit,
+                # but must not influence active recall or be passed as current
+                # context after a user correction.
+                active_record = {
+                    key: value for key, value in record.items()
+                    if key != "superseded_record"
+                }
+                searchable = json.dumps(active_record, ensure_ascii=False).lower()
                 score = sum(1 for token in tokens if token in searchable)
                 if project_id and record_project == project_id:
                     score += 100
@@ -839,7 +902,7 @@ class MemoryService:
                     score += 100
                 if score:
                     record_id = next((value for key, value in record.items() if key.endswith("_id") and key != "source_run"), "")
-                    ranked.append((score, record.get("created_at", ""), record_id, record))
+                    ranked.append((score, record.get("created_at", ""), record_id, active_record))
             ranked.sort(key=lambda row: (-row[0], row[1], row[2]))
             result[collection] = [deepcopy(row[3]) for row in ranked[:max(0, limit)]]
         return result
@@ -881,7 +944,10 @@ class MemoryService:
         memory = self._read_cognitive_memory()
         summary = {}
         for collection in ("goals", "decisions", "experiences", "learning_records"):
-            records = memory.get(collection, [])
+            records = [
+                record for record in memory.get(collection, [])
+                if isinstance(record, dict) and record.get("archived") is not True
+            ]
             if project_id:
                 records = [r for r in records if r.get("project_id", r.get("source_project")) in {None, project_id}]
             if goal_id:
@@ -937,6 +1003,7 @@ class MemoryService:
         correction: dict[str, Any] | None = None,
         forget: bool = False,
         reason: str = "",
+        source: str = "service",
     ) -> dict[str, Any]:
         """Apply an auditable correction or controlled archival to one record.
 
@@ -958,11 +1025,32 @@ class MemoryService:
             raise MemoryValidationError("forget must be boolean")
         if correction is not None and (not isinstance(correction, dict) or not correction):
             raise MemoryValidationError("correction must be a non-empty object")
-        if correction and set(correction) & {"created_at", "updated_at", "archived", "superseded_record"}:
+        if forget == (correction is not None):
+            raise MemoryValidationError("provide correction or set forget=true")
+        protected_fields = {
+            id_keys[collection],
+            "owner_id",
+            "created_at",
+            "updated_at",
+            "schema_version",
+            "archived",
+            "archived_at",
+            "superseded_record",
+            "evolution_reason",
+            "evolution_source",
+        }
+        if correction and set(correction) & protected_fields:
             raise MemoryValidationError("correction contains protected fields")
         reason = self._safe_text(reason.strip())
         if len(reason) > 500:
             raise MemoryValidationError("reason must be at most 500 characters")
+        source = self._bounded_text(source, "source", 80)
+        try:
+            correction_size = len(json.dumps(correction, ensure_ascii=False)) if correction is not None else 0
+        except (TypeError, ValueError, RecursionError) as exc:
+            raise MemoryValidationError("correction must contain JSON-compatible values") from exc
+        if correction_size > 250_000:
+            raise MemoryValidationError("correction exceeds the 250000-character limit")
 
         id_key = id_keys[collection]
         now = datetime.now(UTC).isoformat()
@@ -977,12 +1065,15 @@ class MemoryService:
                         record["archived"] = True
                         record["archived_at"] = now
                         record["evolution_reason"] = reason or "controlled_forgetting"
+                        record["evolution_source"] = source
+                        record["updated_at"] = now
                     elif correction:
                         original = deepcopy(record)
                         record.update(self._redact_nested(correction))
                         record["superseded_record"] = original
                         record["updated_at"] = now
                         record["evolution_reason"] = reason or "user_correction"
+                        record["evolution_source"] = source
                     else:
                         raise MemoryValidationError("provide correction or set forget=true")
                     return deepcopy(record)
@@ -1075,7 +1166,7 @@ class MemoryService:
             return self.store.update(apply, self._default_memory())
         except PersistenceIntegrityError as exc:
             raise MemoryValidationError(str(exc)) from exc
-        
+
         # ==========================
         # ARTIFACTS
         # ==========================
@@ -1124,17 +1215,51 @@ class MemoryService:
             raise MemoryValidationError(str(exc)) from exc
 
     def remove_artifact(self, artifact_id: str) -> bool:
+        if not isinstance(artifact_id, str) or not artifact_id.strip() or len(artifact_id) > 128:
+            raise MemoryValidationError("artifact_id is invalid")
+
         def remove(memory):
             records = memory.setdefault("artifacts", [])
+            if not isinstance(records, list):
+                raise MemoryValidationError("artifacts must be a list")
             remaining = [
-                record
-                for record in records
-                if record.get("artifact_id") != artifact_id
+                record for record in records
+                if not isinstance(record, dict) or record.get("artifact_id") != artifact_id
             ]
             memory["artifacts"] = remaining
             return len(remaining) != len(records)
 
         return bool(self.store.update(remove, self._default_memory()))
+
+    def remove_artifact_references(self, artifact_id: str) -> int:
+        """Remove a deleted artifact ID from cognitive experience links atomically."""
+        if not isinstance(artifact_id, str) or not artifact_id.strip() or len(artifact_id) > 128:
+            raise MemoryValidationError("artifact_id is invalid")
+
+        def remove(memory):
+            if not isinstance(memory, dict) or memory.get("schema_version") != 1:
+                raise MemoryValidationError("unsupported cognitive memory schema version")
+            experiences = memory.get("experiences")
+            if not isinstance(experiences, list):
+                raise MemoryValidationError("experiences must be a list")
+            removed = 0
+            now = datetime.now(UTC).isoformat()
+            for record in experiences:
+                if not isinstance(record, dict) or record.get("schema_version") != 1:
+                    raise MemoryValidationError("experiences contains an invalid record")
+                artifact_ids = record.get("artifact_ids", [])
+                if not isinstance(artifact_ids, list):
+                    raise MemoryValidationError("experience artifact_ids must be a list")
+                if artifact_id in artifact_ids:
+                    record["artifact_ids"] = [item for item in artifact_ids if item != artifact_id]
+                    record["updated_at"] = now
+                    removed += 1
+            return removed
+
+        try:
+            return self.cognitive_store.update(remove, self._default_cognitive_memory())
+        except PersistenceIntegrityError as exc:
+            raise MemoryValidationError(str(exc)) from exc
 
     # ==========================
     # FEATURE HISTORY
