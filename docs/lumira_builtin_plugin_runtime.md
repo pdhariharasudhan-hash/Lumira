@@ -23,6 +23,54 @@ Lumira provides application-owned handlers under six separate permission scopes 
 
 The language classifier uses local deterministic rules for Tamil script, romanized Tamil and English prefixes; it does not upload text to an external provider.
 
+## Example activation sequence
+
+Register the pending manifests (this does not grant permissions):
+
+```http
+POST /plugins/builtins/lumira-core/register
+Content-Type: application/json
+
+{"confirm": true}
+```
+
+Approve only the scopes you want. For example, enable language classification and memory reads independently:
+
+```http
+POST /plugins/lumira.core.language/approve
+Content-Type: application/json
+
+{"confirm": true, "granted_permissions": []}
+
+POST /plugins/lumira.core.memory.read/approve
+Content-Type: application/json
+
+{"confirm": true, "granted_permissions": ["memory.read"]}
+```
+
+For memory writes, grant the separate write scope only when needed:
+
+```http
+POST /plugins/lumira.core.memory.write/approve
+Content-Type: application/json
+
+{"confirm": true, "granted_permissions": ["memory.write"]}
+```
+
+Check activation with `GET /plugins/builtins/lumira-core/status`, then fetch the exact tool schemas from `GET /brain/plugins/capabilities`. A read-only invocation has this shape:
+
+```json
+{
+  "message": "Summarize my saved memory records.",
+  "session_id": "YOUR_EXISTING_SESSION_ID",
+  "confirm": true,
+  "arguments": {},
+  "autonomous": false
+}
+```
+
+For a write capability such as `core.goal_create`, first call its plugin approval endpoint with the exact arguments and session ID. Pass the returned `approval_id` and the same arguments to the Brain execution endpoint. Approval IDs are one-time and session-bound.
+
 ## Handler behavior
 
 - `core.language_classify`: returns detected language, intent, confidence and classification source for text up to 10,000 characters.
