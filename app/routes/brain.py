@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
+from starlette.concurrency import run_in_threadpool
+from pydantic import BaseModel, ConfigDict, Field, StrictBool
 
 from app.schemas.common import BrainCapabilityRequest, GenericInput
 from app.services.response.response_service import build_structured_response
@@ -9,6 +11,18 @@ from app.services.brain.public_brain_view import public_brain_state, public_brai
 from app.services.brain.execution_control import BrainExecutionControlRegistry
 
 router = APIRouter()
+
+
+class BrainPluginExecutionRequest(BaseModel):
+    """A plugin invocation that must pass the Main Brain verification gate."""
+
+    model_config = ConfigDict(extra="forbid")
+    message: str = Field(min_length=1, max_length=10_000)
+    session_id: str = Field(min_length=1, max_length=256)
+    confirm: StrictBool
+    arguments: dict = Field(default_factory=dict)
+    approval_id: str | None = Field(default=None, max_length=128)
+    autonomous: StrictBool = False
 
 
 @router.post("/brain/cancel/{session_id}")
@@ -133,3 +147,96 @@ def get_brain_state(session_id: str):
         "context_snapshot": session.get("context_snapshots", [])[-1:]
         or [],
     }
+
+
+@router.post("/brain/plugins/{plugin_id}/capabilities/{capability}/execute")
+async def brain_execute_plugin_capability(
+    plugin_id: str,
+    capability: str,
+    payload: BrainPluginExecutionRequest,
+    request: Request,
+):
+    """Run the cognitive verification pipeline before a trusted plugin handler.
+
+    Plugin code is never loaded here. The app-owned runtime must already have
+    an explicitly registered handler, and it rechecks plugin grants and audit
+    policy immediately before executing it.
+    """
+    if payload.confirm is not True:
+        raise HTTPException(status_code=409, detail="Explicit owner confirmation is required.")
+    runtime = getattr(request.app.state, "plugin_runtime", None)
+    if runtime is None:
+        raise HTTPException(status_code=503, detail="Plugin runtime is unavailable.")
+    try:
+        if SessionManagerService().get_session(payload.session_id) is None:
+            raise HTTPException(status_code=404, detail="session not found")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Session authorization state is unavailable.") from exc
+
+    brain_response = await run_in_threadpool(
+        BrainService().execute,
+        BrainRequest(
+            message=(
+                f"{payload.message.strip()}\n\n"
+                f"Requested trusted plugin capability: {plugin_id}.{capability}"
+            ),
+            session_id=payload.session_id,
+            metadata={"requested_plugin_execution": {"plugin_id": plugin_id, "capability": capability}},
+        ),
+    )
+    if brain_response.success is not True:
+        return build_structured_response(
+            endpoint="brain.plugin.execute",
+            status="error",
+            data={
+                "success": False,
+                "code": "brain_validation_failed",
+                "message": "Main Brain processing failed; plugin execution was not started.",
+                "brain_error": brain_response.error,
+            },
+        )
+
+    verification = getattr(brain_response.state, "verification_result", None)
+    if not isinstance(verification, dict) or verification.get("ready_for_execution") is not True:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "brain_verification_rejected",
+                "message": "Main Brain did not explicitly verify this request for execution.",
+                "plugin_execution_started": False,
+            },
+        )
+
+    result = await runtime.execute(
+        plugin_id,
+        capability,
+        payload.arguments,
+        session_id=payload.session_id,
+        approval_id=payload.approval_id,
+        autonomous=payload.autonomous,
+    )
+    if result.get("success") is not True:
+        code = result.get("code")
+        status_code = (
+            503 if code in {"security_audit_unavailable", "execution_outcome_audit_failed", "plugin_registry_unavailable"}
+            else 403 if code in {"plugin_permission_unavailable", "permission_denied", "autonomous_permission_required", "autonomous_permission_state_unavailable"}
+            else 404 if code in {"plugin_not_found", "plugin_handler_not_found"}
+            else 409 if code in {"approval_required", "approval_missing_or_consumed", "approval_expired", "approval_context_mismatch", "tool_capacity_busy"}
+            else 422
+        )
+        raise HTTPException(status_code=status_code, detail={**result, "brain_gate": "passed"})
+
+    return build_structured_response(
+        endpoint="brain.plugin.execute",
+        status="ok",
+        data={
+            "success": True,
+            "brain_gate": "passed",
+            "brain_execution_id": getattr(getattr(brain_response.state, "execution_context", None), "execution_id", None),
+            "plugin_id": plugin_id,
+            "capability": capability,
+            "execution": result,
+        },
+    )
