@@ -13,6 +13,13 @@ CORE_PLUGIN_ID = "lumira.core.system"
 
 
 BUILTIN_PLUGIN_MANIFESTS = {
+    "lumira.core.language": {
+        "schema_version": 1, "plugin_id": "lumira.core.language",
+        "name": "Lumira Core Language Classifier", "version": "1.0.0", "api_version": "1",
+        "description": "Local deterministic Tamil, English and mixed-language intent classification.",
+        "capabilities": ["core.language_classify"],
+        "permissions": [], "dependencies": [],
+    },
     "lumira.core.system": {
         "schema_version": 1, "plugin_id": "lumira.core.system",
         "name": "Lumira Core System Read", "version": "1.0.0", "api_version": "1",
@@ -73,6 +80,19 @@ def _artifact_list_schema() -> dict[str, Any]:
 
 
 BUILTIN_HANDLERS = {
+    "core.language_classify": {
+        "permission": None,
+        "tool_manifest": {
+            "description": "Classify intent and language using Lumira's local deterministic Tamil, English and romanized-Tamil classifier.",
+            "parameters": {
+                "type": "object",
+                "properties": {"text": {"type": "string", "minLength": 1, "maxLength": 10000}},
+                "required": ["text"],
+                "additionalProperties": False,
+            },
+            "requires_approval": False,
+        },
+    },
     "core.health_snapshot": {
         "permission": "device.read",
         "tool_manifest": {
@@ -291,6 +311,15 @@ BUILTIN_HANDLERS = {
         },
     },
 }
+
+
+async def _language_classify(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.language.intent_classifier_service import IntentClassifierService
+
+    result = await asyncio.to_thread(
+        IntentClassifierService().classify_detailed, arguments["text"]
+    )
+    return result
 
 
 async def _health_snapshot(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -574,6 +603,7 @@ async def _artifact_list(arguments: dict[str, Any]) -> dict[str, Any]:
 def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
     """Bind app-owned handlers only for individually approved permission scopes."""
     handlers = {
+        "core.language_classify": _language_classify,
         "core.health_snapshot": _health_snapshot,
         "core.memory_summary": _memory_summary,
         "core.memory_search": _memory_search,
@@ -623,7 +653,9 @@ def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
         for capability in expected_manifest["capabilities"]:
             specification = BUILTIN_HANDLERS[capability]
             permission = specification["permission"]
-            if permission not in expected_manifest["permissions"] or permission not in grants:
+            if permission is not None and (
+                permission not in expected_manifest["permissions"] or permission not in grants
+            ):
                 skipped.append({"plugin_id": plugin_id, "capability": capability, "code": "permission_not_granted"})
                 continue
             if capability in existing:
@@ -631,7 +663,8 @@ def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
             try:
                 runtime.register_handler(
                     plugin_id, capability, specification["tool_manifest"],
-                    handlers[capability], required_permissions=[permission],
+                    handlers[capability],
+                    required_permissions=[permission] if permission is not None else [],
                 )
                 registered += 1
             except Exception as exc:

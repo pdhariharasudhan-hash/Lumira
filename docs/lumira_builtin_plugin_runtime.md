@@ -1,6 +1,6 @@
 # Lumira built-in trusted plugin handlers
 
-Lumira provides application-owned handlers under six separate permission scopes. The scopes are separate so approving a read capability never requires granting memory or artifact write access. No third-party plugin code is imported or executed.
+Lumira provides application-owned handlers under six separate permission scopes plus one local language-classification plugin that requests no privileged permission. The scopes are separate so approving a read capability never requires granting memory or artifact write access. No third-party plugin code is imported or executed.
 
 ## Register the built-in manifests
 
@@ -13,6 +13,7 @@ Lumira provides application-owned handlers under six separate permission scopes.
 
 | Plugin ID | Permission | Capabilities |
 |---|---|---|
+| `lumira.core.language` | None (explicit owner approval still required) | `core.language_classify` |
 | `lumira.core.system` | `device.read` | `core.health_snapshot` |
 | `lumira.core.memory.read` | `memory.read` | `core.memory_summary`, `core.memory_search`, `core.goal_list` |
 | `lumira.core.memory.write` | `memory.write` | `core.memory_record_experience`, `core.memory_archive`, `core.memory_link`, `core.goal_create`, `core.goal_decompose`, `core.goal_update` |
@@ -20,8 +21,11 @@ Lumira provides application-owned handlers under six separate permission scopes.
 | `lumira.core.artifacts.read` | `filesystem.artifacts.read` | `core.artifact_list`, `core.artifact_verify` |
 | `lumira.core.artifacts.write` | `filesystem.artifacts.write` | `core.artifact_archive`, `core.artifact_restore` |
 
+The language classifier uses local deterministic rules for Tamil script, romanized Tamil and English prefixes; it does not upload text to an external provider.
+
 ## Handler behavior
 
+- `core.language_classify`: returns detected language, intent, confidence and classification source for text up to 10,000 characters.
 - `core.health_snapshot`: bounded, read-only system health snapshot.
 - `core.memory_summary`: active cognitive-memory record counts only.
 - `core.memory_search`: deterministic memory search; query up to 500 characters and at most 10 records per collection.
