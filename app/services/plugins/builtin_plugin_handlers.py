@@ -42,6 +42,26 @@ BUILTIN_HANDLERS = {
             "requires_approval": False,
         },
     },
+    "core.memory_record_experience": {
+        "permission": "memory.write",
+        "tool_manifest": {
+            "description": "Record a user-approved experience in cognitive memory; verification is never asserted by this handler.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "experience_type": {"type": "string", "enum": ["success", "failure", "decision", "workflow"]},
+                    "summary": {"type": "string", "minLength": 1, "maxLength": 1000},
+                    "outcome": {"type": "string", "minLength": 1, "maxLength": 1000},
+                    "lessons": {"type": "array", "items": {"type": "string", "maxLength": 500}, "maxItems": 10},
+                    "project_id": {"type": "string", "maxLength": 100},
+                    "goal_id": {"type": "string", "maxLength": 128},
+                },
+                "required": ["experience_type", "summary", "outcome"],
+                "additionalProperties": False,
+            },
+            "requires_approval": True,
+        },
+    },
     "core.memory_search": {
         "permission": "memory.read",
         "tool_manifest": {
@@ -89,6 +109,24 @@ async def _health_snapshot(arguments: dict[str, Any]) -> dict[str, Any]:
     from app.services.system.system_health_service import SystemHealthService
 
     return await asyncio.to_thread(SystemHealthService().snapshot)
+
+
+async def _memory_record_experience(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.memory.memory_service import MemoryService
+
+    record = await asyncio.to_thread(
+        MemoryService().record_experience,
+        arguments["experience_type"],
+        arguments["summary"],
+        arguments["outcome"],
+        arguments.get("project_id"),
+        arguments.get("goal_id"),
+        arguments.get("lessons", []),
+        [],
+        None,
+        False,
+    )
+    return {"success": True, "recorded": True, "verified": False, "experience_id": record.get("experience_id")}
 
 
 async def _memory_summary(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -187,6 +225,7 @@ def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
         "core.health_snapshot": _health_snapshot,
         "core.memory_summary": _memory_summary,
         "core.memory_search": _memory_search,
+        "core.memory_record_experience": _memory_record_experience,
         "core.project_list": _project_list,
         "core.artifact_list": _artifact_list,
     }
