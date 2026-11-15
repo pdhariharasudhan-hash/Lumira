@@ -4,7 +4,7 @@ Lumira ships two application-owned, read-only handlers under the exact plugin ID
 
 ## Supported manifest
 
-Register this manifest through `POST /plugins/register`:
+Retrieve the exact application-owned manifest from `GET /plugins/builtins/lumira-core/manifest`. Register it with `POST /plugins/builtins/lumira-core/register` and `{"confirm": true}`. This creates a pending metadata record only; it does not grant permissions or bind handlers. Alternatively, register the manifest below through `POST /plugins/register`:
 
 ```json
 {

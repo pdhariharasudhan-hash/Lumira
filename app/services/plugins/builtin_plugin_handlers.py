@@ -12,6 +12,40 @@ from typing import Any
 CORE_PLUGIN_ID = "lumira.core"
 
 
+BUILTIN_PLUGIN_MANIFEST = {
+    "schema_version": 1,
+    "plugin_id": CORE_PLUGIN_ID,
+    "name": "Lumira Core Read-only and Owner-approved Tools",
+    "version": "1.0.0",
+    "api_version": "1",
+    "description": "Application-owned tools for health, memory, goals, projects and artifact lifecycle.",
+    "capabilities": [
+        "core.health_snapshot",
+        "core.memory_summary",
+        "core.memory_search",
+        "core.memory_record_experience",
+        "core.goal_create",
+        "core.goal_decompose",
+        "core.goal_update",
+        "core.goal_list",
+        "core.project_list",
+        "core.artifact_list",
+        "core.artifact_verify",
+        "core.artifact_archive",
+        "core.artifact_restore",
+    ],
+    "permissions": [
+        "device.read",
+        "memory.read",
+        "memory.write",
+        "filesystem.project.read",
+        "filesystem.artifacts.read",
+        "filesystem.artifacts.write",
+    ],
+    "dependencies": [],
+}
+
+
 def _artifact_list_schema() -> dict[str, Any]:
     return {
         "type": "object",

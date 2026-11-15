@@ -26,6 +26,11 @@ class PluginRegisterRequest(BaseModel):
     manifest: dict[str, Any]
 
 
+class PluginBuiltinRegisterRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    confirm: StrictBool
+
+
 class PluginApprovalRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     confirm: StrictBool
@@ -98,6 +103,44 @@ def _safe_record(record: dict) -> dict:
         "dynamic_code_execution_enabled": False,
         "runtime": "trusted_in_process_handlers_only",
     }
+
+
+@router.get("/builtins/lumira-core/manifest")
+def get_lumira_core_builtin_manifest():
+    from app.services.plugins.builtin_plugin_handlers import BUILTIN_PLUGIN_MANIFEST
+
+    return {
+        "success": True,
+        "manifest": BUILTIN_PLUGIN_MANIFEST,
+        "approval_required": True,
+        "dynamic_code_execution_enabled": False,
+    }
+
+
+@router.post("/builtins/lumira-core/register", status_code=201)
+def register_lumira_core_builtin_plugin(
+    request: PluginBuiltinRegisterRequest,
+):
+    if request.confirm is not True:
+        raise HTTPException(status_code=409, detail="Explicit owner confirmation is required.")
+    from app.services.plugins.builtin_plugin_handlers import BUILTIN_PLUGIN_MANIFEST
+
+    registry = _registry()
+    try:
+        _audit("plugin.builtin.register", "requested", "lumira.core")
+        record = registry.register(BUILTIN_PLUGIN_MANIFEST)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail="Lumira core plugin is already registered or cannot be registered.") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Lumira core plugin registration could not be completed safely.") from exc
+    try:
+        _audit("plugin.builtin.register", "completed", "lumira.core", {"approval_state": record.get("approval_state")})
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "plugin_registration_audit_failed", "side_effect_may_have_occurred": True},
+        ) from exc
+    return {"success": True, "plugin": _safe_record(record), "next_step": "Owner must explicitly approve the declared permissions before any handler is bound."}
 
 
 @router.get("")
