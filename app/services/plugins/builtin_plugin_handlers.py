@@ -42,6 +42,24 @@ BUILTIN_HANDLERS = {
             "requires_approval": False,
         },
     },
+    "core.goal_update": {
+        "permission": "memory.write",
+        "tool_manifest": {
+            "description": "Update the status and progress of an existing goal after one-time owner approval.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "goal_id": {"type": "string", "minLength": 1, "maxLength": 128},
+                    "status": {"type": "string", "enum": ["active", "paused", "completed", "blocked", "cancelled", "in_progress"]},
+                    "progress": {"type": "number", "minimum": 0, "maximum": 100},
+                    "blockers": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 500}, "maxItems": 20},
+                },
+                "required": ["goal_id", "status"],
+                "additionalProperties": False,
+            },
+            "requires_approval": True,
+        },
+    },
     "core.goal_decompose": {
         "permission": "memory.write",
         "tool_manifest": {
@@ -142,6 +160,29 @@ async def _health_snapshot(arguments: dict[str, Any]) -> dict[str, Any]:
     from app.services.system.system_health_service import SystemHealthService
 
     return await asyncio.to_thread(SystemHealthService().snapshot)
+
+
+async def _goal_update(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services.memory.memory_service import MemoryService
+
+    updates = {key: arguments[key] for key in ("status", "progress", "blockers") if key in arguments}
+    if updates.get("status") == "completed" and "progress" not in updates:
+        updates["progress"] = 100.0
+    goal = await asyncio.to_thread(
+        MemoryService().update_goal,
+        arguments["goal_id"],
+        **updates,
+    )
+    return {
+        "success": True,
+        "updated": True,
+        "goal": {
+            "goal_id": goal.get("goal_id"),
+            "title": goal.get("title"),
+            "status": goal.get("status"),
+            "progress": goal.get("progress"),
+        },
+    }
 
 
 async def _goal_decompose(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -301,6 +342,7 @@ def bind_approved_builtin_handlers(runtime) -> dict[str, Any]:
         "core.memory_record_experience": _memory_record_experience,
         "core.goal_create": _goal_create,
         "core.goal_decompose": _goal_decompose,
+        "core.goal_update": _goal_update,
         "core.project_list": _project_list,
         "core.artifact_list": _artifact_list,
     }
